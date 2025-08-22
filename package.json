@@ -2,11 +2,19 @@
   "name": "api-elipse",
   "version": "1.0.0",
   "main": "server.js",
+<<<<<<< HEAD
+=======
+  "type": "commonjs",
+>>>>>>> 0e83e8e (primeiro commit)
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+<<<<<<< HEAD
     "express": "^4.18.2",
     "body-parser": "^1.20.2"
+=======
+    "express": "^4.18.2"
+>>>>>>> 0e83e8e (primeiro commit)
   }
 }
