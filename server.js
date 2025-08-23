@@ -1,53 +1,35 @@
-
-const express = require('express');
-const bodyParser = require('body-parser');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware para JSON
-app.use(bodyParser.json());
-
-// Rota GET
-app.get('/api/data', (req, res) => {
-  res.json({ message: 'GET funcionando no Render!' });
-});
-
-// Rota POST
-app.post('/api/data', (req, res) => {
-  const body = req.body;
-  console.log('Recebido:', body);
-  res.json({ message: 'POST funcionando no Render!', data: body });
-});
-
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
-
-
 const express = require("express");
 const app = express();
 
+// Middleware para JSON
 app.use(express.json());
 
+// Simulação de armazenamento temporário
 let dados = [];
 
-// POST - recebe dados
-app.post("/dados", (req, res) => {
-  dados.push(req.body);
-  res.json({ status: "OK", recebido: req.body });
+// ================= ROTAS =================
+
+// GET simples de teste
+app.get("/", (req, res) => {
+  res.send("API Elipse rodando no Render!");
 });
 
-// GET - retorna dados
+// GET - retorna os dados armazenados
 app.get("/dados", (req, res) => {
   res.json(dados);
 });
+
+// POST - recebe dados e armazena
+app.post("/dados", (req, res) => {
+  dados.push(req.body);
+  console.log("Recebido:", req.body);
+  res.json({ status: "OK", recebido: req.body });
+});
+
+// =========================================
 
 // Porta padrão Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
-
