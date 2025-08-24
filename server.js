@@ -4,8 +4,8 @@ const app = express();
 // Middleware para JSON
 app.use(express.json());
 
-// Simulação de armazenamento temporário
-let dados = [];
+// Armazena apenas o último dado recebido
+let ultimoDado = null;
 
 // ================= ROTAS =================
 
@@ -14,14 +14,18 @@ app.get("/", (req, res) => {
   res.send("API Elipse rodando no Render!");
 });
 
-// GET - retorna os dados armazenados
+// GET - retorna o último dado armazenado
 app.get("/dados", (req, res) => {
-  res.json(dados);
+  if (ultimoDado) {
+    res.json(ultimoDado);
+  } else {
+    res.json({ mensagem: "Nenhum dado recebido ainda." });
+  }
 });
 
-// POST - recebe dados e armazena
+// POST - recebe dados e sobrescreve
 app.post("/dados", (req, res) => {
-  dados.push(req.body);
+  ultimoDado = req.body;
   console.log("Recebido:", req.body);
   res.json({ status: "OK", recebido: req.body });
 });
