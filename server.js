@@ -1,33 +1,29 @@
 const express = require("express");
 const app = express();
 
-// Middleware para JSON
 app.use(express.json());
 
-// Armazena apenas o último dado recebido
-let ultimoDado = null;
+// Estrutura de armazenamento por "pastas"
+let dados = {};
 
 // ================= ROTAS =================
 
-// GET simples de teste
+// GET simples
 app.get("/", (req, res) => {
   res.send("API Elipse rodando no Render!");
 });
 
-// GET - retorna o último dado armazenado
+// GET - retorna tudo
 app.get("/dados", (req, res) => {
-  if (ultimoDado) {
-    res.json(ultimoDado);
-  } else {
-    res.json({ mensagem: "Nenhum dado recebido ainda." });
-  }
+  res.json(dados);
 });
 
-// POST - recebe dados e sobrescreve
-app.post("/dados", (req, res) => {
-  ultimoDado = req.body;
-  console.log("Recebido:", req.body);
-  res.json({ status: "OK", recebido: req.body });
+// POST - cria ou sobrescreve em uma "pasta"
+app.post("/dados/:pasta", (req, res) => {
+  const pasta = req.params.pasta; // pega o nome da pasta pela URL
+  dados[pasta] = req.body;        // sobrescreve dentro da pasta
+  console.log(`Recebido em ${pasta}:`, req.body);
+  res.json({ status: "OK", pasta, recebido: req.body });
 });
 
 // =========================================
