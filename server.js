@@ -3,7 +3,7 @@ const app = express();
 
 app.use(express.json());
 
-// Estrutura de armazenamento por "pastas"
+// Estrutura de armazenamento em árvore
 let dados = {};
 
 // ================= ROTAS =================
@@ -18,12 +18,40 @@ app.get("/dados", (req, res) => {
   res.json(dados);
 });
 
-// POST - cria ou sobrescreve em uma "pasta"
-app.post("/dados/:pasta", (req, res) => {
-  const pasta = req.params.pasta; // pega o nome da pasta pela URL
-  dados[pasta] = req.body;        // sobrescreve dentro da pasta
-  console.log(`Recebido em ${pasta}:`, req.body);
-  res.json({ status: "OK", pasta, recebido: req.body });
+// GET dinâmico - retorna apenas uma subpasta
+app.get("/dados/*", (req, res) => {
+  const path = req.params[0].split("/");
+  let ref = dados;
+
+  for (let p of path) {
+    if (ref[p]) {
+      ref = ref[p];
+    } else {
+      return res.status(404).json({ erro: "Caminho não encontrado" });
+    }
+  }
+
+  res.json(ref);
+});
+
+// POST dinâmico - cria/atualiza em qualquer nível
+app.post("/dados/*", (req, res) => {
+  const path = req.params[0].split("/");
+  let ref = dados;
+
+  for (let i = 0; i < path.length; i++) {
+    const p = path[i];
+    if (!ref[p]) ref[p] = {}; // cria pasta se não existir
+    if (i === path.length - 1) {
+      // último nível recebe o body
+      ref[p] = req.body;
+    } else {
+      ref = ref[p];
+    }
+  }
+
+  console.log(`Recebido em /dados/${req.params[0]}:`, req.body);
+  res.json({ status: "OK", caminho: `/dados/${req.params[0]}`, recebido: req.body });
 });
 
 // =========================================
