@@ -1,6 +1,7 @@
 {
   "name": "elipse-dashboard",
   "private": true,
+  "type": "module",
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
@@ -27,4 +28,5 @@
     "vite": "^7.1.2"
   }
 }
+
 
