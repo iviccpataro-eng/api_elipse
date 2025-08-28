@@ -1,15 +1,8 @@
 {
-<<<<<<< HEAD
   "name": "api_elipse",
   "version": "1.0.0",
   "description": "API simples para integração com Elipse E3",
   "main": "server.js",
-=======
-  "name": "elipse-dashboard",
-  "private": true,
-  "type": "module",
-  "version": "0.0.0",
->>>>>>> 1497559c713da699b46816a98b3d56fbcce40808
   "scripts": {
     "start": "node server.js"
   },
@@ -18,5 +11,4 @@
     "cors": "^2.8.5"
   }
 }
-
 
