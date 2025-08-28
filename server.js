@@ -1,11 +1,10 @@
 const express = require("express");
-const cors = require("cors"); // <-- importa o cors
 const app = express();
 
-// Middleware para JSON
 app.use(express.json());
-app.use(cors({ origin: "*" })); // <-- libera requisições de qualquer origem
 
+const cors = require("cors");
+app.use(cors({ origin: "*" }));
 
 // Estrutura de armazenamento em árvore
 let dados = {};
@@ -65,5 +64,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
 
