@@ -1,67 +1,78 @@
+// server.js (trecho relevante)
 const express = require("express");
-const app = express();
-
-app.use(express.json());
-
 const cors = require("cors");
+const crypto = require("crypto");
+
+const app = express();
+app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-// Estrutura de armazenamento em árvore
-let dados = {};
+// Carrega private/public PEM a partir das env vars
+const PRIV_PEM = (process.env.PRIVATE_KEY || "").replace(/\\n/g, "\n").trim();
+const PUB_PEM  = (process.env.PUBLIC_KEY  || "").replace(/\\n/g, "\n").trim();
 
-// ================= ROTAS =================
+// Helper para decrypt RSA (OAEP/SHA256)
+function rsaDecryptBase64(b64) {
+  const buf = Buffer.from(b64, "base64");
+  return crypto.privateDecrypt(
+    {
+      key: PRIV_PEM,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    buf
+  ); // retorna Buffer com a chave AES original
+}
 
-// GET simples
-app.get("/", (req, res) => {
-  res.send("API Elipse rodando no Render!");
+// AES-256-CBC decrypt (recebe base64 data, base64 iv, Buffer key(32 bytes))
+function aes256cbc_decrypt_b64(dataB64, ivB64, keyBuf) {
+  const iv = Buffer.from(ivB64, "base64");
+  const cipherBuf = Buffer.from(dataB64, "base64");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", keyBuf, iv);
+  const out = Buffer.concat([decipher.update(cipherBuf), decipher.final()]);
+  return out.toString("utf8");
+}
+
+// Expor a public key para clientes (VB) pegarem
+app.get("/public-key", (req, res) => {
+  if (!PUB_PEM) return res.status(500).send("public key not configured");
+  res.type("text/plain").send(PUB_PEM);
 });
 
-// GET - retorna tudo
-app.get("/dados", (req, res) => {
-  res.json(dados);
-});
+// Endpoint que recebe payload cifrado (hybrid)
+app.post("/encrypted", (req, res) => {
+  // Expect body: { key: "<base64 RSA(AESkey)>", iv: "<base64 iv>", data: "<base64 ciphertext>" , path: ["EL","Principal",...] (opcional) }
+  const { key, iv, data, path = [] } = req.body || {};
+  if (!key || !iv || !data) return res.status(400).json({ error: "missing fields" });
 
-// GET dinâmico - retorna apenas uma subpasta
-app.get("/dados/*", (req, res) => {
-  const path = req.params[0].split("/");
-  let ref = dados;
+  try {
+    // 1) decrypt AES key with RSA private
+    const aesKeyBuf = rsaDecryptBase64(key); // should be 32 bytes for AES-256
+    // 2) decrypt data
+    const jsonPlain = aes256cbc_decrypt_b64(data, iv, aesKeyBuf);
+    const payload = JSON.parse(jsonPlain);
 
-  for (let p of path) {
-    if (ref[p]) {
-      ref = ref[p];
+    // 3) store into your tree (adapt to your existing logic)
+    // example: store at path if provided or root:
+    let storageRef = global.store || (global.store = {});
+    if (Array.isArray(path) && path.length > 0) {
+      let ref = storageRef;
+      for (const p of path) {
+        if (!ref[p] || typeof ref[p] !== "object") ref[p] = {};
+        ref = ref[p];
+      }
+      // store payload as leaf
+      ref.info = payload.info || ref.info || [];
+      ref.data = payload.data || ref.data || [];
     } else {
-      return res.status(404).json({ erro: "Caminho não encontrado" });
+      // if no path provided, you can decide where to put it
+      storageRef.latest = payload;
     }
+
+    // respond success
+    return res.json({ status: "ok" });
+  } catch (e) {
+    console.error("decrypt error:", e);
+    return res.status(500).json({ error: "decrypt_failed", detail: e.message });
   }
-
-  res.json(ref);
 });
-
-// POST dinâmico - cria/atualiza em qualquer nível
-app.post("/dados/*", (req, res) => {
-  const path = req.params[0].split("/");
-  let ref = dados;
-
-  for (let i = 0; i < path.length; i++) {
-    const p = path[i];
-    if (!ref[p]) ref[p] = {}; // cria pasta se não existir
-    if (i === path.length - 1) {
-      // último nível recebe o body
-      ref[p] = req.body;
-    } else {
-      ref = ref[p];
-    }
-  }
-
-  console.log(`Recebido em /dados/${req.params[0]}:`, req.body);
-  res.json({ status: "OK", caminho: `/dados/${req.params[0]}`, recebido: req.body });
-});
-
-// =========================================
-
-// Porta padrão Render
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
-
