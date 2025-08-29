@@ -41,7 +41,7 @@ function RelativeTime({ iso }) {
 
 // === UI primitives (Tailwind) ==============================================
 const Card = ({ children, className = "" }) => (
-  <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`}>{children}</div>
+  <div className={`rounded-2xl border border-gray-200 bg-dark shadow-sm ${className}`}>{children}</div>
 );
 const CardHeader = ({ children, className = "" }) => (
   <div className={`p-4 border-b bg-gray-50 rounded-t-2xl ${className}`}>{children}</div>
@@ -122,7 +122,7 @@ export default function ElipseDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+      <div className="sticky top-0 z-10 bg-dark/80 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <h1 className="text-xl font-semibold">TJRJ - Dashboard</h1>
           <div className="ml-auto flex items-center gap-2">
@@ -249,7 +249,7 @@ export default function ElipseDashboard() {
                     <CardBody>
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">Abrir pasta</div>
-                        <Button className="bg-black text-white" onClick={() => navigateTo(k)}>Abrir →</Button>
+                        <Button className="bg-white text-dark" onClick={() => navigateTo(k)}>Abrir →</Button>
                       </div>
                     </CardBody>
                   </Card>
