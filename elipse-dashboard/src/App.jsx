@@ -124,7 +124,7 @@ export default function ElipseDashboard() {
       {/* Top bar */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Elipse Dashboard</h1>
+          <h1 className="text-xl font-semibold">TJRJ - Dashboard</h1>
           <div className="ml-auto flex items-center gap-2">
             <input
               value={filter}
