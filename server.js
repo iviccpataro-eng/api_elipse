@@ -1,78 +1,80 @@
-// server.js (trecho relevante)
 const express = require("express");
-const cors = require("cors");
 const crypto = require("crypto");
+const bodyParser = require("body-parser");
 
 const app = express();
-app.use(express.json());
-app.use(cors({ origin: "*" }));
+app.use(bodyParser.json());
 
-// Carrega private/public PEM a partir das env vars
-const PRIV_PEM = (process.env.PRIVATE_KEY || "").replace(/\\n/g, "\n").trim();
-const PUB_PEM  = (process.env.PUBLIC_KEY  || "").replace(/\\n/g, "\n").trim();
+// ======== CONFIGURAÇÕES =========
+const PORT = process.env.PORT || 3000;
+const WRITE_API_KEY = process.env.WRITE_API_KEY;
+const READ_API_KEY = process.env.READ_API_KEY;
+const PUBLIC_KEY = process.env.PUBLIC_KEY;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
-// Helper para decrypt RSA (OAEP/SHA256)
-function rsaDecryptBase64(b64) {
-  const buf = Buffer.from(b64, "base64");
-  return crypto.privateDecrypt(
-    {
-      key: PRIV_PEM,
-      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: "sha256",
-    },
-    buf
-  ); // retorna Buffer com a chave AES original
+// ===== Middleware para validar API Keys =====
+function checkWriteKey(req, res, next) {
+  const key = req.headers["x-api-key"];
+  if (!key || key !== WRITE_API_KEY) {
+    return res.status(403).json({ error: "Acesso negado: API Key inválida (POST)." });
+  }
+  next();
 }
 
-// AES-256-CBC decrypt (recebe base64 data, base64 iv, Buffer key(32 bytes))
-function aes256cbc_decrypt_b64(dataB64, ivB64, keyBuf) {
-  const iv = Buffer.from(ivB64, "base64");
-  const cipherBuf = Buffer.from(dataB64, "base64");
-  const decipher = crypto.createDecipheriv("aes-256-cbc", keyBuf, iv);
-  const out = Buffer.concat([decipher.update(cipherBuf), decipher.final()]);
-  return out.toString("utf8");
+function checkReadKey(req, res, next) {
+  const key = req.headers["x-api-key"];
+  if (!key || key !== READ_API_KEY) {
+    return res.status(403).json({ error: "Acesso negado: API Key inválida (GET)." });
+  }
+  next();
 }
 
-// Expor a public key para clientes (VB) pegarem
-app.get("/public-key", (req, res) => {
-  if (!PUB_PEM) return res.status(500).send("public key not configured");
-  res.type("text/plain").send(PUB_PEM);
+// ====== Endpoints ======
+
+// Entregar chave pública (para o VB usar na criptografia)
+app.get("/public-key", checkReadKey, (req, res) => {
+  res.send(PUBLIC_KEY);
 });
 
-// Endpoint que recebe payload cifrado (hybrid)
-app.post("/encrypted", (req, res) => {
-  // Expect body: { key: "<base64 RSA(AESkey)>", iv: "<base64 iv>", data: "<base64 ciphertext>" , path: ["EL","Principal",...] (opcional) }
-  const { key, iv, data, path = [] } = req.body || {};
-  if (!key || !iv || !data) return res.status(400).json({ error: "missing fields" });
-
+// Receber dados criptografados (VB → Render)
+app.post("/data", checkWriteKey, (req, res) => {
   try {
-    // 1) decrypt AES key with RSA private
-    const aesKeyBuf = rsaDecryptBase64(key); // should be 32 bytes for AES-256
-    // 2) decrypt data
-    const jsonPlain = aes256cbc_decrypt_b64(data, iv, aesKeyBuf);
-    const payload = JSON.parse(jsonPlain);
+    const { encryptedData } = req.body;
 
-    // 3) store into your tree (adapt to your existing logic)
-    // example: store at path if provided or root:
-    let storageRef = global.store || (global.store = {});
-    if (Array.isArray(path) && path.length > 0) {
-      let ref = storageRef;
-      for (const p of path) {
-        if (!ref[p] || typeof ref[p] !== "object") ref[p] = {};
-        ref = ref[p];
-      }
-      // store payload as leaf
-      ref.info = payload.info || ref.info || [];
-      ref.data = payload.data || ref.data || [];
-    } else {
-      // if no path provided, you can decide where to put it
-      storageRef.latest = payload;
-    }
+    // Descriptografar com a chave privada do Render
+    const decrypted = crypto.privateDecrypt(
+      {
+        key: PRIVATE_KEY,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      Buffer.from(encryptedData, "base64")
+    );
 
-    // respond success
-    return res.json({ status: "ok" });
-  } catch (e) {
-    console.error("decrypt error:", e);
-    return res.status(500).json({ error: "decrypt_failed", detail: e.message });
+    const originalText = decrypted.toString("utf-8");
+
+    console.log("📥 Recebido e descriptografado:", originalText);
+
+    res.json({
+      status: "OK",
+      decrypted: originalText,
+    });
+  } catch (err) {
+    console.error("Erro ao descriptografar:", err.message);
+    res.status(400).json({ error: "Falha ao descriptografar os dados." });
   }
+});
+
+// GET protegido (exemplo: listar últimos dados recebidos)
+app.get("/data", checkReadKey, (req, res) => {
+  res.json({ message: "Aqui viriam os dados descriptografados e salvos" });
+});
+
+// Teste rápido
+app.get("/", (req, res) => {
+  res.send("🚀 API com RSA + API Keys funcionando!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
