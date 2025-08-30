@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // === Helper utils ==========================================================
 const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const API_KEY = import.meta?.env?.VITE_READ_API_KEY || "@_5a8336f39a90574629817de23d41932c";
 
 function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -74,8 +75,8 @@ export default function ElipseDashboard() {
       const res = await fetch(`${API_BASE}/data`, {
         cache: "no-store",
         headers: {
-          "x-api-key": import.meta.env.VITE_READ_API_KEY, // vem do .env do Vercel
-        },
+          "x-api-key": { API_KEY }, // vem do .env do Vercel
+        }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
