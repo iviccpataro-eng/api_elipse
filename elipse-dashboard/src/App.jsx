@@ -71,7 +71,12 @@ export default function ElipseDashboard() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/dados`, { cache: "no-store" });
+      const res = await fetch(`${API_BASE}/data`, {
+        cache: "no-store",
+        headers: {
+          "x-api-key": import.meta.env.VITE_READ_API_KEY, // vem do .env do Vercel
+        },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json || {});
@@ -260,7 +265,7 @@ export default function ElipseDashboard() {
         )}
       </div>
 
-      <footer className="py-8 text-center text-xs text-gray-500">Fonte: {API_BASE}/dados</footer>
+      <footer className="py-8 text-center text-xs text-gray-500">Fonte: {API_BASE}/data</footer>
     </div>
   );
 }
