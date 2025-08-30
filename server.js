@@ -31,10 +31,10 @@ let dados = {};
 
 // ====== Endpoints ======
 
-// Receber dados em Base64 e armazenar
-app.post("/data/:pasta", checkWriteKey, (req, res) => {
+// Receber dados em Base64 e armazenar (aceita caminhos aninhados)
+app.post("/data/*", checkWriteKey, (req, res) => {
   try {
-    const { pasta } = req.params;
+    const pasta = req.params[0]; // pega todo o caminho após /data/
     const { valor } = req.body; // dado vem em Base64
 
     // Decodificar Base64
@@ -63,9 +63,9 @@ app.post("/data/:pasta", checkWriteKey, (req, res) => {
   }
 });
 
-// Listar dados (somente quem tem API Key de leitura)
-app.get("/data/:pasta", checkReadKey, (req, res) => {
-  const { pasta } = req.params;
+// Listar dados (somente quem tem API Key de leitura, também com caminhos aninhados)
+app.get("/data/*", checkReadKey, (req, res) => {
+  const pasta = req.params[0]; // pega o caminho completo
   res.json({
     pasta,
     conteudo: dados[pasta] || [],
