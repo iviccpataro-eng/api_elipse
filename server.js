@@ -1,5 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 
 const app = express();
 app.use(bodyParser.json());
@@ -25,6 +26,13 @@ function checkReadKey(req, res, next) {
   }
   next();
 }
+
+// ====== LIBERAR CORS ======
+app.use(cors({
+  origin: "*", // pode trocar pelo domínio do seu front
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "x-api-key"]
+}));
 
 // ====== ARMAZENAMENTO SIMPLES ======
 let dados = {};
@@ -63,7 +71,12 @@ app.post("/data/*", checkWriteKey, (req, res) => {
   }
 });
 
-// Listar dados (somente quem tem API Key de leitura, também com caminhos aninhados)
+// Listar tudo
+app.get("/data", checkReadKey, (req, res) => {
+  res.json(dados);
+});
+
+// Listar dados (com caminhos aninhados)
 app.get("/data/*", checkReadKey, (req, res) => {
   const pasta = req.params[0]; // pega o caminho completo
   res.json({
