@@ -34,34 +34,49 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "x-api-key"]
 }));
 
-// ====== ARMAZENAMENTO SIMPLES ======
+// ====== ARMAZENAMENTO EM ÁRVORE ======
 let dados = {};
+
+// Função auxiliar para navegar/criar objetos aninhados
+function setNestedValue(obj, pathArray, value) {
+  let current = obj;
+  for (let i = 0; i < pathArray.length - 1; i++) {
+    const part = pathArray[i];
+    if (!current[part]) {
+      current[part] = {}; // cria nível se não existir
+    }
+    current = current[part];
+  }
+
+  const lastPart = pathArray[pathArray.length - 1];
+  if (!current[lastPart]) {
+    current[lastPart] = [];
+  }
+
+  // sobrescreve (ou empilha se preferir: current[lastPart].push(value))
+  current[lastPart] = [value];
+}
 
 // ====== Endpoints ======
 
 // Receber dados em Base64 e armazenar (aceita caminhos aninhados)
 app.post("/data/*", checkWriteKey, (req, res) => {
   try {
-    const pasta = req.params[0]; // pega todo o caminho após /data/
+    const path = req.params[0].split("/"); // ["EL", "PredioPrincipal", "PAV01", "MM_01_01"]
     const { valor } = req.body; // dado vem em Base64
 
     // Decodificar Base64
     const buffer = Buffer.from(valor, "base64");
     const textoOriginal = buffer.toString("utf-8");
 
-    // Cria pasta se não existir
-    if (!dados[pasta]) {
-      dados[pasta] = [];
-    }
+    // Armazenar na estrutura aninhada
+    setNestedValue(dados, path, textoOriginal);
 
-    // Salva sobrescrevendo (poderia empilhar também)
-    dados[pasta] = [textoOriginal];
-
-    console.log(`📥 Recebido na pasta '${pasta}':`, textoOriginal);
+    console.log(`📥 Recebido em '${path.join(" > ")}':`, textoOriginal);
 
     res.json({
       status: "OK",
-      pasta,
+      caminho: path,
       recebidoBase64: valor,
       recebidoTexto: textoOriginal,
     });
@@ -78,16 +93,25 @@ app.get("/data", checkReadKey, (req, res) => {
 
 // Listar dados (com caminhos aninhados)
 app.get("/data/*", checkReadKey, (req, res) => {
-  const pasta = req.params[0]; // pega o caminho completo
+  const path = req.params[0].split("/");
+  let current = dados;
+
+  for (const part of path) {
+    if (!current[part]) {
+      return res.json({ caminho: path, conteudo: [] });
+    }
+    current = current[part];
+  }
+
   res.json({
-    pasta,
-    conteudo: dados[pasta] || [],
+    caminho: path,
+    conteudo: current,
   });
 });
 
 // Teste rápido
 app.get("/", (req, res) => {
-  res.send("🚀 API com Base64 + API Keys funcionando!");
+  res.send("🚀 API hierárquica com Base64 + API Keys funcionando!");
 });
 
 app.listen(PORT, () => {
