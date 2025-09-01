@@ -1,127 +1,67 @@
 const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-
 const app = express();
-app.use(bodyParser.json());
 
-// ======== CONFIGURAÇÕES =========
-const PORT = process.env.PORT || 3000;
-const WRITE_API_KEY = process.env.WRITE_API_KEY;
-const READ_API_KEY = process.env.READ_API_KEY;
+app.use(express.json());
 
-// ===== Middleware para validar API Keys =====
-function checkWriteKey(req, res, next) {
-  const key = req.headers["x-api-key"];
-  if (!key || key !== WRITE_API_KEY) {
-    return res.status(403).json({ error: "Acesso negado: API Key inválida (POST)." });
-  }
-  next();
-}
+const cors = require("cors");
+app.use(cors({ origin: "*" }));
 
-function checkReadKey(req, res, next) {
-  const key = req.headers["x-api-key"];
-  if (!key || key !== READ_API_KEY) {
-    return res.status(403).json({ error: "Acesso negado: API Key inválida (GET)." });
-  }
-  next();
-}
+// Estrutura de armazenamento em árvore
+let dados = {};
 
-// ====== LIBERAR CORS ======
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "x-api-key"]
-}));
+// ================= ROTAS =================
 
-// ====== ARMAZENAMENTO SIMPLES ======
-let dados = {}; // estrutura linear (caminho -> objetos JSON)
-let arvore = {}; // estrutura hierárquica para navegação
-
-// ===== Função auxiliar para inserir na árvore =====
-function inserirNaArvore(caminho, objetoJSON) {
-  const partes = caminho.split("/"); 
-  let atual = arvore;
-
-  partes.forEach((parte, idx) => {
-    if (!atual[parte]) {
-      atual[parte] = {};
-    }
-    // no último nível, salva o objeto diretamente
-    if (idx === partes.length - 1) {
-      atual[parte] = objetoJSON; 
-    }
-    atual = atual[parte];
-  });
-}
-
-// ====== Endpoints ======
-
-// Receber dados em Base64 e armazenar
-app.post("/data/*", checkWriteKey, (req, res) => {
-  try {
-    const pasta = req.params[0];
-    let { valor } = req.body; 
-
-    if (!valor) {
-      return res.status(400).json({ error: "Campo 'valor' não encontrado no payload." });
-    }
-
-    let objetoJSON;
-
-    try {
-      // 🔹 1) Se 'valor' é um JSON stringificado (ex: {"valor": "{...}"})
-      if (valor.trim().startsWith("{") || valor.trim().startsWith("[")) {
-        objetoJSON = JSON.parse(valor);
-
-      // 🔹 2) Caso contrário, assume que é Base64 → decodifica e parseia
-      } else {
-        const buffer = Buffer.from(valor, "base64");
-        const textoOriginal = buffer.toString("utf-8");
-        objetoJSON = JSON.parse(textoOriginal);
-      }
-    } catch (err) {
-      return res.status(400).json({ error: "Payload não é JSON válido." });
-    }
-
-    // Salva em dados (linear)
-    dados[pasta] = objetoJSON;
-
-    // Atualiza também na árvore
-    inserirNaArvore(pasta, objetoJSON);
-
-    console.log(`📥 Recebido em '${pasta}':`, JSON.stringify(objetoJSON, null, 2));
-
-    res.json({
-      status: "OK",
-      pasta,
-      recebidoTexto: objetoJSON,
-    });
-  } catch (err) {
-    console.error("Erro ao processar dados:", err.message);
-    res.status(400).json({ error: "Falha ao processar os dados." });
-  }
-});
-
-// Listar árvore inteira
-app.get("/data", checkReadKey, (req, res) => {
-  res.json(arvore);
-});
-
-// Listar dados de um caminho específico
-app.get("/data/*", checkReadKey, (req, res) => {
-  const pasta = req.params[0]; 
-  res.json({
-    pasta,
-    conteudo: dados[pasta] || {},
-  });
-});
-
-// Teste rápido
+// GET simples
 app.get("/", (req, res) => {
-  res.send("🚀 API com JSON estruturado funcionando!");
+  res.send("API Elipse rodando no Render!");
 });
 
+// GET - retorna tudo
+app.get("/dados", (req, res) => {
+  res.json(dados);
+});
+
+// GET dinâmico - retorna apenas uma subpasta
+app.get("/dados/*", (req, res) => {
+  const path = req.params[0].split("/");
+  let ref = dados;
+
+  for (let p of path) {
+    if (ref[p]) {
+      ref = ref[p];
+    } else {
+      return res.status(404).json({ erro: "Caminho não encontrado" });
+    }
+  }
+
+  res.json(ref);
+});
+
+// POST dinâmico - cria/atualiza em qualquer nível
+app.post("/dados/*", (req, res) => {
+  const path = req.params[0].split("/");
+  let ref = dados;
+
+  for (let i = 0; i < path.length; i++) {
+    const p = path[i];
+    if (!ref[p]) ref[p] = {}; // cria pasta se não existir
+    if (i === path.length - 1) {
+      // último nível recebe o body
+      ref[p] = req.body;
+    } else {
+      ref = ref[p];
+    }
+  }
+
+  console.log(`Recebido em /dados/${req.params[0]}:`, req.body);
+  res.json({ status: "OK", caminho: `/dados/${req.params[0]}`, recebido: req.body });
+});
+
+// =========================================
+
+// Porta padrão Render
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+
