@@ -29,28 +29,27 @@ function checkReadKey(req, res, next) {
 
 // ====== LIBERAR CORS ======
 app.use(cors({
-  origin: "*", // pode trocar pelo domínio do seu front
+  origin: "*",
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "x-api-key"]
 }));
 
 // ====== ARMAZENAMENTO SIMPLES ======
-let dados = {}; // estrutura linear (chave -> valores)
+let dados = {}; // estrutura linear (caminho -> objetos JSON)
 let arvore = {}; // estrutura hierárquica para navegação
 
-// ===== Função auxiliar para inserir em árvore =====
-function inserirNaArvore(caminho, valor) {
-  const partes = caminho.split("/"); // EL > Empreendimento > Pavimento > Equipamento
+// ===== Função auxiliar para inserir na árvore =====
+function inserirNaArvore(caminho, objetoJSON) {
+  const partes = caminho.split("/"); 
   let atual = arvore;
 
   partes.forEach((parte, idx) => {
     if (!atual[parte]) {
       atual[parte] = {};
     }
-    // quando chegar no equipamento (último nível), guarda o valor
+    // no último nível, salva o objeto diretamente
     if (idx === partes.length - 1) {
-      atual[parte]._valores = atual[parte]._valores || [];
-      atual[parte]._valores.push(valor);
+      atual[parte] = objetoJSON; 
     }
     atual = atual[parte];
   });
@@ -58,36 +57,40 @@ function inserirNaArvore(caminho, valor) {
 
 // ====== Endpoints ======
 
-// Receber dados em Base64 e armazenar (aceita caminhos aninhados)
+// Receber dados em Base64 e armazenar
 app.post("/data/*", checkWriteKey, (req, res) => {
   try {
-    const pasta = req.params[0]; // pega todo o caminho após /data/
-    const { valor } = req.body; // dado vem em Base64
+    const pasta = req.params[0]; 
+    const { valor } = req.body; 
 
     // Decodificar Base64
     const buffer = Buffer.from(valor, "base64");
     const textoOriginal = buffer.toString("utf-8");
 
-    // Salva em dados (linear)
-    if (!dados[pasta]) {
-      dados[pasta] = [];
+    // Converter para JSON válido
+    let objetoJSON;
+    try {
+      objetoJSON = JSON.parse(textoOriginal);
+    } catch (err) {
+      return res.status(400).json({ error: "Payload não é JSON válido." });
     }
-    dados[pasta].push(textoOriginal);
+
+    // Salva em dados (linear)
+    dados[pasta] = objetoJSON;
 
     // Atualiza também na árvore
-    inserirNaArvore(pasta, textoOriginal);
+    inserirNaArvore(pasta, objetoJSON);
 
-    console.log(`📥 Recebido na pasta '${pasta}':`, textoOriginal);
+    console.log(`📥 Recebido em '${pasta}':`, JSON.stringify(objetoJSON, null, 2));
 
     res.json({
       status: "OK",
       pasta,
-      recebidoBase64: valor,
-      recebidoTexto: textoOriginal,
+      recebidoTexto: objetoJSON,
     });
   } catch (err) {
-    console.error("Erro ao decodificar Base64:", err.message);
-    res.status(400).json({ error: "Falha ao processar os dados (Base64 inválido)." });
+    console.error("Erro ao processar dados:", err.message);
+    res.status(400).json({ error: "Falha ao processar os dados." });
   }
 });
 
@@ -96,18 +99,18 @@ app.get("/data", checkReadKey, (req, res) => {
   res.json(arvore);
 });
 
-// Listar dados (linear, pelo caminho exato)
+// Listar dados de um caminho específico
 app.get("/data/*", checkReadKey, (req, res) => {
-  const pasta = req.params[0]; // pega o caminho completo
+  const pasta = req.params[0]; 
   res.json({
     pasta,
-    conteudo: dados[pasta] || [],
+    conteudo: dados[pasta] || {},
   });
 });
 
 // Teste rápido
 app.get("/", (req, res) => {
-  res.send("🚀 API com Base64 + API Keys funcionando!");
+  res.send("🚀 API com JSON estruturado funcionando!");
 });
 
 app.listen(PORT, () => {
