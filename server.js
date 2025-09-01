@@ -60,17 +60,26 @@ function inserirNaArvore(caminho, objetoJSON) {
 // Receber dados em Base64 e armazenar
 app.post("/data/*", checkWriteKey, (req, res) => {
   try {
-    const pasta = req.params[0]; 
-    const { valor } = req.body; 
+    const pasta = req.params[0];
+    let { valor } = req.body; 
 
-    // Decodificar Base64
-    const buffer = Buffer.from(valor, "base64");
-    const textoOriginal = buffer.toString("utf-8");
+    if (!valor) {
+      return res.status(400).json({ error: "Campo 'valor' não encontrado no payload." });
+    }
 
-    // Converter para JSON válido
     let objetoJSON;
+
     try {
-      objetoJSON = JSON.parse(textoOriginal);
+      // 🔹 1) Se 'valor' é um JSON stringificado (ex: {"valor": "{...}"})
+      if (valor.trim().startsWith("{") || valor.trim().startsWith("[")) {
+        objetoJSON = JSON.parse(valor);
+
+      // 🔹 2) Caso contrário, assume que é Base64 → decodifica e parseia
+      } else {
+        const buffer = Buffer.from(valor, "base64");
+        const textoOriginal = buffer.toString("utf-8");
+        objetoJSON = JSON.parse(textoOriginal);
+      }
     } catch (err) {
       return res.status(400).json({ error: "Payload não é JSON válido." });
     }
