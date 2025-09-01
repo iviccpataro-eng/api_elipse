@@ -34,27 +34,26 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "x-api-key"]
 }));
 
-// ====== ARMAZENAMENTO EM ÁRVORE ======
-let dados = {};
+// ====== ARMAZENAMENTO SIMPLES ======
+let dados = {}; // estrutura linear (chave -> valores)
+let arvore = {}; // estrutura hierárquica para navegação
 
-// Função auxiliar para navegar/criar objetos aninhados
-function setNestedValue(obj, pathArray, value) {
-  let current = obj;
-  for (let i = 0; i < pathArray.length - 1; i++) {
-    const part = pathArray[i];
-    if (!current[part]) {
-      current[part] = {}; // cria nível se não existir
+// ===== Função auxiliar para inserir em árvore =====
+function inserirNaArvore(caminho, valor) {
+  const partes = caminho.split("/"); // EL > Empreendimento > Pavimento > Equipamento
+  let atual = arvore;
+
+  partes.forEach((parte, idx) => {
+    if (!atual[parte]) {
+      atual[parte] = {};
     }
-    current = current[part];
-  }
-
-  const lastPart = pathArray[pathArray.length - 1];
-  if (!current[lastPart]) {
-    current[lastPart] = [];
-  }
-
-  // sobrescreve (ou empilha se preferir: current[lastPart].push(value))
-  current[lastPart] = [value];
+    // quando chegar no equipamento (último nível), guarda o valor
+    if (idx === partes.length - 1) {
+      atual[parte]._valores = atual[parte]._valores || [];
+      atual[parte]._valores.push(valor);
+    }
+    atual = atual[parte];
+  });
 }
 
 // ====== Endpoints ======
@@ -62,21 +61,27 @@ function setNestedValue(obj, pathArray, value) {
 // Receber dados em Base64 e armazenar (aceita caminhos aninhados)
 app.post("/data/*", checkWriteKey, (req, res) => {
   try {
-    const path = req.params[0].split("/"); // ["EL", "PredioPrincipal", "PAV01", "MM_01_01"]
+    const pasta = req.params[0]; // pega todo o caminho após /data/
     const { valor } = req.body; // dado vem em Base64
 
     // Decodificar Base64
     const buffer = Buffer.from(valor, "base64");
     const textoOriginal = buffer.toString("utf-8");
 
-    // Armazenar na estrutura aninhada
-    setNestedValue(dados, path, textoOriginal);
+    // Salva em dados (linear)
+    if (!dados[pasta]) {
+      dados[pasta] = [];
+    }
+    dados[pasta].push(textoOriginal);
 
-    console.log(`📥 Recebido em '${path.join(" > ")}':`, textoOriginal);
+    // Atualiza também na árvore
+    inserirNaArvore(pasta, textoOriginal);
+
+    console.log(`📥 Recebido na pasta '${pasta}':`, textoOriginal);
 
     res.json({
       status: "OK",
-      caminho: path,
+      pasta,
       recebidoBase64: valor,
       recebidoTexto: textoOriginal,
     });
@@ -86,32 +91,23 @@ app.post("/data/*", checkWriteKey, (req, res) => {
   }
 });
 
-// Listar tudo
+// Listar árvore inteira
 app.get("/data", checkReadKey, (req, res) => {
-  res.json(dados);
+  res.json(arvore);
 });
 
-// Listar dados (com caminhos aninhados)
+// Listar dados (linear, pelo caminho exato)
 app.get("/data/*", checkReadKey, (req, res) => {
-  const path = req.params[0].split("/");
-  let current = dados;
-
-  for (const part of path) {
-    if (!current[part]) {
-      return res.json({ caminho: path, conteudo: [] });
-    }
-    current = current[part];
-  }
-
+  const pasta = req.params[0]; // pega o caminho completo
   res.json({
-    caminho: path,
-    conteudo: current,
+    pasta,
+    conteudo: dados[pasta] || [],
   });
 });
 
 // Teste rápido
 app.get("/", (req, res) => {
-  res.send("🚀 API hierárquica com Base64 + API Keys funcionando!");
+  res.send("🚀 API com Base64 + API Keys funcionando!");
 });
 
 app.listen(PORT, () => {
