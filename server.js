@@ -21,9 +21,9 @@ app.get("/dados", (req, res) => {
   res.json(dados);
 });
 
-// GET dinâmico - retorna apenas uma subpasta
-app.get("/dados/*", (req, res) => {
-  const path = req.params[0].split("/");
+// GET dinâmico - retorna apenas uma subpasta (qualquer nível)
+app.get("/dados/:pasta(*)", (req, res) => {
+  const path = req.params.pasta.split("/");
   let ref = dados;
 
   for (let p of path) {
@@ -38,8 +38,8 @@ app.get("/dados/*", (req, res) => {
 });
 
 // POST dinâmico - cria/atualiza em qualquer nível
-app.post("/dados/*", (req, res) => {
-  const path = req.params[0].split("/");
+app.post("/dados/:pasta(*)", (req, res) => {
+  const path = req.params.pasta.split("/");
   let ref = dados;
 
   for (let i = 0; i < path.length; i++) {
@@ -53,8 +53,12 @@ app.post("/dados/*", (req, res) => {
     }
   }
 
-  console.log(`Recebido em /dados/${req.params[0]}:`, req.body);
-  res.json({ status: "OK", caminho: `/dados/${req.params[0]}`, recebido: req.body });
+  console.log(`Recebido em /dados/${req.params.pasta}:`, req.body);
+  res.json({
+    status: "OK",
+    caminho: `/dados/${req.params.pasta}`,
+    recebido: req.body
+  });
 });
 
 // =========================================
@@ -64,4 +68,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
