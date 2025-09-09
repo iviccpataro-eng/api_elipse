@@ -10,7 +10,7 @@ app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
 app.use(express.json({ limit: "1mb" })); // aceita body JSON até ~1MB
 
 // --------- Config ---------
-const SECRET = process.env.JWT_SECRET || "segredo123";
+const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad";
 
 // Armazenamento em memória (reinicia a cada deploy/restart)
 let dados = {};
