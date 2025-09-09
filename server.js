@@ -17,8 +17,7 @@ let dados = {};
 
 // Usuários em memória (exemplo)
 let usuarios = [
-  { id: 1, email: "admin@empresa.com", senha: "123456", role: "admin" },
-  { id: 2, email: "user@empresa.com", senha: "senha123", role: "user" },
+  { id: 1, user: process.env.ADMIN_USER, senha: process.env.ADMIN_PASS, role: "admin" }
 ];
 
 // --------- Helpers ---------
@@ -95,13 +94,13 @@ function somenteAdmin(req, res, next) {
 
 // --------- Rotas de Autenticação ---------
 app.post("/auth/login", (req, res) => {
-  const { email, senha } = req.body;
-  const usuario = usuarios.find((u) => u.email === email && u.senha === senha);
+  const { user, senha } = req.body;
+  const usuario = usuarios.find((u) => u.user === user && u.senha === senha);
 
   if (!usuario) return res.status(401).json({ erro: "Credenciais inválidas" });
 
   const token = jwt.sign(
-    { id: usuario.id, email: usuario.email, role: usuario.role },
+    { id: usuario.id, user: usuario.user, role: usuario.role },
     SECRET,
     { expiresIn: "8h" }
   );
@@ -115,8 +114,8 @@ app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
 });
 
 app.post("/usuarios", autenticar, somenteAdmin, (req, res) => {
-  const { email, senha, role } = req.body;
-  const novo = { id: Date.now(), email, senha, role: role || "user" };
+  const { user, senha, role } = req.body;
+  const novo = { id: Date.now(), user, senha, role: role || "user" };
   usuarios.push(novo);
   res.json({ msg: "Usuário criado", usuario: novo });
 });
