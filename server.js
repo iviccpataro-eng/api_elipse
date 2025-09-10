@@ -70,26 +70,26 @@ function normalizeBody(req) {
 
   return payload;
 }
-
 // --------- Middlewares de Autenticação ---------
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
 
   const token = authHeader.split(" ")[1];
+
+  // ✅ Aceita o token fixo do React
+  if (token === FIXED_TOKEN) {
+    req.user = { id: "react-dashboard", user: "react", role: "reader" };
+    return next();
+  }
+
+  // ✅ Caso contrário, valida como JWT normal
   try {
     req.user = jwt.verify(token, SECRET);
     next();
   } catch (err) {
     res.status(403).json({ erro: "Token inválido" });
   }
-}
-
-function somenteAdmin(req, res, next) {
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ erro: "Apenas administradores têm acesso." });
-  }
-  next();
 }
 
 // --------- Rotas de Autenticação ---------
@@ -107,6 +107,14 @@ app.post("/auth/login", (req, res) => {
 
   res.json({ token });
 });
+
+// --------- Token fixo para o React (somente leitura) ---------
+const FIXED_TOKEN = jwt.sign(
+  { id: "react-dashboard", user: "react", role: "reader" },
+  SECRET
+  // sem expiresIn -> não expira
+);
+console.log("Token fixo para o React:", FIXED_TOKEN);
 
 // CRUD de usuários (apenas admin)
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
