@@ -92,6 +92,13 @@ function autenticar(req, res, next) {
   }
 }
 
+function somenteAdmin(req, res, next) {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ erro: "Apenas administradores têm acesso." });
+  }
+  next();
+}
+
 // --------- Rotas de Autenticação ---------
 app.post("/auth/login", (req, res) => {
   const { user, senha } = req.body;
