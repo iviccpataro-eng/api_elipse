@@ -75,7 +75,7 @@ export default function ElipseDashboard() {
       const res = await fetch(`${API_BASE}/data`, {
         cache: "no-store",
         headers: {
-          "x-api-key": API_KEY, // ✅ agora string correta
+          "Authorization": `Bearer ${import.meta.env.VITE_REACT_TOKEN}`,
         }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
