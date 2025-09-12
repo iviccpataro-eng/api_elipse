@@ -1,65 +1,107 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function RegisterPage() {
-    const params = new URLSearchParams(window.location.search);
-    const invite = params.get("invite");
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const invite = searchParams.get("invite");
 
-    const [valid, setValid] = useState(null);
     const [user, setUser] = useState("");
     const [senha, setSenha] = useState("");
-    const [msg, setMsg] = useState("");
+    const [confirm, setConfirm] = useState("");
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
     useEffect(() => {
         if (!invite) {
-            setValid(false);
-            return;
+            setError("Link de convite inválido ou ausente.");
         }
-        fetch(`${API_BASE}/auth/verify-invite`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ invite })
-        })
-            .then((res) => res.json())
-            .then((data) => setValid(data.valid))
-            .catch(() => setValid(false));
     }, [invite]);
 
-    const handleRegister = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const res = await fetch(`${API_BASE}/auth/register`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ invite, user, senha })
-        });
-        const data = await res.json();
-        if (res.ok) setMsg("✅ Usuário registrado com sucesso!");
-        else setMsg("❌ " + (data.erro || "Erro no registro"));
+        setError("");
+        setSuccess("");
+
+        if (!user || !senha || !confirm) {
+            setError("Preencha todos os campos.");
+            return;
+        }
+        if (senha !== confirm) {
+            setError("As senhas não coincidem.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/usuarios/register`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${invite}`, // adminApi gerou o convite
+                },
+                body: JSON.stringify({ user, senha }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.erro || "Erro ao registrar.");
+            }
+
+            setSuccess("Usuário criado com sucesso! Redirecionando...");
+            setTimeout(() => navigate("/"), 2000);
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
-    if (valid === null) return <p>Verificando convite...</p>;
-    if (!valid) return <p className="text-red-500">Convite inválido ou expirado.</p>;
-
     return (
-        <form onSubmit={handleRegister} className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded">
-            <h1 className="text-xl font-bold mb-4">Registrar Usuário</h1>
-            {msg && <p className="mb-2">{msg}</p>}
-            <input
-                type="text"
-                placeholder="Usuário"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                className="w-full p-2 border rounded mb-2"
-            />
-            <input
-                type="password"
-                placeholder="Senha"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className="w-full p-2 border rounded mb-2"
-            />
-            <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded">
-                Registrar
-            </button>
-        </form>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+            <div className="w-full max-w-md bg-white shadow-md rounded-2xl p-6">
+                <h1 className="text-2xl font-bold mb-4 text-center">Registrar Usuário</h1>
+                {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
+                {success && <div className="mb-3 text-sm text-green-600">{success}</div>}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Usuário</label>
+                        <input
+                            type="text"
+                            value={user}
+                            onChange={(e) => setUser(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                            placeholder="Digite seu usuário"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Senha</label>
+                        <input
+                            type="password"
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                            placeholder="Digite sua senha"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Confirmar Senha</label>
+                        <input
+                            type="password"
+                            value={confirm}
+                            onChange={(e) => setConfirm(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                            placeholder="Confirme sua senha"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={!invite}
+                        className="w-full px-3 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+                    >
+                        Criar Conta
+                    </button>
+                </form>
+            </div>
+        </div>
     );
 }

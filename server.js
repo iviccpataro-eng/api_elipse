@@ -2,14 +2,16 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const {Pool} = require("pg");
 
 const app = express();
 
+const bcrypt = require("bcrypt");
+const { Pool } = require("pg");
+
 // --------- Conexão com o Banco de Dados ---------
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {rejectUnauthorized: false},
+  connectionString: process.env.DATABASE_URL, // já vem do Render
+  ssl: { rejectUnauthorized: false }
 });
 
 // --------- Rotas de Autenticação ---------
@@ -53,6 +55,31 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+// --------- Registro via convite seguro ---------
+app.post("/usuarios/register", autenticar, somenteAdmin, async (req, res) => {
+  const { user, senha } = req.body;
+
+  if (!user || !senha) {
+    return res.status(400).json({ erro: "Usuário e senha são obrigatórios" });
+  }
+
+  try {
+    // Hash da senha com bcrypt
+    const saltRounds = 10;
+    const hash = await bcrypt.hash(senha, saltRounds);
+
+    // Insere no banco
+    const query = `INSERT INTO users (userName, passHash, roleName) VALUES ($1, $2, $3) RETURNING userName, roleName`;
+    const values = [user, hash, "user"];
+
+    const result = await pool.query(query, values);
+
+    res.json({ msg: "Usuário criado com sucesso", usuario: result.rows[0] });
+  } catch (err) {
+    console.error("Erro ao registrar usuário:", err);
+    res.status(500).json({ erro: "Falha ao registrar usuário" });
+  }
+});
 
 // Middleware
 app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
@@ -284,4 +311,20 @@ app.post("/auth/register", async (req, res) => {
   } catch (err) {
     res.status(400).json({ erro: "Convite inválido ou expirado" });
   }
+});
+
+// --------- Gera link de convite ---------
+app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
+  const { expiresIn } = req.body || {};
+
+  // Tempo padrão: 1h (pode customizar no body: { expiresIn: "15m" } )
+  const token = jwt.sign(
+    { id: "invite", user: "adminApi", role: "admin" },
+    SECRET,
+    { expiresIn: expiresIn || "1h" }
+  );
+
+  const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
+
+  res.json({ msg: "Convite gerado", link, token });
 });
