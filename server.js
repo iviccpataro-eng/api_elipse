@@ -237,3 +237,51 @@ app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
 
+// --------- Rota para gerar convite (apenas admin) ---------
+app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
+  const inviteToken = jwt.sign(
+    { type: "invite" },
+    SECRET,
+    { expiresIn: "24h" } // expira em 24 horas
+  );
+  res.json({
+    link: `https://api-elipse.vercel.app/register?invite=${inviteToken}`
+  });
+});
+
+// --------- Verificar token de convite ---------
+app.post("/auth/verify-invite", (req, res) => {
+  const { invite } = req.body;
+  try {
+    const payload = jwt.verify(invite, SECRET);
+    if (payload.type !== "invite") throw new Error();
+    res.json({ valid: true });
+  } catch {
+    res.status(400).json({ valid: false, erro: "Convite inválido ou expirado" });
+  }
+});
+
+// --------- Registrar usuário ---------
+app.post("/auth/register", async (req, res) => {
+  const { invite, user, senha, role } = req.body;
+
+  try {
+    const payload = jwt.verify(invite, SECRET);
+    if (payload.type !== "invite") throw new Error();
+
+    // Criptografar senha
+    const bcrypt = require("bcryptjs");
+    const salt = await bcrypt.genSalt(10);
+    const passHash = await bcrypt.hash(senha, salt);
+
+    // Salvar no PostgreSQL
+    await pool.query(
+      "INSERT INTO users (userName, passHash, roleName) VALUES ($1,$2,$3)",
+      [user, passHash, role || "user"]
+    );
+
+    res.json({ msg: "Usuário registrado com sucesso!" });
+  } catch (err) {
+    res.status(400).json({ erro: "Convite inválido ou expirado" });
+  }
+});
