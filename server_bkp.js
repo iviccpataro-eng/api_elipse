@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const {Pool} = require("pg");
 
 const app = express();
 
@@ -70,13 +71,20 @@ function normalizeBody(req) {
 
   return payload;
 }
-
 // --------- Middlewares de Autenticação ---------
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
 
   const token = authHeader.split(" ")[1];
+
+  // ✅ Aceita o token fixo do React
+  if (token === FIXED_TOKEN) {
+    req.user = { id: "react-dashboard", user: "react", role: "reader" };
+    return next();
+  }
+
+  // ✅ Caso contrário, valida como JWT normal
   try {
     req.user = jwt.verify(token, SECRET);
     next();
@@ -91,6 +99,12 @@ function somenteAdmin(req, res, next) {
   }
   next();
 }
+
+// --------- Conexão com o Banco de Dados ---------
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {rejectUnauthorized: false},
+});
 
 // --------- Rotas de Autenticação ---------
 app.post("/auth/login", (req, res) => {
@@ -107,6 +121,14 @@ app.post("/auth/login", (req, res) => {
 
   res.json({ token });
 });
+
+// --------- Token fixo para o React (somente leitura) ---------
+const FIXED_TOKEN = jwt.sign(
+  { id: "react-dashboard", user: "react", role: "reader" },
+  SECRET
+  // sem expiresIn -> não expira
+);
+console.log("Token fixo para o React:", FIXED_TOKEN);
 
 // CRUD de usuários (apenas admin)
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
@@ -188,3 +210,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+

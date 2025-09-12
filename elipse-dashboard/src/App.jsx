@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// === Helper utils ==========================================================
+// === Config ================================================================
 const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
-const API_KEY = import.meta?.env?.VITE_READ_API_KEY || "@_5a8336f39a90574629817de23d41932c";
 
+// === Helper utils ==========================================================
 function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -57,12 +57,79 @@ const Badge = ({ children, className = "" }) => (
   <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs border ${className}`}>{children}</span>
 );
 
-// === Main component =========================================================
-export default function ElipseDashboard() {
+// === Login page ============================================================
+function LoginPage({ onLogin }) {
+  const [user, setUser] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setErro("");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, senha }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem("authToken", data.token);
+        onLogin(data.token);
+      } else {
+        setErro(data.erro || "Falha ao autenticar");
+      }
+    } catch (err) {
+      setErro("Erro de conexão com servidor");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-6 rounded-xl shadow-md w-96"
+      >
+        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
+        {erro && <p className="text-red-500 mb-2 text-center">{erro}</p>}
+        <input
+          type="text"
+          placeholder="Usuário"
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
+          className="w-full p-2 mb-3 border rounded"
+        />
+        <input
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          className="w-full p-2 mb-3 border rounded"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          {loading ? "Carregando..." : "Entrar"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// === Dashboard =============================================================
+function Dashboard({ token }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [path, setPath] = useState([]); // e.g., ["EL","Principal","PAV01","MM_01_01"]
+  const [path, setPath] = useState([]);
   const [filter, setFilter] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [intervalSec, setIntervalSec] = useState(15);
@@ -74,9 +141,7 @@ export default function ElipseDashboard() {
     try {
       const res = await fetch(`${API_BASE}/data`, {
         cache: "no-store",
-        headers: {
-          "Authorization": `Bearer ${import.meta.env.VITE_REACT_TOKEN}`,
-        }
+        headers: { "Authorization": `Bearer ${token}` }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -89,10 +154,7 @@ export default function ElipseDashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+  useEffect(() => { fetchData(); }, [token]);
   useEffect(() => {
     if (!autoRefresh) return () => { };
     timerRef.current && clearInterval(timerRef.current);
@@ -102,7 +164,6 @@ export default function ElipseDashboard() {
 
   const currentNode = useMemo(() => getNodeByPath(data, path) ?? data, [data, path]);
 
-  // Determine if node is a leaf with { info: [...], data: [...] }
   const leafPayload = useMemo(() => {
     if (!currentNode || Array.isArray(currentNode)) return null;
     const keys = Object.keys(currentNode || {});
@@ -138,7 +199,7 @@ export default function ElipseDashboard() {
               placeholder="Filtrar itens"
               className="px-3 py-2 rounded-xl border text-sm"
             />
-            <Button onClick={fetchData} title="Atualizar agora">🔄 Atualizar</Button>
+            <Button onClick={fetchData}>🔄 Atualizar</Button>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} /> Auto
             </label>
@@ -170,10 +231,8 @@ export default function ElipseDashboard() {
         {loading && <div className="mb-3 text-sm text-gray-500">Carregando…</div>}
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
-        {/* If leaf payload (info/data) */}
         {leafPayload ? (
           <div className="space-y-4">
-            {/* Info */}
             {leafPayload.info?.length > 0 && (
               <Card>
                 <CardHeader>
@@ -197,7 +256,6 @@ export default function ElipseDashboard() {
               </Card>
             )}
 
-            {/* Data cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {leafPayload.data?.filter(d => (d.name || "").toLowerCase().includes(filter.toLowerCase()))
                 .map((d, idx) => {
@@ -237,7 +295,6 @@ export default function ElipseDashboard() {
             </div>
           </div>
         ) : (
-          // Intermediate node → list child folders as cards
           <div>
             {childKeys.length === 0 ? (
               <Card>
@@ -265,8 +322,18 @@ export default function ElipseDashboard() {
           </div>
         )}
       </div>
-
       <footer className="py-8 text-center text-xs text-gray-500">Fonte: {API_BASE}/data</footer>
     </div>
   );
+}
+
+// === Root App ==============================================================
+export default function App() {
+  const [token, setToken] = useState(localStorage.getItem("authToken"));
+
+  if (!token) {
+    return <LoginPage onLogin={setToken} />;
+  }
+
+  return <Dashboard token={token} />;
 }

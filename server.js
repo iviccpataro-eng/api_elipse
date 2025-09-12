@@ -2,8 +2,57 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const {Pool} = require("pg");
 
 const app = express();
+
+// --------- Conexão com o Banco de Dados ---------
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {rejectUnauthorized: false},
+});
+
+// --------- Rotas de Autenticação ---------
+app.post("/auth/login", async (req, res) => {
+  const { user, senha } = req.body;
+  if (!user || !senha) return res.status(400).json({ erro: "Dados usuário/senha são obrigatórios" });
+
+  try {
+    // buscar usuário no banco
+    const result = await pool.query(
+      'SELECT * FROM users WHERE "userName" = $1',
+      [user]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ erro: "Credenciais inválidas" });
+    }
+
+    const usuario = result.rows[0];
+
+    // comparar senha com hash
+    const match = await bcrypt.compare(senha, usuario.passhash);
+    if (!match) {
+      return res.status(401).json({ erro: "Credenciais inválidas" });
+    }
+
+    // gerar token JWT
+    const token = jwt.sign(
+      {
+        id: usuario.username, 
+        user: usuario.username, 
+        role: usuario.rolename
+      },
+      SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error("Erro no login:", err);
+    res.status(500).json({ erro: "Erro interno no servidor" });
+  }
+});
+
 
 // Middleware
 app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
@@ -99,22 +148,6 @@ function somenteAdmin(req, res, next) {
   next();
 }
 
-// --------- Rotas de Autenticação ---------
-app.post("/auth/login", (req, res) => {
-  const { user, senha } = req.body;
-  const usuario = usuarios.find((u) => u.user === user && u.senha === senha);
-
-  if (!usuario) return res.status(401).json({ erro: "Credenciais inválidas" });
-
-  const token = jwt.sign(
-    { id: usuario.id, user: usuario.user, role: usuario.role },
-    SECRET,
-    { expiresIn: "8h" }
-  );
-
-  res.json({ token });
-});
-
 // --------- Token fixo para o React (somente leitura) ---------
 const FIXED_TOKEN = jwt.sign(
   { id: "react-dashboard", user: "react", role: "reader" },
@@ -203,3 +236,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+
