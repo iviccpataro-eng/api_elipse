@@ -1,20 +1,13 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-//import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { BrowserRouter } from "react-router-dom";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./index.css";
+
 import ElipseDashboard from "./App";
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
-
-export default function AppRouter() {
+function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
@@ -25,3 +18,9 @@ export default function AppRouter() {
     </BrowserRouter>
   );
 }
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <AppRouter />
+  </StrictMode>
+);
