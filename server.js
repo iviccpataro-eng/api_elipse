@@ -243,6 +243,17 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
+// Listar usuários para debug (⚠️ só para teste!)
+app.get("/test-users", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT username, rolename FROM users");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar usuários:", err);
+    res.status(500).json({ erro: err.message });
+  }
+});
+
 // --------- 404 JSON amigável ---------
 app.all("*", (req, res) => {
   res.status(404).json({
