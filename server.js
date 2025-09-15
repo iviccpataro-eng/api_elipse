@@ -119,7 +119,7 @@ app.post("/auth/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      'SELECT "userName" as username, "passHash" as passhash, "roleName" as rolename FROM users WHERE "userName" = $1',
+      'SELECT username, passhash, rolename FROM users WHERE username = $1',
       [user]
     );
     if (result.rows.length === 0) {
