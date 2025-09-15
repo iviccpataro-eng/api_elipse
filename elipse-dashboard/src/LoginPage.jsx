@@ -1,11 +1,13 @@
-// Login.jsx
+// LoginPage.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function Login({ onLogin }) {
+export default function LoginPage() {
     const [user, setUser] = useState("");
     const [senha, setSenha] = useState("");
     const [erro, setErro] = useState("");
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -16,14 +18,24 @@ export default function Login({ onLogin }) {
             const resp = await fetch("https://api-elipse.onrender.com/auth/login", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ user, senha })
+                body: JSON.stringify({ user, senha }),
             });
-            const data = await resp.json();
 
-            if (resp.ok) {
-                onLogin(data.token);
+            let data = {};
+            try {
+                data = await resp.json();
+            } catch {
+                data = {};
+            }
+
+            if (resp.ok && data.token) {
+                // ✅ salvar token no localStorage
+                localStorage.setItem("token", data.token);
+
+                // ✅ redirecionar para o dashboard
+                navigate("/dashboard");
             } else {
                 setErro(data.erro || "Falha desconhecida no login");
             }
@@ -67,7 +79,8 @@ export default function Login({ onLogin }) {
 
                 <button
                     type="submit"
-                    className={`w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 ${loading ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
                     disabled={loading}
                 >
                     {loading ? "Carregando..." : "Entrar"}
@@ -76,4 +89,3 @@ export default function Login({ onLogin }) {
         </div>
     );
 }
-
