@@ -232,6 +232,17 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
 });
 
+// Testar conexão com PostgreSQL
+app.get("/test-db", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW() as now");
+    res.json({ ok: true, time: result.rows[0].now });
+  } catch (err) {
+    console.error("Erro ao conectar no banco:", err);
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
 // --------- 404 JSON amigável ---------
 app.all("*", (req, res) => {
   res.status(404).json({
