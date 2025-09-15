@@ -12,7 +12,7 @@ app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
 app.use(express.json({ limit: "1mb" })); // parse JSON antes das rotas
 
 // --------- Config ---------
-const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad";
+const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
 
 // Conexão com PostgreSQL (Render já injeta DATABASE_URL)
 const pool = new Pool({
