@@ -109,6 +109,7 @@ function Dashboard({ token, onLogout }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [path, setPath] = useState([]); // caminho atual
   const [filter, setFilter] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [intervalSec, setIntervalSec] = useState(15);
@@ -120,7 +121,7 @@ function Dashboard({ token, onLogout }) {
     try {
       if (!token) throw new Error("JWT ausente, faça login novamente");
 
-      const res = await fetch(`${API_BASE}/data`, {
+      const res = await fetch(`${API_BASE}/dados`, {
         cache: "no-store",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -136,16 +137,24 @@ function Dashboard({ token, onLogout }) {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [token]);
-
+  useEffect(() => { fetchData(); }, [token]);
   useEffect(() => {
     if (!autoRefresh) return () => { };
     timerRef.current && clearInterval(timerRef.current);
     timerRef.current = setInterval(fetchData, Math.max(5, intervalSec) * 1000);
     return () => timerRef.current && clearInterval(timerRef.current);
   }, [autoRefresh, intervalSec]);
+
+  // nó atual (sub-árvore)
+  const currentNode = useMemo(() => getNodeByPath(data, path) ?? data, [data, path]);
+
+  // checa se é nó final (tem info+data)
+  const isLeafNode = currentNode && typeof currentNode === "object" &&
+    (Array.isArray(currentNode.info) || Array.isArray(currentNode.data));
+
+  const goHome = () => setPath([]);
+  const navigateTo = (k) => setPath((p) => [...p, k]);
+  const navigateCrumb = (idx) => setPath((p) => p.slice(0, idx));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -166,127 +175,118 @@ function Dashboard({ token, onLogout }) {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-              />{" "}
-              Auto
+              /> Auto
             </label>
             <input
               type="number"
               min={5}
               value={intervalSec}
-              onChange={(e) =>
-                setIntervalSec(Number(e.target.value) || 15)
-              }
+              onChange={(e) => setIntervalSec(Number(e.target.value) || 15)}
               className="w-20 px-2 py-2 rounded-xl border text-sm"
               title="Intervalo (s)"
             />
-            <Button
-              className="bg-red-500 text-white hover:bg-red-600"
-              onClick={onLogout}
-            >
+            <Button className="bg-red-500 text-white hover:bg-red-600" onClick={onLogout}>
               🚪 Logout
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo */}
+      {/* Breadcrumbs */}
       <div className="max-w-7xl mx-auto p-4">
+        <div className="mb-3 text-sm flex items-center gap-2 flex-wrap">
+          <Button className="bg-gray-50" onClick={goHome}>🏠 Home</Button>
+          {path.map((k, i) => (
+            <React.Fragment key={i}>
+              <span className="text-gray-400">/</span>
+              <Button className="bg-gray-50" onClick={() => navigateCrumb(i + 1)}>
+                {formatKeyLabel(k)}
+              </Button>
+            </React.Fragment>
+          ))}
+        </div>
+
         {loading && <div className="mb-3 text-sm text-gray-500">Carregando…</div>}
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
-        {data?.info && data?.data ? (
-          <div className="space-y-4">
-            {/* Cabeçalho */}
-            {data.info.length > 0 && (
-              <div className="bg-white rounded-xl shadow-md p-4">
-                <h2 className="text-lg font-semibold mb-2">Cabeçalho</h2>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(data.info[0]).map(([k, v]) => (
-                    <Badge key={k} className="bg-gray-50 border-gray-200">
-                      <span className="text-gray-600 mr-1">
-                        {formatKeyLabel(k)}:
-                      </span>
-                      <span className="font-medium">{String(v)}</span>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Dados */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {data.data
-                .filter((arr) =>
-                  (arr[0] || "").toLowerCase().includes(filter.toLowerCase())
-                )
-                .map((arr, idx) => {
-                  const [name, value, unit, hasGraph, nominal] = arr;
-                  const val = toNumberMaybe(value);
-                  const nominalVal = toNumberMaybe(nominal);
-                  const pct =
-                    val !== undefined && nominalVal
-                      ? Math.min(100, Math.round((val / nominalVal) * 100))
-                      : undefined;
-                  const showPct = typeof pct === "number" && isFinite(pct);
-
-                  return (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-xl shadow-md p-4"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium">{name}</div>
-                        {String(hasGraph).toLowerCase() === "true" && (
-                          <Badge className="bg-blue-50 border-blue-200">
-                            gráfico
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-2xl font-semibold">
-                        {value}
-                        {unit ? (
-                          <span className="text-base text-gray-500 ml-1">
-                            {` ${unit}`}
-                          </span>
-                        ) : null}
-                      </div>
-                      {nominalVal !== undefined && nominalVal !== "" && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          Nominal:{" "}
-                          <span className="font-medium">
-                            {nominalVal}
-                            {unit ? ` ${unit}` : ""}
-                          </span>
-                        </div>
-                      )}
-                      {showPct && (
-                        <div className="mt-3">
-                          <div className="h-2 w-full rounded-full bg-gray-200">
-                            <div
-                              className={`h-2 rounded-full ${pct > 100
-                                  ? "bg-red-500"
-                                  : pct > 90
-                                    ? "bg-yellow-500"
-                                    : "bg-green-500"
-                                }`}
-                              style={{ width: `${Math.min(pct, 100)}%` }}
-                            />
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {pct}% do nominal
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
+        {/* Se for nó final: mostra info + data */}
+        {isLeafNode ? (
+          <LeafNode node={currentNode} filter={filter} />
         ) : (
-          <div className="bg-white rounded-xl shadow-md p-4">
-            <div className="text-sm text-gray-600">Nenhum dado disponível.</div>
-          </div>
+          <FolderNode node={currentNode} filter={filter} onOpen={navigateTo} />
         )}
+      </div>
+    </div>
+  );
+}
+
+// === Renderização de pasta =================================================
+function FolderNode({ node, filter, onOpen }) {
+  if (!node || typeof node !== "object") return null;
+  const keys = Object.keys(node).filter((k) =>
+    k.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  if (keys.length === 0) {
+    return <div className="text-gray-500">Nenhum item encontrado.</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {keys.map((k) => (
+        <div key={k} className="rounded-xl border bg-white shadow p-4">
+          <div className="font-medium">{formatKeyLabel(k)}</div>
+          <Button className="mt-2 bg-blue-50" onClick={() => onOpen(k)}>Abrir →</Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// === Renderização de folha (equipamento) ==================================
+function LeafNode({ node, filter }) {
+  const info = node.info || [];
+  const data = node.data || [];
+
+  return (
+    <div className="space-y-4">
+      {info.length > 0 && (
+        <div className="rounded-xl border bg-white shadow p-4">
+          <h2 className="text-lg font-semibold mb-2">Cabeçalho</h2>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(info[0]).map(([k, v]) => (
+              <Badge key={k} className="bg-gray-50 border-gray-200">
+                <span className="text-gray-600 mr-1">{formatKeyLabel(k)}:</span>
+                <span className="font-medium">{String(v)}</span>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {data
+          .filter((d) => (d[0] || "").toLowerCase().includes(filter.toLowerCase()))
+          .map((d, idx) => {
+            const [name, value, unit, hasGraph, nominal] = d;
+            const valNum = toNumberMaybe(value);
+            const nomNum = toNumberMaybe(nominal);
+            const pct = valNum !== undefined && nomNum ? Math.round((valNum / nomNum) * 100) : null;
+
+            return (
+              <div key={idx} className="rounded-xl border bg-white shadow p-4">
+                <div className="font-medium">{name}</div>
+                <div className="text-2xl font-semibold">
+                  {value}{unit ? ` ${unit}` : ""}
+                </div>
+                {pct !== null && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    {pct}% do nominal
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
     </div>
   );
