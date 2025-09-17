@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 
 // === Config ================================================================
 const API_BASE =
@@ -17,6 +17,18 @@ function toNumberMaybe(v) {
     return isNaN(n) ? undefined : n;
   }
   return undefined;
+}
+
+// Caminha dentro do objeto seguindo o path atual
+function getNodeByPath(obj, path) {
+  let ref = obj;
+  for (const key of path) {
+    if (!ref || typeof ref !== "object" || !Object.prototype.hasOwnProperty.call(ref, key)) {
+      return undefined;
+    }
+    ref = ref[key];
+  }
+  return ref;
 }
 
 // === UI Components =========================================================
