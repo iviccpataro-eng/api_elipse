@@ -131,11 +131,12 @@ function Dashboard({ token, onLogout }) {
     setLoading(true);
     setError("");
     try {
-      if (!token) throw new Error("JWT ausente, faça login novamente");
+      // token fixo do Elipse (env var)
+      const fixedToken = import.meta.env.VITE_REACT_TOKEN;
 
       const res = await fetch(`${API_BASE}/dados`, {
         cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${fixedToken}` },
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -148,6 +149,7 @@ function Dashboard({ token, onLogout }) {
       setLoading(false);
     }
   };
+
 
   useEffect(() => { fetchData(); }, [token]);
   useEffect(() => {
