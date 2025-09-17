@@ -306,28 +306,31 @@ function LeafNode({ node, filter }) {
               return (
                 <div key={idx} className="rounded-xl border bg-white shadow p-4">
                   <div className="font-medium mb-2">{name}</div>
-                  <RadialBarChart
-                    width={180}
-                    height={120}
-                    innerRadius="70%"
-                    outerRadius="100%"
-                    startAngle={180}
-                    endAngle={0}
-                    data={chartData}
-                  >
-                    <PolarAngleAxis
-                      type="number"
-                      domain={[0, 100]}
-                      angleAxisId={0}
-                      tick={false}
-                    />
-                    <RadialBar
-                      dataKey="value"
-                      cornerRadius={10}
-                      background
-                      clockWise
-                    />
-                  </RadialBarChart>
+                  <div className="flex justify-center">
+                    <RadialBarChart
+                      width={180}
+                      height={120}
+                      innerRadius="70%"
+                      outerRadius="100%"
+                      startAngle={180}
+                      endAngle={0}
+                      data={chartData}
+                    >
+                      <PolarAngleAxis
+                        type="number"
+                        domain={[0, 100]}
+                        angleAxisId={0}
+                        tick={false}
+                      />
+                      <RadialBar
+                        dataKey="value"
+                        cornerRadius={10}
+                        background
+                        clockWise
+                      />
+                    </RadialBarChart>
+                  </div>
+
                   <div className="text-center mt-2">
                     <div className="text-xl font-semibold">
                       {value}{unit ? ` ${unit}` : ""}
