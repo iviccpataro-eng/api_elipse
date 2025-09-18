@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 // === Config ================================================================
 const API_BASE =
@@ -285,17 +286,71 @@ function LeafNode({ node, filter }) {
             const [name, value, unit, hasGraph, nominal] = d;
             const valNum = toNumberMaybe(value);
             const nomNum = toNumberMaybe(nominal);
-            const pct = valNum !== undefined && nomNum ? Math.round((valNum / nomNum) * 100) : null;
 
+            if (hasGraph && valNum !== undefined && nomNum) {
+              // Definindo limites (±10%)
+              const min = nomNum * 0.9;
+              const max = nomNum * 1.1;
+
+              // Normalizar o valor dentro do range
+              const clamped = Math.max(min, Math.min(valNum, max));
+              const percent = ((clamped - min) / (max - min)) * 100;
+
+              // Definir cor conforme proximidade
+              let fill = "#22c55e"; // verde
+              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316"; // laranja
+              if (valNum < min || valNum > max) fill = "#ef4444"; // vermelho
+
+              const chartData = [{ name, value: percent, fill }];
+
+              return (
+                <div key={idx} className="rounded-xl border bg-white shadow p-4">
+                  <div className="font-medium mb-2">{name}</div>
+                  <div className="flex justify-center">
+                    <RadialBarChart
+                      width={180}
+                      height={120}
+                      innerRadius="70%"
+                      outerRadius="100%"
+                      startAngle={180}
+                      endAngle={0}
+                      data={chartData}
+                    >
+                      <PolarAngleAxis
+                        type="number"
+                        domain={[0, 100]}
+                        angleAxisId={0}
+                        tick={false}
+                      />
+                      <RadialBar
+                        dataKey="value"
+                        cornerRadius={10}
+                        background
+                        clockWise
+                      />
+                    </RadialBarChart>
+                  </div>
+
+                  <div className="text-center mt-2">
+                    <div className="text-xl font-semibold">
+                      {value}{unit ? ` ${unit}` : ""}
+                    </div>
+                    <div className="text-sm text-gray-500">Nominal: {nomNum}{unit}</div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Se não tiver gráfico, card normal
             return (
               <div key={idx} className="rounded-xl border bg-white shadow p-4">
                 <div className="font-medium">{name}</div>
                 <div className="text-2xl font-semibold">
                   {value}{unit ? ` ${unit}` : ""}
                 </div>
-                {pct !== null && (
+                {nomNum && (
                   <div className="mt-2 text-sm text-gray-600">
-                    {pct}% do nominal
+                    Nominal: {nomNum}{unit}
                   </div>
                 )}
               </div>

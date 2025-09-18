@@ -144,40 +144,74 @@ app.post("/auth/login", async (req, res) => {
 });
 
 // --------- Rotas de Convite e Registro ---------
-app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
-  const { expiresIn } = req.body || {};
 
-  const token = jwt.sign(
-    { type: "invite", user: "adminApi" },
-    SECRET,
-    { expiresIn: expiresIn || "1h" }
-  );
+// Gerar convite (somente admin)
+app.post("/auth/invite", autenticar, somenteAdmin, async (req, res) => {
+  const { email, role = "user", expiresIn } = req.body || {};
+  if (!email) return res.status(400).json({ erro: "E-mail obrigatório" });
 
-  const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
+  try {
+    // Token de convite (expira em até 48h por padrão)
+    const inviteToken = jwt.sign(
+      { type: "invite", email, role },
+      SECRET,
+      { expiresIn: expiresIn || "48h" }
+    );
 
-  res.json({ msg: "Convite gerado", link, token });
+    const link = `${
+      process.env.FRONTEND_URL || "https://api-elipse.vercel.app"
+    }/register?invite=${inviteToken}`;
+
+    // por enquanto só retorna (se quiser depois, usa nodemailer para enviar e-mail)
+    res.json({ ok: true, msg: "Convite gerado com sucesso", link, token: inviteToken });
+  } catch (err) {
+    console.error("Erro ao gerar convite:", err);
+    res.status(500).json({ erro: "Falha ao gerar convite" });
+  }
 });
 
+// Validar convite (usado pelo front para exibir e-mail pré-preenchido)
+app.get("/auth/validate-invite", (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ ok: false, erro: "Token ausente" });
+
+    const payload = jwt.verify(token, SECRET);
+    if (payload.type !== "invite") throw new Error();
+
+    res.json({ ok: true, email: payload.email, role: payload.role });
+  } catch (err) {
+    res.json({ ok: false, erro: "Convite inválido ou expirado" });
+  }
+});
+
+// Registrar usuário a partir do convite
 app.post("/auth/register", async (req, res) => {
-  const { invite, user, senha, role } = req.body;
+  const { invite, senha } = req.body || {};
+  if (!invite || !senha) return res.status(400).json({ erro: "Convite e senha obrigatórios" });
 
   try {
     const payload = jwt.verify(invite, SECRET);
     if (payload.type !== "invite") throw new Error();
 
+    const { email, role } = payload;
+
+    // gera hash da senha
     const saltRounds = 10;
     const hash = await bcrypt.hash(senha, saltRounds);
 
     await pool.query(
       "INSERT INTO users (userName, passHash, roleName) VALUES ($1,$2,$3)",
-      [user, hash, role || "user"]
+      [email, hash, role || "user"]
     );
 
-    res.json({ msg: "Usuário registrado com sucesso!" });
+    res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
   } catch (err) {
+    console.error("Erro no registro:", err);
     res.status(400).json({ erro: "Convite inválido ou expirado" });
   }
 });
+
 
 // --------- CRUD de usuários (exemplo: memória) ---------
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {

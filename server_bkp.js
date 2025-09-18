@@ -2,21 +2,28 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const {Pool} = require("pg");
+const bcrypt = require("bcrypt");
+const { Pool } = require("pg");
 
 const app = express();
 
-// Middleware
+// --------- Middlewares globais ---------
 app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
-app.use(express.json({ limit: "1mb" })); // aceita body JSON até ~1MB
+app.use(express.json({ limit: "1mb" })); // parse JSON antes das rotas
 
 // --------- Config ---------
-const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad";
+const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
 
-// Armazenamento em memória (reinicia a cada deploy/restart)
+// Conexão com PostgreSQL (Render já injeta DATABASE_URL)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// Armazenamento em memória (para dados do Elipse)
 let dados = {};
 
-// Usuários em memória (exemplo)
+// Usuário admin inicial em memória (fallback)
 let usuarios = [
   { id: 1, user: process.env.ADMIN_USER, senha: process.env.ADMIN_PASS, role: "admin" }
 ];
@@ -53,13 +60,11 @@ function getByPath(root, pathStr) {
 function normalizeBody(req) {
   let payload = req.body;
 
-  // Caso venha no padrão { valor: "<base64>" }
   if (payload && typeof payload.valor === "string") {
     const b64 = payload.valor;
     const buf = Buffer.from(b64, "base64");
     let txt = buf.toString("utf8");
-    // remove BOM, se houver
-    txt = txt.replace(/^\uFEFF/, "");
+    txt = txt.replace(/^\uFEFF/, ""); // remove BOM se houver
     try {
       payload = JSON.parse(txt);
     } catch (e) {
@@ -71,20 +76,27 @@ function normalizeBody(req) {
 
   return payload;
 }
+
 // --------- Middlewares de Autenticação ---------
+const FIXED_TOKEN = jwt.sign(
+  { id: "react-dashboard", user: "react", role: "reader" },
+  SECRET
+  // sem expiresIn -> não expira
+);
+console.log("Token fixo para o React:", FIXED_TOKEN);
+
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
 
   const token = authHeader.split(" ")[1];
 
-  // ✅ Aceita o token fixo do React
+  // Aceita o token fixo do React
   if (token === FIXED_TOKEN) {
     req.user = { id: "react-dashboard", user: "react", role: "reader" };
     return next();
   }
 
-  // ✅ Caso contrário, valida como JWT normal
   try {
     req.user = jwt.verify(token, SECRET);
     next();
@@ -100,61 +112,87 @@ function somenteAdmin(req, res, next) {
   next();
 }
 
-// --------- Conexão com o Banco de Dados ---------
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {rejectUnauthorized: false},
+// --------- Rotas de Autenticação ---------
+app.post("/auth/login", async (req, res) => {
+  const { user, senha } = req.body || {};
+  if (!user || !senha) return res.status(400).json({ erro: "Usuário e senha são obrigatórios" });
+
+  try {
+    const result = await pool.query(
+      'SELECT username, passhash, rolename FROM users WHERE username = $1',
+      [user]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ erro: "Credenciais inválidas" });
+    }
+
+    const usuario = result.rows[0];
+    const match = await bcrypt.compare(senha, usuario.passhash);
+    if (!match) return res.status(401).json({ erro: "Credenciais inválidas" });
+
+    const token = jwt.sign(
+      { id: usuario.username, user: usuario.username, role: usuario.rolename },
+      SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error("Erro no login:", err);
+    res.status(500).json({ erro: "Erro interno no servidor" });
+  }
 });
 
-// --------- Rotas de Autenticação ---------
-app.post("/auth/login", (req, res) => {
-  const { user, senha } = req.body;
-  const usuario = usuarios.find((u) => u.user === user && u.senha === senha);
-
-  if (!usuario) return res.status(401).json({ erro: "Credenciais inválidas" });
+// --------- Rotas de Convite e Registro ---------
+app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
+  const { expiresIn } = req.body || {};
 
   const token = jwt.sign(
-    { id: usuario.id, user: usuario.user, role: usuario.role },
+    { type: "invite", user: "adminApi" },
     SECRET,
-    { expiresIn: "8h" }
+    { expiresIn: expiresIn || "1h" }
   );
 
-  res.json({ token });
+  const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
+
+  res.json({ msg: "Convite gerado", link, token });
 });
 
-// --------- Token fixo para o React (somente leitura) ---------
-const FIXED_TOKEN = jwt.sign(
-  { id: "react-dashboard", user: "react", role: "reader" },
-  SECRET
-  // sem expiresIn -> não expira
-);
-console.log("Token fixo para o React:", FIXED_TOKEN);
+app.post("/auth/register", async (req, res) => {
+  const { invite, user, senha, role } = req.body;
 
-// CRUD de usuários (apenas admin)
+  try {
+    const payload = jwt.verify(invite, SECRET);
+    if (payload.type !== "invite") throw new Error();
+
+    const saltRounds = 10;
+    const hash = await bcrypt.hash(senha, saltRounds);
+
+    await pool.query(
+      "INSERT INTO users (userName, passHash, roleName) VALUES ($1,$2,$3)",
+      [user, hash, role || "user"]
+    );
+
+    res.json({ msg: "Usuário registrado com sucesso!" });
+  } catch (err) {
+    res.status(400).json({ erro: "Convite inválido ou expirado" });
+  }
+});
+
+// --------- CRUD de usuários (exemplo: memória) ---------
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
   res.json(usuarios);
 });
 
-app.post("/usuarios", autenticar, somenteAdmin, (req, res) => {
-  const { user, senha, role } = req.body;
-  const novo = { id: Date.now(), user, senha, role: role || "user" };
-  usuarios.push(novo);
-  res.json({ msg: "Usuário criado", usuario: novo });
-});
-
-// --------- Rotas já existentes ---------
-
-// Raiz
+// --------- Rotas do Elipse ---------
 app.get("/", (req, res) => {
   res.send("API Elipse rodando no Render!");
 });
 
-// GET all (alias: /dados e /data) → protegido
 app.get(["/dados", "/data"], autenticar, (req, res) => {
   res.json(dados);
 });
 
-// GET por caminho (alias) → protegido
 app.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const path = req.params[0] || "";
   const ref = getByPath(dados, path);
@@ -166,7 +204,6 @@ app.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
   res.json(ref);
 });
 
-// POST por caminho (alias) → protegido
 app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const path = req.params[0] || "";
 
@@ -195,7 +232,29 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
 });
 
-// 404 JSON amigável
+// Testar conexão com PostgreSQL
+app.get("/test-db", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW() as now");
+    res.json({ ok: true, time: result.rows[0].now });
+  } catch (err) {
+    console.error("Erro ao conectar no banco:", err);
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+// Listar usuários para debug (⚠️ só para teste!)
+app.get("/test-users", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT username, rolename FROM users");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar usuários:", err);
+    res.status(500).json({ erro: err.message });
+  }
+});
+
+// --------- 404 JSON amigável ---------
 app.all("*", (req, res) => {
   res.status(404).json({
     erro: "Rota não encontrada",
@@ -205,9 +264,8 @@ app.all("*", (req, res) => {
   });
 });
 
-// Porta Render
+// --------- Porta ---------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
