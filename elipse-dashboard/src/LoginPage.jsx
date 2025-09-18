@@ -1,6 +1,7 @@
 // LoginPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import jwtDecode from "jwt-decode";
 
 export default function LoginPage() {
     const [user, setUser] = useState("");
@@ -33,6 +34,14 @@ export default function LoginPage() {
             if (resp.ok && data.token) {
                 // ✅ salvar token no localStorage
                 localStorage.setItem("token", data.token);
+
+                // ✅ também salvar informações do usuário decodificado
+                try {
+                    const decoded = jwtDecode(data.token);
+                    localStorage.setItem("userInfo", JSON.stringify(decoded));
+                } catch (err) {
+                    console.warn("Não foi possível decodificar o token:", err);
+                }
 
                 // ✅ redirecionar para o dashboard
                 navigate("/dashboard");
@@ -79,8 +88,7 @@ export default function LoginPage() {
 
                 <button
                     type="submit"
-                    className={`w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 ${loading ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                    className={`w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                     disabled={loading}
                 >
                     {loading ? "Carregando..." : "Entrar"}
