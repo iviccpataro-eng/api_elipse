@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
@@ -360,7 +360,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <>
       <Navbar onLogout={handleLogout} />
       <Routes>
         <Route path="/dashboard" element={<Dashboard token={token} />} />
@@ -373,6 +373,6 @@ export default function App() {
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="/" element={<Dashboard token={token} />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
