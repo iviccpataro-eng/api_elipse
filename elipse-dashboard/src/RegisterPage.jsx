@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function RegisterPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const invite = searchParams.get("invite");
 
-    const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [role, setRole] = useState("");
     const [senha, setSenha] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -24,13 +25,16 @@ export default function RegisterPage() {
 
         const validar = async () => {
             try {
-                const res = await fetch(`${API_BASE}/auth/validate-invite?token=${invite}`);
+                const res = await fetch(
+                    `${API_BASE}/auth/validate-invite?token=${invite}`
+                );
                 const data = await res.json();
                 if (!data.ok) {
                     setError(data.erro || "Convite inválido ou expirado.");
                 } else {
-                    setEmail(data.email);
-                    setRole(data.role);
+                    // Preenche infos vindas do backend
+                    setUsername(data.username || "");
+                    setRole(data.role || "user");
                 }
             } catch (err) {
                 setError("Erro ao validar convite.");
@@ -45,7 +49,7 @@ export default function RegisterPage() {
         setError("");
         setSuccess("");
 
-        if (!senha || !confirm) {
+        if (!username || !senha || !confirm) {
             setError("Preencha todos os campos.");
             return;
         }
@@ -58,7 +62,7 @@ export default function RegisterPage() {
             const res = await fetch(`${API_BASE}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ invite, senha }),
+                body: JSON.stringify({ invite, username, senha }),
             });
 
             const data = await res.json();
@@ -84,16 +88,21 @@ export default function RegisterPage() {
                 {!error && (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">E-mail</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Usuário
+                            </label>
                             <input
-                                type="email"
-                                value={email}
-                                disabled
-                                className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm bg-gray-100 cursor-not-allowed"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                                placeholder="Digite seu usuário"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Perfil</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Perfil
+                            </label>
                             <input
                                 type="text"
                                 value={role}
@@ -102,7 +111,9 @@ export default function RegisterPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Senha</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Senha
+                            </label>
                             <input
                                 type="password"
                                 value={senha}
@@ -112,7 +123,9 @@ export default function RegisterPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Confirmar Senha</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Confirmar Senha
+                            </label>
                             <input
                                 type="password"
                                 value={confirm}

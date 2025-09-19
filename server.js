@@ -144,29 +144,51 @@ app.post("/auth/login", async (req, res) => {
 });
 
 // --------- Rotas de Convite e Registro ---------
+app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
+  const { username, role, expiresIn } = req.body || {};
 
-// Gerar convite (somente admin)
-app.post("/auth/invite", autenticar, somenteAdmin, async (req, res) => {
-  const { email, role = "user", expiresIn } = req.body || {};
-  if (!email) return res.status(400).json({ erro: "E-mail obrigatório" });
+  // monta payload do convite
+  const payload = {
+    type: "invite",
+    createdBy: req.user.user,  // quem gerou
+    role: role || "user",
+  };
+
+  if (username) payload.username = username; // sugestão de login
+
+  const token = jwt.sign(payload, SECRET, { expiresIn: expiresIn || "1h" });
+
+  const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
+
+  res.json({ msg: "Convite gerado", link, token, payload });
+});
+
+app.post("/auth/register", async (req, res) => {
+  const { invite, user, senha } = req.body;
 
   try {
-    // Token de convite (expira em até 48h por padrão)
-    const inviteToken = jwt.sign(
-      { type: "invite", email, role },
-      SECRET,
-      { expiresIn: expiresIn || "48h" }
+    const payload = jwt.verify(invite, SECRET);
+    if (payload.type !== "invite") throw new Error("Token inválido");
+
+    const saltRounds = 10;
+    const hash = await bcrypt.hash(senha, saltRounds);
+
+    const role = payload.role || "user";
+    const username = user || payload.username;
+
+    if (!username) {
+      return res.status(400).json({ erro: "Usuário não informado" });
+    }
+
+    await pool.query(
+      "INSERT INTO users (username, passhash, rolename) VALUES ($1,$2,$3)",
+      [username, hash, role]
     );
 
-    const link = `${
-      process.env.FRONTEND_URL || "https://api-elipse.vercel.app"
-    }/register?invite=${inviteToken}`;
-
-    // por enquanto só retorna (se quiser depois, usa nodemailer para enviar e-mail)
-    res.json({ ok: true, msg: "Convite gerado com sucesso", link, token: inviteToken });
+    res.json({ msg: "Usuário registrado com sucesso!", username, role });
   } catch (err) {
-    console.error("Erro ao gerar convite:", err);
-    res.status(500).json({ erro: "Falha ao gerar convite" });
+    console.error("Erro no registro:", err);
+    res.status(400).json({ erro: "Convite inválido ou expirado" });
   }
 });
 

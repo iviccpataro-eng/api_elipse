@@ -3,8 +3,6 @@ import React, { useState } from "react";
 const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function ToolsPage({ token, user }) {
-    const [email, setEmail] = useState("");
-    const [role, setRole] = useState("user");
     const [expiresIn, setExpiresIn] = useState("1h");
     const [inviteLink, setInviteLink] = useState("");
     const [error, setError] = useState("");
@@ -21,7 +19,7 @@ export default function ToolsPage({ token, user }) {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ email, role, expiresIn }),
+                body: JSON.stringify({ expiresIn }), // 👈 só envia o que o backend entende
             });
 
             const data = await res.json();
@@ -44,21 +42,6 @@ export default function ToolsPage({ token, user }) {
                 <div className="mb-6 bg-white shadow rounded-xl p-6">
                     <h2 className="text-lg font-semibold mb-3">Gerar Convite</h2>
                     <div className="space-y-3">
-                        <input
-                            type="email"
-                            placeholder="E-mail (opcional)"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-xl"
-                        />
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-xl"
-                        >
-                            <option value="user">Usuário</option>
-                            <option value="admin">Administrador</option>
-                        </select>
                         <input
                             type="text"
                             placeholder="Validade (ex: 1h, 24h, 7d)"
@@ -95,7 +78,9 @@ export default function ToolsPage({ token, user }) {
             {/* Outras ferramentas (visíveis a todos) */}
             <div className="bg-white shadow rounded-xl p-6">
                 <h2 className="text-lg font-semibold mb-3">Outras Ferramentas</h2>
-                <p className="text-gray-600">Em breve você poderá configurar tempo de scan, relatórios, etc.</p>
+                <p className="text-gray-600">
+                    Em breve você poderá configurar tempo de scan, relatórios, etc.
+                </p>
             </div>
         </div>
     );
