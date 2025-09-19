@@ -363,7 +363,7 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
       <Routes>
-        <Route path="/dashboard" element={<Dashboard token={token} />} />
+        <Route path="/dashboard/*" element={<Dashboard token={token} />} />
         <Route path="/ar" element={<div className="p-6">Ar Condicionado</div>} />
         <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
         <Route path="/eletrica" element={<div className="p-6">Elétrica</div>} />
