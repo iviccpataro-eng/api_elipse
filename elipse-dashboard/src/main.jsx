@@ -19,13 +19,11 @@ function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <ElipseDashboard />
-            </PrivateRoute>
-          }
+        <Route path="/dashboard/*" element={
+          <PrivateRoute>
+            <ElipseDashboard />
+          </PrivateRoute>
+        }
         />
         <Route path="/register" element={<RegisterPage />} />
       </Routes>
