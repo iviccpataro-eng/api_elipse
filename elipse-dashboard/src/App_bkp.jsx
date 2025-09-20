@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { Routes, Route, Link } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
+
+import ToolsPage from "./ToolsPage";
 
 // === Config ================================================================
 const API_BASE =
@@ -20,7 +24,6 @@ function toNumberMaybe(v) {
   return undefined;
 }
 
-// Caminha dentro do objeto seguindo o path atual
 function getNodeByPath(obj, path) {
   let ref = obj;
   for (const key of path) {
@@ -72,7 +75,12 @@ function LoginPage({ onLogin }) {
       const data = await res.json();
       if (res.ok && data.token) {
         localStorage.setItem("authToken", data.token);
-        onLogin(data.token);
+
+        // ✅ Decodificar e salvar informações do usuário
+        const decoded = jwtDecode(data.token);
+        localStorage.setItem("userInfo", JSON.stringify(decoded));
+
+        onLogin(data.token, decoded);
       } else {
         setErro(data.erro || "Falha ao autenticar");
       }
@@ -118,11 +126,11 @@ function LoginPage({ onLogin }) {
 }
 
 // === Dashboard =============================================================
-function Dashboard({ token, onLogout }) {
+function Dashboard({ token }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [path, setPath] = useState([]); // caminho atual
+  const [path, setPath] = useState([]);
   const [filter, setFilter] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [intervalSec, setIntervalSec] = useState(15);
@@ -132,9 +140,7 @@ function Dashboard({ token, onLogout }) {
     setLoading(true);
     setError("");
     try {
-      // token fixo do Elipse (env var)
       const fixedToken = import.meta.env.VITE_REACT_TOKEN;
-
       const res = await fetch(`${API_BASE}/dados`, {
         cache: "no-store",
         headers: { Authorization: `Bearer ${fixedToken}` },
@@ -151,7 +157,6 @@ function Dashboard({ token, onLogout }) {
     }
   };
 
-
   useEffect(() => { fetchData(); }, [token]);
   useEffect(() => {
     if (!autoRefresh) return () => { };
@@ -160,10 +165,7 @@ function Dashboard({ token, onLogout }) {
     return () => timerRef.current && clearInterval(timerRef.current);
   }, [autoRefresh, intervalSec]);
 
-  // nó atual (sub-árvore)
   const currentNode = useMemo(() => getNodeByPath(data, path) ?? data, [data, path]);
-
-  // checa se é nó final (tem info+data)
   const isLeafNode = currentNode && typeof currentNode === "object" &&
     (Array.isArray(currentNode.info) || Array.isArray(currentNode.data));
 
@@ -173,41 +175,6 @@ function Dashboard({ token, onLogout }) {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-dark/80 backdrop-blur border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <h1 className="text-xl font-semibold">TJRJ - Dashboard</h1>
-          <div className="ml-auto flex items-center gap-2">
-            <input
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filtrar itens"
-              className="px-3 py-2 rounded-xl border text-sm"
-            />
-            <Button onClick={fetchData}>🔄 Atualizar</Button>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-              /> Auto
-            </label>
-            <input
-              type="number"
-              min={5}
-              value={intervalSec}
-              onChange={(e) => setIntervalSec(Number(e.target.value) || 15)}
-              className="w-20 px-2 py-2 rounded-xl border text-sm"
-              title="Intervalo (s)"
-            />
-            <Button className="bg-red-500 text-white hover:bg-red-600" onClick={onLogout}>
-              🚪 Logout
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Breadcrumbs */}
       <div className="max-w-7xl mx-auto p-4">
         <div className="mb-3 text-sm flex items-center gap-2 flex-wrap">
           <Button className="bg-gray-50" onClick={goHome}>🏠 Home</Button>
@@ -224,7 +191,6 @@ function Dashboard({ token, onLogout }) {
         {loading && <div className="mb-3 text-sm text-gray-500">Carregando…</div>}
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
-        {/* Se for nó final: mostra info + data */}
         {isLeafNode ? (
           <LeafNode node={currentNode} filter={filter} />
         ) : (
@@ -235,7 +201,7 @@ function Dashboard({ token, onLogout }) {
   );
 }
 
-// === Renderização de pasta =================================================
+// === Folder Node ===========================================================
 function FolderNode({ node, filter, onOpen }) {
   if (!node || typeof node !== "object") return null;
   const keys = Object.keys(node).filter((k) =>
@@ -258,7 +224,7 @@ function FolderNode({ node, filter, onOpen }) {
   );
 }
 
-// === Renderização de folha (equipamento) ==================================
+// === Leaf Node =============================================================
 function LeafNode({ node, filter }) {
   const info = node.info || [];
   const data = node.data || [];
@@ -288,18 +254,14 @@ function LeafNode({ node, filter }) {
             const nomNum = toNumberMaybe(nominal);
 
             if (hasGraph && valNum !== undefined && nomNum) {
-              // Definindo limites (±10%)
               const min = nomNum * 0.9;
               const max = nomNum * 1.1;
-
-              // Normalizar o valor dentro do range
               const clamped = Math.max(min, Math.min(valNum, max));
               const percent = ((clamped - min) / (max - min)) * 100;
 
-              // Definir cor conforme proximidade
-              let fill = "#22c55e"; // verde
-              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316"; // laranja
-              if (valNum < min || valNum > max) fill = "#ef4444"; // vermelho
+              let fill = "#22c55e";
+              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
+              if (valNum < min || valNum > max) fill = "#ef4444";
 
               const chartData = [{ name, value: percent, fill }];
 
@@ -316,18 +278,8 @@ function LeafNode({ node, filter }) {
                       endAngle={0}
                       data={chartData}
                     >
-                      <PolarAngleAxis
-                        type="number"
-                        domain={[0, 100]}
-                        angleAxisId={0}
-                        tick={false}
-                      />
-                      <RadialBar
-                        dataKey="value"
-                        cornerRadius={10}
-                        background
-                        clockWise
-                      />
+                      <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                      <RadialBar dataKey="value" cornerRadius={10} background clockWise />
                     </RadialBarChart>
                   </div>
 
@@ -341,7 +293,6 @@ function LeafNode({ node, filter }) {
               );
             }
 
-            // Se não tiver gráfico, card normal
             return (
               <div key={idx} className="rounded-xl border bg-white shadow p-4">
                 <div className="font-medium">{name}</div>
@@ -361,18 +312,68 @@ function LeafNode({ node, filter }) {
   );
 }
 
+// === Navbar ================================================================
+function Navbar({ onLogout }) {
+  return (
+    <div className="bg-gray-800 text-white px-4 py-3 flex gap-4">
+      <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+      <Link to="/ar" className="hover:underline">Ar Condicionado</Link>
+      <Link to="/iluminacao" className="hover:underline">Iluminação</Link>
+      <Link to="/eletrica" className="hover:underline">Elétrica</Link>
+      <Link to="/hidraulica" className="hover:underline">Hidráulica</Link>
+      <Link to="/incendio" className="hover:underline">Incêndio</Link>
+      <Link to="/comunicacao" className="hover:underline">Comunicação</Link>
+      <Link to="/tools" className="hover:underline">Ferramentas</Link>
+      <button
+        onClick={onLogout}
+        className="ml-auto bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
+      >
+        Logout
+      </button>
+    </div>
+  );
+}
+
 // === Root App ==============================================================
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
+  const [user, setUser] = useState(() => {
+    const t = localStorage.getItem("authToken");
+    return t ? jwtDecode(t) : null;
+  });
+
+  const handleLogin = (tk, decodedUser) => {
+    localStorage.setItem("authToken", tk);
+    setToken(tk);
+    setUser(decodedUser || jwtDecode(tk));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
+    localStorage.removeItem("userInfo");
     setToken(null);
+    setUser(null);
   };
 
   if (!token) {
-    return <LoginPage onLogin={setToken} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
 
-  return <Dashboard token={token} onLogout={handleLogout} />;
+  return (
+    <>
+      <Navbar onLogout={handleLogout} />
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard token={token} />} />
+        <Route path="/ar" element={<div className="p-6">Ar Condicionado</div>} />
+        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
+        <Route path="/eletrica" element={<div className="p-6">Elétrica</div>} />
+        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
+        <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
+        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
+        {/* Rota default → vai para dashboard */}
+        <Route path="/" element={<Dashboard token={token} />} />
+      </Routes>
+    </>
+  );
 }
