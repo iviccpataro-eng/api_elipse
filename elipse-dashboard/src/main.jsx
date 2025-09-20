@@ -6,7 +6,6 @@ import "./index.css";
 import ElipseDashboard from "./App";
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
-import ToolsPage from "./ToolsPage";
 
 // 🔒 Rota protegida: só deixa acessar se tiver token
 function PrivateRoute({ children }) {
@@ -18,7 +17,10 @@ function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Login */}
         <Route path="/" element={<LoginPage />} />
+
+        {/* Área protegida do sistema */}
         <Route
           path="/dashboard/*"
           element={
@@ -27,8 +29,9 @@ function AppRouter() {
             </PrivateRoute>
           }
         />
+
+        {/* Registro de usuário (via convite) */}
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/tools" element={<ToolsPage />} />
       </Routes>
     </BrowserRouter>
   );
