@@ -163,35 +163,6 @@ app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
   res.json({ msg: "Convite gerado", link, token, payload });
 });
 
-app.post("/auth/register", async (req, res) => {
-  const { invite, user, senha } = req.body;
-
-  try {
-    const payload = jwt.verify(invite, SECRET);
-    if (payload.type !== "invite") throw new Error("Token inválido");
-
-    const saltRounds = 10;
-    const hash = await bcrypt.hash(senha, saltRounds);
-
-    const role = payload.role || "user";
-    const username = user || payload.username;
-
-    if (!username) {
-      return res.status(400).json({ erro: "Usuário não informado" });
-    }
-
-    await pool.query(
-      "INSERT INTO users (username, passhash, rolename) VALUES ($1,$2,$3)",
-      [username, hash, role]
-    );
-
-    res.json({ msg: "Usuário registrado com sucesso!", username, role });
-  } catch (err) {
-    console.error("Erro no registro:", err);
-    res.status(400).json({ erro: "Convite inválido ou expirado" });
-  }
-});
-
 // Validar convite (usado pelo front para exibir e-mail pré-preenchido)
 app.get("/auth/validate-invite", (req, res) => {
   try {
