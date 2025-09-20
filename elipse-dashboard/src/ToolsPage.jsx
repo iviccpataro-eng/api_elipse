@@ -1,12 +1,16 @@
+// ToolsPage.jsx
 import React, { useState } from "react";
 
 const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-export default function ToolsPage({ token, user }) {
+export default function ToolsPage({ user }) {
     const [expiresIn, setExpiresIn] = useState("1h");
     const [inviteLink, setInviteLink] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // 👉 sempre pega o token salvo no localStorage
+    const token = localStorage.getItem("authToken");
 
     const handleGenerateInvite = async () => {
         setError("");
@@ -19,7 +23,7 @@ export default function ToolsPage({ token, user }) {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ expiresIn }), // 👈 só envia o que o backend entende
+                body: JSON.stringify({ expiresIn }),
             });
 
             const data = await res.json();
@@ -37,7 +41,6 @@ export default function ToolsPage({ token, user }) {
         <div className="p-6">
             <h1 className="text-2xl font-bold mb-4">Ferramentas do Sistema</h1>
 
-            {/* Painel de Convite só aparece para admin */}
             {user?.role === "admin" && (
                 <div className="mb-6 bg-white shadow rounded-xl p-6">
                     <h2 className="text-lg font-semibold mb-3">Gerar Convite</h2>
@@ -75,12 +78,9 @@ export default function ToolsPage({ token, user }) {
                 </div>
             )}
 
-            {/* Outras ferramentas (visíveis a todos) */}
             <div className="bg-white shadow rounded-xl p-6">
                 <h2 className="text-lg font-semibold mb-3">Outras Ferramentas</h2>
-                <p className="text-gray-600">
-                    Em breve você poderá configurar tempo de scan, relatórios, etc.
-                </p>
+                <p className="text-gray-600">Em breve você poderá configurar tempo de scan, relatórios, etc.</p>
             </div>
         </div>
     );
