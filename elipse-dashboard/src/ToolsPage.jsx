@@ -8,10 +8,10 @@ export default function ToolsPage({ user }) {
     const [inviteLink, setInviteLink] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    console.log("Token usado no Tools:", token);
+
     // 👉 sempre pega o token salvo no localStorage
     const token = localStorage.getItem("authToken");
-
+    console.log("Token usado no Tools:", token);
     const handleGenerateInvite = async () => {
         setError("");
         setInviteLink("");
