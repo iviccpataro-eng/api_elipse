@@ -21,7 +21,7 @@ export default function ToolsPage({ user }) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
                 },
                 body: JSON.stringify({ expiresIn }),
             });
