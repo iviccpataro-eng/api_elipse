@@ -87,23 +87,30 @@ console.log("Token fixo para o React:", FIXED_TOKEN);
 
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
-  if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
+  if (!authHeader) {
+    console.warn("[AUTH] Nenhum token enviado");
+    return res.status(401).json({ erro: "Token não enviado" });
+  }
 
   const token = authHeader.split(" ")[1];
+  console.log("[AUTH] Token recebido:", token);
 
   // Aceita o token fixo do React
   if (token === FIXED_TOKEN) {
+    console.log("[AUTH] Token fixo reconhecido ✅");
     req.user = { id: "react-dashboard", user: "react", role: "reader" };
     return next();
   }
 
   try {
-    req.user = jwt.verify(token, SECRET);
+    const payload = jwt.verify(token, SECRET);
+    console.log("[AUTH] Token válido de usuário:", payload);
+    req.user = payload;
     next();
   } catch (err) {
+    console.error("[AUTH] Token inválido ❌:", err.message);
     res.status(403).json({ erro: "Token inválido" });
   }
-  console.log("Token recebido no header:", token);
 }
 
 function somenteAdmin(req, res, next) {
