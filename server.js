@@ -9,7 +9,7 @@ const app = express();
 
 // --------- Middlewares globais ---------
 app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
-app.use(express.json({ limit: "1mb" })); // parse JSON antes das rotas
+app.use(express.json({ limit: "1mb" }));
 
 // --------- Config ---------
 const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
@@ -56,7 +56,6 @@ function getByPath(root, pathStr) {
   return ref;
 }
 
-// Converte body: aceita JSON direto OU { valor: "<base64>" }
 function normalizeBody(req) {
   let payload = req.body;
 
@@ -64,7 +63,7 @@ function normalizeBody(req) {
     const b64 = payload.valor;
     const buf = Buffer.from(b64, "base64");
     let txt = buf.toString("utf8");
-    txt = txt.replace(/^\uFEFF/, ""); // remove BOM se houver
+    txt = txt.replace(/^\uFEFF/, "");
     try {
       payload = JSON.parse(txt);
     } catch (e) {
@@ -82,7 +81,7 @@ const FIXED_TOKEN = jwt.sign(
   { id: "react-dashboard", user: "react", role: "reader" },
   SECRET
 );
-console.log("Token fixo para o React:", FIXED_TOKEN);
+console.log("[BOOT] Token fixo para o React:", FIXED_TOKEN);
 
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -94,26 +93,26 @@ function autenticar(req, res, next) {
   const token = authHeader.split(" ")[1];
   console.log("[AUTH] Token recebido:", token);
 
-  // Aceita o token fixo do React
   if (token === FIXED_TOKEN) {
-    console.log("[AUTH] Token fixo reconhecido ✅");
+    console.log("[AUTH] ✅ Token fixo reconhecido");
     req.user = { id: "react-dashboard", user: "react", role: "reader" };
     return next();
   }
 
   try {
     const payload = jwt.verify(token, SECRET);
-    console.log("[AUTH] Token válido de usuário:", payload);
+    console.log("[AUTH] ✅ Token válido:", payload);
     req.user = payload;
     next();
   } catch (err) {
-    console.error("[AUTH] Token inválido ❌:", err.message);
+    console.error("[AUTH] ❌ Token inválido:", err.message);
     res.status(403).json({ erro: "Token inválido" });
   }
 }
 
 function somenteAdmin(req, res, next) {
   if (req.user.role !== "admin") {
+    console.warn("[AUTH] ❌ Tentativa de acesso sem permissão:", req.user);
     return res.status(403).json({ erro: "Apenas administradores têm acesso." });
   }
   next();
@@ -126,25 +125,30 @@ app.post("/auth/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      'SELECT username, passhash, rolename FROM users WHERE username = $1',
+      "SELECT username, passhash, rolename FROM users WHERE username = $1",
       [user]
     );
     if (result.rows.length === 0) {
+      console.warn("[LOGIN] ❌ Usuário não encontrado:", user);
       return res.status(401).json({ erro: "Credenciais inválidas" });
     }
 
     const usuario = result.rows[0];
     const match = await bcrypt.compare(senha, usuario.passhash);
-    if (!match) return res.status(401).json({ erro: "Credenciais inválidas" });
+    if (!match) {
+      console.warn("[LOGIN] ❌ Senha incorreta para:", user);
+      return res.status(401).json({ erro: "Credenciais inválidas" });
+    }
 
     const token = jwt.sign(
       { id: usuario.username, user: usuario.username, role: usuario.rolename },
       SECRET
     );
 
+    console.log("[LOGIN] ✅ Usuário autenticado:", usuario.username);
     res.json({ token });
   } catch (err) {
-    console.error("Erro no login:", err);
+    console.error("[LOGIN] Erro:", err);
     res.status(500).json({ erro: "Erro interno no servidor" });
   }
 });
@@ -153,23 +157,20 @@ app.post("/auth/login", async (req, res) => {
 app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
   const { username, role, expiresIn } = req.body || {};
 
-  // monta payload do convite
   const payload = {
     type: "invite",
-    createdBy: req.user.user,  // quem gerou
-    role: role || "user",
+    createdBy: req.user.user,
+    role: role || "user"
   };
-
-  if (username) payload.username = username; // sugestão de login
+  if (username) payload.username = username;
 
   const token = jwt.sign(payload, SECRET, { expiresIn: expiresIn || "1h" });
-
   const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
 
+  console.log("[INVITE] ✅ Convite gerado para:", username || "(sem usuário)");
   res.json({ msg: "Convite gerado", link, token, payload });
 });
 
-// Validar convite (usado pelo front para exibir e-mail pré-preenchido)
 app.get("/auth/validate-invite", (req, res) => {
   try {
     const { token } = req.query;
@@ -178,13 +179,14 @@ app.get("/auth/validate-invite", (req, res) => {
     const payload = jwt.verify(token, SECRET);
     if (payload.type !== "invite") throw new Error();
 
+    console.log("[INVITE] ✅ Convite validado:", payload);
     res.json({ ok: true, email: payload.email, role: payload.role });
-  } catch (err) {
+  } catch {
+    console.warn("[INVITE] ❌ Convite inválido");
     res.json({ ok: false, erro: "Convite inválido ou expirado" });
   }
 });
 
-// Registrar usuário a partir do convite
 app.post("/auth/register", async (req, res) => {
   const { invite, senha } = req.body || {};
   if (!invite || !senha) return res.status(400).json({ erro: "Convite e senha obrigatórios" });
@@ -194,26 +196,24 @@ app.post("/auth/register", async (req, res) => {
     if (payload.type !== "invite") throw new Error();
 
     const { email, role } = payload;
-
-    // gera hash da senha
-    const saltRounds = 10;
-    const hash = await bcrypt.hash(senha, saltRounds);
+    const hash = await bcrypt.hash(senha, 10);
 
     await pool.query(
       "INSERT INTO users (userName, passHash, roleName) VALUES ($1,$2,$3)",
       [email, hash, role || "user"]
     );
 
+    console.log("[REGISTER] ✅ Novo usuário registrado:", email);
     res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
   } catch (err) {
-    console.error("Erro no registro:", err);
+    console.error("[REGISTER] ❌ Erro:", err);
     res.status(400).json({ erro: "Convite inválido ou expirado" });
   }
 });
 
-
 // --------- CRUD de usuários (exemplo: memória) ---------
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
+  console.log("[USUÁRIOS] Listando usuários em memória");
   res.json(usuarios);
 });
 
@@ -223,6 +223,7 @@ app.get("/", (req, res) => {
 });
 
 app.get(["/dados", "/data"], autenticar, (req, res) => {
+  console.log("[E3] GET /dados");
   res.json(dados);
 });
 
@@ -230,24 +231,22 @@ app.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const path = req.params[0] || "";
   const ref = getByPath(dados, path);
   if (typeof ref === "undefined") {
-    return res
-      .status(404)
-      .json({ erro: "Caminho não encontrado", caminho: path });
+    console.warn("[E3] ❌ Caminho não encontrado:", path);
+    return res.status(404).json({ erro: "Caminho não encontrado", caminho: path });
   }
+  console.log("[E3] ✅ GET /dados/", path);
   res.json(ref);
 });
 
 app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const path = req.params[0] || "";
-
   let payload;
+
   try {
     payload = normalizeBody(req);
   } catch (e) {
-    return res.status(400).json({
-      erro: e.message,
-      detalhe: e.cause ? e.cause.message : undefined,
-    });
+    console.error("[E3] ❌ Erro no body:", e.message);
+    return res.status(400).json({ erro: e.message, detalhe: e.cause?.message });
   }
 
   if (typeof payload === "undefined") {
@@ -255,50 +254,51 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   }
 
   setByPath(dados, path, payload);
-
   console.log(
-    `[${new Date().toISOString()}] POST /dados/${path}`,
-    JSON.stringify(payload).slice(0, 400) +
-      (JSON.stringify(payload).length > 400 ? "…(trunc)" : "")
+    `[E3] ✅ POST /dados/${path}`,
+    JSON.stringify(payload).slice(0, 300) +
+      (JSON.stringify(payload).length > 300 ? "…(trunc)" : "")
   );
 
   res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
 });
 
-// Testar conexão com PostgreSQL
+// --------- Testes ---------
 app.get("/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW() as now");
+    console.log("[DB] ✅ Conexão OK:", result.rows[0].now);
     res.json({ ok: true, time: result.rows[0].now });
   } catch (err) {
-    console.error("Erro ao conectar no banco:", err);
+    console.error("[DB] ❌ Erro:", err.message);
     res.status(500).json({ ok: false, erro: err.message });
   }
 });
 
-// Listar usuários para debug (⚠️ só para teste!)
 app.get("/test-users", async (req, res) => {
   try {
     const result = await pool.query("SELECT username, rolename FROM users");
+    console.log("[DB] ✅ Lista de usuários retornada");
     res.json(result.rows);
   } catch (err) {
-    console.error("Erro ao buscar usuários:", err);
+    console.error("[DB] ❌ Erro:", err.message);
     res.status(500).json({ erro: err.message });
   }
 });
 
-// --------- 404 JSON amigável ---------
+// --------- 404 ---------
 app.all("*", (req, res) => {
+  console.warn("[404] Rota não encontrada:", req.method, req.originalUrl);
   res.status(404).json({
     erro: "Rota não encontrada",
     method: req.method,
     url: req.originalUrl,
-    dica: "Use /dados/... ou /data/... com POST para salvar e GET para ler.",
+    dica: "Use /dados/... ou /data/... com POST para salvar e GET para ler."
   });
 });
 
 // --------- Porta ---------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`[BOOT] Servidor rodando na porta ${PORT}`);
 });
