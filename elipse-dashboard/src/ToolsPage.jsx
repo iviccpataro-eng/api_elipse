@@ -8,7 +8,7 @@ export default function ToolsPage({ user }) {
     const [inviteLink, setInviteLink] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-
+    console.log("Token usado no Tools:", token);
     // 👉 sempre pega o token salvo no localStorage
     const token = localStorage.getItem("authToken");
 
@@ -21,7 +21,7 @@ export default function ToolsPage({ user }) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ expiresIn }),
             });

@@ -103,6 +103,7 @@ function autenticar(req, res, next) {
   } catch (err) {
     res.status(403).json({ erro: "Token inválido" });
   }
+  console.log("Token recebido no header:", token);
 }
 
 function somenteAdmin(req, res, next) {
