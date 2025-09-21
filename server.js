@@ -81,7 +81,6 @@ function normalizeBody(req) {
 const FIXED_TOKEN = jwt.sign(
   { id: "react-dashboard", user: "react", role: "reader" },
   SECRET
-  // sem expiresIn -> não expira
 );
 console.log("Token fixo para o React:", FIXED_TOKEN);
 
@@ -140,8 +139,7 @@ app.post("/auth/login", async (req, res) => {
 
     const token = jwt.sign(
       { id: usuario.username, user: usuario.username, role: usuario.rolename },
-      SECRET,
-      { expiresIn: "8h" }
+      SECRET
     );
 
     res.json({ token });
