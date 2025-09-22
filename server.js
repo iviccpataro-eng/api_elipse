@@ -86,7 +86,7 @@ console.log("[BOOT] Token fixo para o React:", FIXED_TOKEN);
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (!authHeader) {
-    console.warn("[AUTH] Nenhum token enviado");
+    console.warn("[AUTH] ❌ Nenhum token enviado");
     return res.status(401).json({ erro: "Token não enviado" });
   }
 
@@ -101,7 +101,7 @@ function autenticar(req, res, next) {
 
   try {
     const payload = jwt.verify(token, SECRET);
-    console.log("[AUTH] ✅ Token válido:", payload);
+    console.log("[AUTH] ✅ Token de usuário válido:", payload);
     req.user = payload;
     next();
   } catch (err) {
@@ -112,7 +112,7 @@ function autenticar(req, res, next) {
 
 function somenteAdmin(req, res, next) {
   if (req.user.role !== "admin") {
-    console.warn("[AUTH] ❌ Tentativa de acesso sem permissão:", req.user);
+    console.warn("[AUTH] ❌ Acesso negado. Usuário não é admin:", req.user);
     return res.status(403).json({ erro: "Apenas administradores têm acesso." });
   }
   next();
@@ -142,13 +142,14 @@ app.post("/auth/login", async (req, res) => {
 
     const token = jwt.sign(
       { id: usuario.username, user: usuario.username, role: usuario.rolename },
-      SECRET
+      SECRET,
+      { expiresIn: "8h" }
     );
 
     console.log("[LOGIN] ✅ Usuário autenticado:", usuario.username);
     res.json({ token });
   } catch (err) {
-    console.error("[LOGIN] Erro:", err);
+    console.error("[LOGIN] ❌ Erro:", err);
     res.status(500).json({ erro: "Erro interno no servidor" });
   }
 });
