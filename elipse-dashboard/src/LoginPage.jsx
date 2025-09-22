@@ -32,10 +32,10 @@ export default function LoginPage() {
             }
 
             if (resp.ok && data.token) {
-                // ✅ salvar token no localStorage
-                localStorage.setItem("token", data.token);
+                // ✅ salvar token no localStorage com a chave correta
+                localStorage.setItem("authToken", data.token);
 
-                // ✅ também salvar informações do usuário decodificado
+                // ✅ salvar informações do usuário decodificado
                 try {
                     const decoded = jwtDecode(data.token);
                     localStorage.setItem("userInfo", JSON.stringify(decoded));
