@@ -1,17 +1,22 @@
 {
-  "name": "elipse-dashboard",
+  "name": "elipse-app",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "npm run build",
+    "start": "node server.js"
   },
   "dependencies": {
-    "jwt-decode": "^4.0.0",
-    "npm": "^11.6.0",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",

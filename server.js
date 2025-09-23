@@ -4,6 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { Pool } = require("pg");
+const path = require("path");
 
 const app = express();
 
@@ -287,9 +288,19 @@ app.get("/test-users", async (req, res) => {
   }
 });
 
-// --------- 404 ---------
+// --------- Servir React buildado ---------
+app.use(express.static(path.join(__dirname, "elipse-dashboard", "dist")));
+
+app.get("*", (req, res, next) => {
+  if (req.originalUrl.startsWith("/auth") || req.originalUrl.startsWith("/dados") || req.originalUrl.startsWith("/data") || req.originalUrl.startsWith("/usuarios") || req.originalUrl.startsWith("/test")) {
+    return next(); // deixa cair no bloco do 404 JSON
+  }
+  res.sendFile(path.join(__dirname, "elipse-dashboard", "dist", "index.html"));
+});
+
+// --------- 404 JSON amigável ---------
 app.all("*", (req, res) => {
-  console.warn("[404] Rota não encontrada:", req.method, req.originalUrl);
+  console.warn("[404] Rota não encontrada (API):", req.method, req.originalUrl);
   res.status(404).json({
     erro: "Rota não encontrada",
     method: req.method,
