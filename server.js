@@ -1,10 +1,15 @@
 // server.js
-const express = require("express");
-const cors = require("cors");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const { Pool } = require("pg");
-const path = require("path");
+import express from "express";
+import cors from "cors";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import pkg from "pg";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+
+const { Pool } = pkg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 
