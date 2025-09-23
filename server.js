@@ -294,13 +294,29 @@ app.get("/test-users", async (req, res) => {
 });
 
 // --------- Servir React buildado ---------
-app.use(express.static(path.join(__dirname, "elipse-dashboard", "dist")));
+const clientBuildPath = path.resolve(__dirname, "elipse-dashboard", "dist");
+
+console.log("[BOOT] Procurando build do React em:", clientBuildPath);
+
+app.use(express.static(clientBuildPath));
 
 app.get("*", (req, res, next) => {
-  if (req.originalUrl.startsWith("/auth") || req.originalUrl.startsWith("/dados") || req.originalUrl.startsWith("/data") || req.originalUrl.startsWith("/usuarios") || req.originalUrl.startsWith("/test")) {
+  if (
+    req.originalUrl.startsWith("/auth") ||
+    req.originalUrl.startsWith("/dados") ||
+    req.originalUrl.startsWith("/data") ||
+    req.originalUrl.startsWith("/usuarios") ||
+    req.originalUrl.startsWith("/test")
+  ) {
     return next(); // deixa cair no bloco do 404 JSON
   }
-  res.sendFile(path.join(__dirname, "elipse-dashboard", "dist", "index.html"));
+
+  res.sendFile(path.join(clientBuildPath, "index.html"), (err) => {
+    if (err) {
+      console.error("[SERVE] Erro ao servir index.html:", err);
+      res.status(500).send("Erro interno ao servir o frontend.");
+    }
+  });
 });
 
 // --------- 404 JSON amigável ---------
@@ -313,6 +329,7 @@ app.all("*", (req, res) => {
     dica: "Use /dados/... ou /data/... com POST para salvar e GET para ler."
   });
 });
+
 
 // --------- Porta ---------
 const PORT = process.env.PORT || 3000;
