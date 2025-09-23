@@ -1,6 +1,7 @@
 {
   "name": "api_elipse",
   "version": "1.0.0",
+  "type": "module",
   "description": "API simples para integração com Elipse E3",
   "main": "server.js",
   "scripts": {
