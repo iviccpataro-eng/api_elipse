@@ -64,7 +64,6 @@ function getByPath(root, pathStr) {
 
 function normalizeBody(req) {
   let payload = req.body;
-
   if (payload && typeof payload.valor === "string") {
     const b64 = payload.valor;
     const buf = Buffer.from(b64, "base64");
@@ -78,7 +77,6 @@ function normalizeBody(req) {
       throw err;
     }
   }
-
   return payload;
 }
 
@@ -162,19 +160,18 @@ app.post("/auth/login", async (req, res) => {
 
 // --------- Rotas de Convite e Registro ---------
 app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
-  const { username, role, expiresIn } = req.body || {};
+  const { role, expiresIn } = req.body || {};
 
   const payload = {
     type: "invite",
     createdBy: req.user.user,
     role: role || "user"
   };
-  if (username) payload.username = username;
 
   const token = jwt.sign(payload, SECRET, { expiresIn: expiresIn || "1h" });
   const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
 
-  console.log("[INVITE] ✅ Convite gerado para:", username || "(sem usuário)");
+  console.log("[INVITE] ✅ Convite gerado com role:", role || "user");
   res.json({ msg: "Convite gerado", link, token, payload });
 });
 
@@ -187,7 +184,7 @@ app.get("/auth/validate-invite", (req, res) => {
     if (payload.type !== "invite") throw new Error();
 
     console.log("[INVITE] ✅ Convite validado:", payload);
-    res.json({ ok: true, email: payload.email, role: payload.role });
+    res.json({ ok: true, role: payload.role });
   } catch {
     console.warn("[INVITE] ❌ Convite inválido");
     res.json({ ok: false, erro: "Convite inválido ou expirado" });
@@ -195,22 +192,29 @@ app.get("/auth/validate-invite", (req, res) => {
 });
 
 app.post("/auth/register", async (req, res) => {
-  const { invite, senha } = req.body || {};
-  if (!invite || !senha) return res.status(400).json({ erro: "Convite e senha obrigatórios" });
+  const { invite, senha, username } = req.body || {};
+  if (!invite || !senha || !username) {
+    return res.status(400).json({ erro: "Convite, usuário e senha são obrigatórios" });
+  }
 
   try {
     const payload = jwt.verify(invite, SECRET);
     if (payload.type !== "invite") throw new Error();
 
-    const { email, role } = payload;
+    const { role } = payload;
     const hash = await bcrypt.hash(senha, 10);
 
+    const check = await pool.query("SELECT 1 FROM users WHERE username = $1", [username]);
+    if (check.rows.length > 0) {
+      return res.status(400).json({ erro: "Usuário já existe." });
+    }
+
     await pool.query(
-      "INSERT INTO users (userName, passHash, roleName) VALUES ($1,$2,$3)",
-      [email, hash, role || "user"]
+      "INSERT INTO users (username, passhash, rolename) VALUES ($1,$2,$3)",
+      [username, hash, role || "user"]
     );
 
-    console.log("[REGISTER] ✅ Novo usuário registrado:", email);
+    console.log("[REGISTER] ✅ Novo usuário registrado:", username);
     res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
   } catch (err) {
     console.error("[REGISTER] ❌ Erro:", err);
@@ -218,7 +222,7 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-// --------- CRUD de usuários (exemplo: memória) ---------
+// --------- CRUD de usuários (apenas exemplo em memória) ---------
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
   console.log("[USUÁRIOS] Listando usuários em memória");
   res.json(usuarios);
@@ -261,12 +265,7 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   }
 
   setByPath(dados, path, payload);
-  console.log(
-    `[E3] ✅ POST /dados/${path}`,
-    JSON.stringify(payload).slice(0, 300) +
-      (JSON.stringify(payload).length > 300 ? "…(trunc)" : "")
-  );
-
+  console.log(`[E3] ✅ POST /dados/${path}`, JSON.stringify(payload).slice(0, 300));
   res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
 });
 
@@ -295,9 +294,7 @@ app.get("/test-users", async (req, res) => {
 
 // --------- Servir React buildado ---------
 const clientBuildPath = path.resolve(__dirname, "elipse-dashboard", "dist");
-
 console.log("[BOOT] Procurando build do React em:", clientBuildPath);
-
 app.use(express.static(clientBuildPath));
 
 app.get("*", (req, res, next) => {
@@ -308,7 +305,7 @@ app.get("*", (req, res, next) => {
     req.originalUrl.startsWith("/usuarios") ||
     req.originalUrl.startsWith("/test")
   ) {
-    return next(); // deixa cair no bloco do 404 JSON
+    return next();
   }
 
   res.sendFile(path.join(clientBuildPath, "index.html"), (err) => {
@@ -329,7 +326,6 @@ app.all("*", (req, res) => {
     dica: "Use /dados/... ou /data/... com POST para salvar e GET para ler."
   });
 });
-
 
 // --------- Porta ---------
 const PORT = process.env.PORT || 3000;
