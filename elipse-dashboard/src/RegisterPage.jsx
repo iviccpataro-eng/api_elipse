@@ -10,6 +10,8 @@ export default function RegisterPage() {
     const invite = searchParams.get("invite");
 
     const [username, setUsername] = useState("");
+    const [fullname, setFullname] = useState("");
+    const [matricula, setMatricula] = useState("");
     const [role, setRole] = useState("");
     const [senha, setSenha] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -32,8 +34,6 @@ export default function RegisterPage() {
                 if (!data.ok) {
                     setError(data.erro || "Convite inválido ou expirado.");
                 } else {
-                    // Preenche infos vindas do backend
-                    setUsername(data.username || "");
                     setRole(data.role || "user");
                 }
             } catch (err) {
@@ -49,8 +49,8 @@ export default function RegisterPage() {
         setError("");
         setSuccess("");
 
-        if (!username || !senha || !confirm) {
-            setError("Preencha todos os campos.");
+        if (!username || !fullname || !senha || !confirm) {
+            setError("Preencha todos os campos obrigatórios.");
             return;
         }
         if (senha !== confirm) {
@@ -62,7 +62,7 @@ export default function RegisterPage() {
             const res = await fetch(`${API_BASE}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ invite, username, senha }),
+                body: JSON.stringify({ invite, username, senha, fullname, matricula }),
             });
 
             const data = await res.json();
@@ -89,7 +89,7 @@ export default function RegisterPage() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Usuário
+                                Usuário <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -97,6 +97,30 @@ export default function RegisterPage() {
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
                                 placeholder="Digite seu usuário"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Nome completo <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={fullname}
+                                onChange={(e) => setFullname(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                                placeholder="Digite seu nome completo"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Matrícula
+                            </label>
+                            <input
+                                type="text"
+                                value={matricula}
+                                onChange={(e) => setMatricula(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                                placeholder="Digite sua matrícula (opcional)"
                             />
                         </div>
                         <div>
@@ -112,7 +136,7 @@ export default function RegisterPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Senha
+                                Senha <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="password"
@@ -124,7 +148,7 @@ export default function RegisterPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Confirmar Senha
+                                Confirmar Senha <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="password"
