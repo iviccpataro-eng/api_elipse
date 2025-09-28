@@ -14,7 +14,17 @@ const __dirname = dirname(__filename);
 const app = express();
 
 // --------- Middlewares globais ---------
-app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"] }));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "https://api-elipse.vercel.app",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Responde pré-flights corretamente
+app.options("*", cors());
+
 app.use(express.json({ limit: "1mb" }));
 
 // --------- Config ---------
@@ -23,7 +33,7 @@ const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
 // Conexão com PostgreSQL (Render já injeta DATABASE_URL)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 
 // Armazenamento em memória (para dados do Elipse)
@@ -31,7 +41,12 @@ let dados = {};
 
 // Usuário admin inicial em memória (fallback)
 let usuarios = [
-  { id: 1, user: process.env.ADMIN_USER, senha: process.env.ADMIN_PASS, role: "admin" }
+  {
+    id: 1,
+    user: process.env.ADMIN_USER,
+    senha: process.env.ADMIN_PASS,
+    role: "admin",
+  },
 ];
 
 // --------- Helpers ---------
@@ -117,7 +132,9 @@ function autenticar(req, res, next) {
 function somenteAdmin(req, res, next) {
   if (req.user.role !== "admin") {
     console.warn("[AUTH] ❌ Acesso negado. Usuário não é admin:", req.user);
-    return res.status(403).json({ erro: "Apenas administradores têm acesso." });
+    return res
+      .status(403)
+      .json({ erro: "Apenas administradores têm acesso." });
   }
   next();
 }
@@ -125,7 +142,10 @@ function somenteAdmin(req, res, next) {
 // --------- Rotas de Autenticação ---------
 app.post("/auth/login", async (req, res) => {
   const { user, senha } = req.body || {};
-  if (!user || !senha) return res.status(400).json({ erro: "Usuário e senha são obrigatórios" });
+  if (!user || !senha)
+    return res
+      .status(400)
+      .json({ erro: "Usuário e senha são obrigatórios" });
 
   try {
     const result = await pool.query(
@@ -165,11 +185,13 @@ app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
   const payload = {
     type: "invite",
     createdBy: req.user.user,
-    role: role || "user"
+    role: role || "user",
   };
 
   const token = jwt.sign(payload, SECRET, { expiresIn: expiresIn || "1h" });
-  const link = `${process.env.FRONTEND_URL || "https://api-elipse.vercel.app"}/register?invite=${token}`;
+  const link = `${
+    process.env.FRONTEND_URL || "https://api-elipse.vercel.app"
+  }/register?invite=${token}`;
 
   console.log("[INVITE] ✅ Convite gerado com role:", role || "user");
   res.json({ msg: "Convite gerado", link, token, payload });
@@ -178,7 +200,8 @@ app.post("/auth/invite", autenticar, somenteAdmin, (req, res) => {
 app.get("/auth/validate-invite", (req, res) => {
   try {
     const { token } = req.query;
-    if (!token) return res.status(400).json({ ok: false, erro: "Token ausente" });
+    if (!token)
+      return res.status(400).json({ ok: false, erro: "Token ausente" });
 
     const payload = jwt.verify(token, SECRET);
     if (payload.type !== "invite") throw new Error();
@@ -194,7 +217,9 @@ app.get("/auth/validate-invite", (req, res) => {
 app.post("/auth/register", async (req, res) => {
   const { invite, senha, username } = req.body || {};
   if (!invite || !senha || !username) {
-    return res.status(400).json({ erro: "Convite, usuário e senha são obrigatórios" });
+    return res
+      .status(400)
+      .json({ erro: "Convite, usuário e senha são obrigatórios" });
   }
 
   try {
@@ -204,7 +229,9 @@ app.post("/auth/register", async (req, res) => {
     const { role } = payload;
     const hash = await bcrypt.hash(senha, 10);
 
-    const check = await pool.query("SELECT 1 FROM users WHERE username = $1", [username]);
+    const check = await pool.query("SELECT 1 FROM users WHERE username = $1", [
+      username,
+    ]);
     if (check.rows.length > 0) {
       return res.status(400).json({ erro: "Usuário já existe." });
     }
@@ -243,7 +270,9 @@ app.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const ref = getByPath(dados, path);
   if (typeof ref === "undefined") {
     console.warn("[E3] ❌ Caminho não encontrado:", path);
-    return res.status(404).json({ erro: "Caminho não encontrado", caminho: path });
+    return res
+      .status(404)
+      .json({ erro: "Caminho não encontrado", caminho: path });
   }
   console.log("[E3] ✅ GET /dados/", path);
   res.json(ref);
@@ -257,7 +286,9 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
     payload = normalizeBody(req);
   } catch (e) {
     console.error("[E3] ❌ Erro no body:", e.message);
-    return res.status(400).json({ erro: e.message, detalhe: e.cause?.message });
+    return res
+      .status(400)
+      .json({ erro: e.message, detalhe: e.cause?.message });
   }
 
   if (typeof payload === "undefined") {
@@ -265,7 +296,10 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   }
 
   setByPath(dados, path, payload);
-  console.log(`[E3] ✅ POST /dados/${path}`, JSON.stringify(payload).slice(0, 300));
+  console.log(
+    `[E3] ✅ POST /dados/${path}`,
+    JSON.stringify(payload).slice(0, 300)
+  );
   res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
 });
 
@@ -323,7 +357,7 @@ app.all("*", (req, res) => {
     erro: "Rota não encontrada",
     method: req.method,
     url: req.originalUrl,
-    dica: "Use /dados/... ou /data/... com POST para salvar e GET para ler."
+    dica: "Use /dados/... ou /data/... com POST para salvar e GET para ler.",
   });
 });
 
