@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -5,11 +6,9 @@ import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 import ToolsPage from "./ToolsPage";
 
-// === Config ================================================================
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-// === Helpers ===============================================================
 function formatKeyLabel(k) {
   if (!k) return "";
   return k.replace(/_/g, " ").replace(/\b([a-z])/g, (m, c) => c.toUpperCase());
@@ -35,25 +34,18 @@ function getNodeByPath(obj, path) {
   return ref;
 }
 
-// === UI Components =========================================================
+/* --- UI primitives --- */
 const Button = ({ children, className = "", ...props }) => (
-  <button
-    className={`px-3 py-2 rounded-xl border shadow-sm hover:shadow transition text-sm ${className}`}
-    {...props}
-  >
+  <button className={`px-3 py-2 rounded-xl border shadow-sm hover:shadow transition text-sm ${className}`} {...props}>
     {children}
   </button>
 );
 
 const Badge = ({ children, className = "" }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs border ${className}`}
-  >
-    {children}
-  </span>
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs border ${className}`}>{children}</span>
 );
 
-// === Login Page ============================================================
+/* --- Login --- */
 function LoginPage({ onLogin }) {
   const [user, setUser] = useState("");
   const [senha, setSenha] = useState("");
@@ -64,22 +56,17 @@ function LoginPage({ onLogin }) {
     e.preventDefault();
     setErro("");
     setLoading(true);
-
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user, senha }),
       });
-
       const data = await res.json();
       if (res.ok && data.token) {
         localStorage.setItem("authToken", data.token);
-
-        // ✅ Decodificar e salvar informações do usuário
         const decoded = jwtDecode(data.token);
         localStorage.setItem("userInfo", JSON.stringify(decoded));
-
         onLogin(data.token, decoded);
       } else {
         setErro(data.erro || "Falha ao autenticar");
@@ -93,31 +80,12 @@ function LoginPage({ onLogin }) {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-6 rounded-xl shadow-md w-96"
-      >
+      <form onSubmit={handleLogin} className="bg-white p-6 rounded-xl shadow-md w-96">
         <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
         {erro && <p className="text-red-500 mb-2 text-center">{erro}</p>}
-        <input
-          type="text"
-          placeholder="Usuário"
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
-          className="w-full p-2 mb-3 border rounded"
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          className="w-full p-2 mb-3 border rounded"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        >
+        <input type="text" placeholder="Usuário" value={user} onChange={(e) => setUser(e.target.value)} className="w-full p-2 mb-3 border rounded" />
+        <input type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full p-2 mb-3 border rounded" />
+        <button type="submit" disabled={loading} className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
           {loading ? "Carregando..." : "Entrar"}
         </button>
       </form>
@@ -125,7 +93,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-// === Dashboard =============================================================
+/* --- Dashboard --- */
 function Dashboard({ token }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -181,9 +149,7 @@ function Dashboard({ token }) {
           {path.map((k, i) => (
             <React.Fragment key={i}>
               <span className="text-gray-400">/</span>
-              <Button className="bg-gray-50" onClick={() => navigateCrumb(i + 1)}>
-                {formatKeyLabel(k)}
-              </Button>
+              <Button className="bg-gray-50" onClick={() => navigateCrumb(i + 1)}>{formatKeyLabel(k)}</Button>
             </React.Fragment>
           ))}
         </div>
@@ -201,17 +167,11 @@ function Dashboard({ token }) {
   );
 }
 
-// === Folder Node ===========================================================
+/* --- Folder / Leaf renderers (mantive como você tinha) --- */
 function FolderNode({ node, filter, onOpen }) {
   if (!node || typeof node !== "object") return null;
-  const keys = Object.keys(node).filter((k) =>
-    k.toLowerCase().includes(filter.toLowerCase())
-  );
-
-  if (keys.length === 0) {
-    return <div className="text-gray-500">Nenhum item encontrado.</div>;
-  }
-
+  const keys = Object.keys(node).filter((k) => k.toLowerCase().includes(filter.toLowerCase()));
+  if (keys.length === 0) return <div className="text-gray-500">Nenhum item encontrado.</div>;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {keys.map((k) => (
@@ -224,11 +184,9 @@ function FolderNode({ node, filter, onOpen }) {
   );
 }
 
-// === Leaf Node =============================================================
 function LeafNode({ node, filter }) {
   const info = node.info || [];
   const data = node.data || [];
-
   return (
     <div className="space-y-4">
       {info.length > 0 && (
@@ -244,97 +202,72 @@ function LeafNode({ node, filter }) {
           </div>
         </div>
       )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {data
-          .filter((d) => (d[0] || "").toLowerCase().includes(filter.toLowerCase()))
-          .map((d, idx) => {
-            const [name, value, unit, hasGraph, nominal] = d;
-            const valNum = toNumberMaybe(value);
-            const nomNum = toNumberMaybe(nominal);
+        {data.filter((d) => (d[0] || "").toLowerCase().includes(filter.toLowerCase())).map((d, idx) => {
+          const [name, value, unit, hasGraph, nominal] = d;
+          const valNum = toNumberMaybe(value);
+          const nomNum = toNumberMaybe(nominal);
 
-            if (hasGraph && valNum !== undefined && nomNum) {
-              const min = nomNum * 0.9;
-              const max = nomNum * 1.1;
-              const clamped = Math.max(min, Math.min(valNum, max));
-              const percent = ((clamped - min) / (max - min)) * 100;
+          if (hasGraph && valNum !== undefined && nomNum) {
+            const min = nomNum * 0.9;
+            const max = nomNum * 1.1;
+            const clamped = Math.max(min, Math.min(valNum, max));
+            const percent = ((clamped - min) / (max - min)) * 100;
 
-              let fill = "#22c55e";
-              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
-              if (valNum < min || valNum > max) fill = "#ef4444";
+            let fill = "#22c55e";
+            if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
+            if (valNum < min || valNum > max) fill = "#ef4444";
 
-              const chartData = [{ name, value: percent, fill }];
-
-              return (
-                <div key={idx} className="rounded-xl border bg-white shadow p-4">
-                  <div className="font-medium mb-2">{name}</div>
-                  <div className="flex justify-center">
-                    <RadialBarChart
-                      width={180}
-                      height={120}
-                      innerRadius="70%"
-                      outerRadius="100%"
-                      startAngle={180}
-                      endAngle={0}
-                      data={chartData}
-                    >
-                      <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                      <RadialBar dataKey="value" cornerRadius={10} background clockWise />
-                    </RadialBarChart>
-                  </div>
-
-                  <div className="text-center mt-2">
-                    <div className="text-xl font-semibold">
-                      {value}{unit ? ` ${unit}` : ""}
-                    </div>
-                    <div className="text-sm text-gray-500">Nominal: {nomNum}{unit}</div>
-                  </div>
-                </div>
-              );
-            }
+            const chartData = [{ name, value: percent, fill }];
 
             return (
               <div key={idx} className="rounded-xl border bg-white shadow p-4">
-                <div className="font-medium">{name}</div>
-                <div className="text-2xl font-semibold">
-                  {value}{unit ? ` ${unit}` : ""}
+                <div className="font-medium mb-2">{name}</div>
+                <div className="flex justify-center">
+                  <RadialBarChart width={180} height={120} innerRadius="70%" outerRadius="100%" startAngle={180} endAngle={0} data={chartData}>
+                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                    <RadialBar dataKey="value" cornerRadius={10} background clockWise />
+                  </RadialBarChart>
                 </div>
-                {nomNum && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    Nominal: {nomNum}{unit}
-                  </div>
-                )}
+                <div className="text-center mt-2">
+                  <div className="text-xl font-semibold">{value}{unit ? ` ${unit}` : ""}</div>
+                  <div className="text-sm text-gray-500">Nominal: {nomNum}{unit}</div>
+                </div>
               </div>
             );
-          })}
+          }
+
+          return (
+            <div key={idx} className="rounded-xl border bg-white shadow p-4">
+              <div className="font-medium">{name}</div>
+              <div className="text-2xl font-semibold">{value}{unit ? ` ${unit}` : ""}</div>
+              {nomNum && <div className="mt-2 text-sm text-gray-600">Nominal: {nomNum}{unit}</div>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// === Navbar ================================================================
+/* --- Navbar ---: use links that resolve to /dashboard/... (explicit, seguro) --- */
 function Navbar({ onLogout }) {
   return (
     <div className="bg-gray-800 text-white px-4 py-3 flex gap-4">
       <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-      <Link to="/ar" className="hover:underline">Ar Condicionado</Link>
-      <Link to="/iluminacao" className="hover:underline">Iluminação</Link>
-      <Link to="/eletrica" className="hover:underline">Elétrica</Link>
-      <Link to="/hidraulica" className="hover:underline">Hidráulica</Link>
-      <Link to="/incendio" className="hover:underline">Incêndio</Link>
-      <Link to="/comunicacao" className="hover:underline">Comunicação</Link>
-      <Link to="/tools" className="hover:underline">Ferramentas</Link>
-      <button
-        onClick={onLogout}
-        className="ml-auto bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
-      >
-        Logout
-      </button>
+      <Link to="/dashboard/ar" className="hover:underline">Ar Condicionado</Link>
+      <Link to="/dashboard/iluminacao" className="hover:underline">Iluminação</Link>
+      <Link to="/dashboard/eletrica" className="hover:underline">Elétrica</Link>
+      <Link to="/dashboard/hidraulica" className="hover:underline">Hidráulica</Link>
+      <Link to="/dashboard/incendio" className="hover:underline">Incêndio</Link>
+      <Link to="/dashboard/comunicacao" className="hover:underline">Comunicação</Link>
+      <Link to="/dashboard/tools" className="hover:underline">Ferramentas</Link>
+      <button onClick={onLogout} className="ml-auto bg-red-600 hover:bg-red-700 px-3 py-1 rounded">Logout</button>
     </div>
   );
 }
 
-// === Root App ==============================================================
+/* --- Root component exported (mounted in main.jsx at /dashboard/*) --- */
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
   const [user, setUser] = useState(() => {
@@ -363,16 +296,18 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
       <Routes>
-        <Route path="/dashboard" element={<Dashboard token={token} />} />
-        <Route path="/ar" element={<div className="p-6">Ar Condicionado</div>} />
-        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="/eletrica" element={<div className="p-6">Elétrica</div>} />
-        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
-        <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
-        <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
-        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
-        {/* Rota default → vai para dashboard */}
-        <Route path="/" element={<Dashboard token={token} />} />
+        {/* index => /dashboard */}
+        <Route index element={<Dashboard token={token} />} />
+        {/* nested routes (relativos a /dashboard/) */}
+        <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
+        <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
+        <Route path="eletrica" element={<div className="p-6">Elétrica</div>} />
+        <Route path="hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="incendio" element={<div className="p-6">Incêndio</div>} />
+        <Route path="comunicacao" element={<div className="p-6">Comunicação</div>} />
+        <Route path="tools" element={<ToolsPage token={token} user={user} />} />
+        {/* fallback: volta pro dashboard */}
+        <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </>
   );
