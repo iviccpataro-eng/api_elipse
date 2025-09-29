@@ -3,9 +3,6 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
-// Adicionando a importação dos ícones
-import { FaEye, FaFan, FaLightbulb, FaBolt, FaTint, FaFire, FaBroadcastTower, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
-
 
 import ToolsPage from "./ToolsPage";
 
@@ -170,7 +167,7 @@ function Dashboard({ token }) {
   );
 }
 
-/* --- Folder / Leaf renderers --- */
+/* --- Folder / Leaf renderers (mantive como você tinha) --- */
 function FolderNode({ node, filter, onOpen }) {
   if (!node || typeof node !== "object") return null;
   const keys = Object.keys(node).filter((k) => k.toLowerCase().includes(filter.toLowerCase()));
@@ -253,109 +250,24 @@ function LeafNode({ node, filter }) {
   );
 }
 
-/* --- Navbar ---: Substituído pela versão responsiva --- */
+/* --- Navbar ---: use links that resolve to /dashboard/... (explicit, seguro) --- */
 function Navbar({ onLogout }) {
-  // Estado para controlar se o menu lateral está aberto ou fechado
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Função para alternar a visibilidade do menu lateral
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // Função para fechar o menu ao clicar num link e fazer logout se necessário
-  const handleLinkClick = (isLogout = false) => {
-    if (isLogout) {
-      onLogout();
-    }
-    setSidebarOpen(false); // Sempre fecha a sidebar ao navegar
-  };
-
   return (
-    <>
-      {/* O cabeçalho principal */}
-      <div className="navbar-container">
-        {/* Links principais (versão desktop e tablet) */}
-        <div className="nav-links-left">
-          <Link to="/dashboard" className="nav-link">
-            <FaEye className="nav-icon" />
-            <span className="nav-text">Dashboard</span>
-          </Link>
-          <Link to="/dashboard/ar" className="nav-link">
-            <FaFan className="nav-icon" />
-            <span className="nav-text">Ar Condicionado</span>
-          </Link>
-          <Link to="/dashboard/iluminacao" className="nav-link">
-            <FaLightbulb className="nav-icon" />
-            <span className="nav-text">Iluminação</span>
-          </Link>
-          <Link to="/dashboard/eletrica" className="nav-link">
-            <FaBolt className="nav-icon" />
-            <span className="nav-text">Elétrica</span>
-          </Link>
-          <Link to="/dashboard/hidraulica" className="nav-link">
-            <FaTint className="nav-icon" />
-            <span className="nav-text">Hidráulica</span>
-          </Link>
-          <Link to="/dashboard/incendio" className="nav-link">
-            <FaFire className="nav-icon" />
-            <span className="nav-text">Incêndio</span>
-          </Link>
-          <Link to="/dashboard/comunicacao" className="nav-link">
-            <FaBroadcastTower className="nav-icon" />
-            <span className="nav-text">Comunicação</span>
-          </Link>
-          <Link to="/dashboard/tools" className="nav-link">
-            <FaCog className="nav-icon" />
-            <span className="nav-text">Ferramentas</span>
-          </Link>
-        </div>
-
-        {/* Link de Logout (versão desktop e tablet) */}
-        <div className="nav-logout-right">
-          <button onClick={onLogout} className="nav-link-logout">
-            <FaSignOutAlt className="nav-icon" />
-            <span className="nav-text">Logout</span>
-          </button>
-        </div>
-
-        {/* Botão do Menu Hambúrguer (visível apenas em telas pequenas) */}
-        <div className="hamburger-menu" onClick={toggleSidebar}>
-          <FaBars />
-        </div>
-      </div>
-
-      {/* Menu Lateral (Sidebar) */}
-      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <h3 className="text-white text-xl font-bold">Menu</h3>
-          <button onClick={toggleSidebar} className="close-btn">
-            <FaTimes />
-          </button>
-        </div>
-        <div className="sidebar-links">
-          <Link to="/dashboard" onClick={() => handleLinkClick()}>Dashboard</Link>
-          <Link to="/dashboard/ar" onClick={() => handleLinkClick()}>Ar Condicionado</Link>
-          <Link to="/dashboard/iluminacao" onClick={() => handleLinkClick()}>Iluminação</Link>
-          <Link to="/dashboard/eletrica" onClick={() => handleLinkClick()}>Elétrica</Link>
-          <Link to="/dashboard/hidraulica" onClick={() => handleLinkClick()}>Hidráulica</Link>
-          <Link to="/dashboard/incendio" onClick={() => handleLinkClick()}>Incêndio</Link>
-          <Link to="/dashboard/comunicacao" onClick={() => handleLinkClick()}>Comunicação</Link>
-          <Link to="/dashboard/tools" onClick={() => handleLinkClick()}>Ferramentas</Link>
-        </div>
-        <div className="sidebar-logout">
-          <button onClick={() => handleLinkClick(true)}>Logout</button>
-        </div>
-      </div>
-
-      {/* Overlay para escurecer o fundo quando o menu estiver aberto */}
-      {sidebarOpen && <div className="overlay" onClick={toggleSidebar}></div>}
-    </>
+    <div className="bg-gray-800 text-white px-4 py-3 flex gap-4">
+      <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+      <Link to="/dashboard/ar" className="hover:underline">Ar Condicionado</Link>
+      <Link to="/dashboard/iluminacao" className="hover:underline">Iluminação</Link>
+      <Link to="/dashboard/eletrica" className="hover:underline">Elétrica</Link>
+      <Link to="/dashboard/hidraulica" className="hover:underline">Hidráulica</Link>
+      <Link to="/dashboard/incendio" className="hover:underline">Incêndio</Link>
+      <Link to="/dashboard/comunicacao" className="hover:underline">Comunicação</Link>
+      <Link to="/dashboard/tools" className="hover:underline">Ferramentas</Link>
+      <button onClick={onLogout} className="ml-auto bg-red-600 hover:bg-red-700 px-3 py-1 rounded">Logout</button>
+    </div>
   );
 }
 
-
-/* --- Root component exported --- */
+/* --- Root component exported (mounted in main.jsx at /dashboard/*) --- */
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
   const [user, setUser] = useState(() => {
@@ -384,7 +296,9 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
       <Routes>
+        {/* index => /dashboard */}
         <Route index element={<Dashboard token={token} />} />
+        {/* nested routes (relativos a /dashboard/) */}
         <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
         <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
         <Route path="eletrica" element={<div className="p-6">Elétrica</div>} />
@@ -392,6 +306,7 @@ export default function App() {
         <Route path="incendio" element={<div className="p-6">Incêndio</div>} />
         <Route path="comunicacao" element={<div className="p-6">Comunicação</div>} />
         <Route path="tools" element={<ToolsPage token={token} user={user} />} />
+        {/* fallback: volta pro dashboard */}
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </>
