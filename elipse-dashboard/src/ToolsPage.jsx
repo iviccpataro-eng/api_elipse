@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import InviteGenerator from "../components/InviteGenerator";
-import SystemConfig from "../components/SystemConfig";
-import UpdateProfile from "../components/UpdateProfile";
+import InviteGenerator from "./components/InviteGenerator";
+import SystemConfig from "./components/SystemConfig";
+import UpdateProfile from "./components/UpdateProfile";
 
 export default function ToolsPage() {
     const [selected, setSelected] = useState("system");
