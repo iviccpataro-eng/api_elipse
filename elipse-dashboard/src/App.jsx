@@ -254,7 +254,7 @@ function LeafNode({ node, filter }) {
 function Navbar({ onLogout }) {
   return (
     <div className="bg-gray-800 text-white px-4 py-3 flex gap-4">
-      <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+      <Link to="/dashboard" className="hover:underline md:invisible"> <HomeIcon className="w-5 h-5 lg:visible" />Dashboard</Link>
       <Link to="/dashboard/ar" className="hover:underline">Ar Condicionado</Link>
       <Link to="/dashboard/iluminacao" className="hover:underline">Iluminação</Link>
       <Link to="/dashboard/eletrica" className="hover:underline">Elétrica</Link>
@@ -269,7 +269,7 @@ function Navbar({ onLogout }) {
 
 /* --- Root component exported (mounted in main.jsx at /dashboard/*) --- */
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem("authToken"));
+  const [token, setToken] = useState(localStorage.getItem("authToken")); ""
   const [user, setUser] = useState(() => {
     const t = localStorage.getItem("authToken");
     return t ? jwtDecode(t) : null;
