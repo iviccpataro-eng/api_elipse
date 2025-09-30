@@ -3,18 +3,17 @@ import React, { useState } from "react";
 const API_BASE =
     import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-export default function UpdateProfile() {
+export default function UpdateProfile({ token }) {
     const [fullname, setFullname] = useState("");
     const [matricula, setMatricula] = useState("");
     const [senha, setSenha] = useState("");
-    const [msg, setMsg] = useState("");
+    const [message, setMessage] = useState("");
 
     const handleUpdate = async (e) => {
         e.preventDefault();
-        setMsg("");
+        setMessage("");
 
         try {
-            const token = localStorage.getItem("token");
             const res = await fetch(`${API_BASE}/auth/update-profile`, {
                 method: "POST",
                 headers: {
@@ -29,28 +28,32 @@ export default function UpdateProfile() {
                 throw new Error(data.erro || "Erro ao atualizar perfil.");
             }
 
-            setMsg("Perfil atualizado com sucesso!");
+            setMessage("Perfil atualizado com sucesso!");
+            setSenha(""); // limpa senha após salvar
         } catch (err) {
-            setMsg(`Erro: ${err.message}`);
+            setMessage(err.message);
         }
     };
 
     return (
-        <div>
-            <h1 className="text-2xl font-bold mb-4">Configurações de Usuário</h1>
-            <form onSubmit={handleUpdate} className="space-y-4 max-w-md">
+        <div className="bg-white rounded-2xl shadow-md p-4">
+            <h2 className="text-lg font-semibold mb-3">Configurações de Usuário</h2>
+
+            {message && <div className="mb-2 text-sm">{message}</div>}
+
+            <form onSubmit={handleUpdate} className="space-y-3">
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
-                        Nome Completo *
+                        Nome completo <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={fullname}
                         onChange={(e) => setFullname(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite seu nome completo"
+                        className="mt-1 block w-full px-3 py-2 border rounded-xl text-sm"
                     />
                 </div>
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
                         Matrícula
@@ -59,10 +62,10 @@ export default function UpdateProfile() {
                         type="text"
                         value={matricula}
                         onChange={(e) => setMatricula(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Opcional"
+                        className="mt-1 block w-full px-3 py-2 border rounded-xl text-sm"
                     />
                 </div>
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
                         Nova senha
@@ -71,19 +74,17 @@ export default function UpdateProfile() {
                         type="password"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite para alterar"
+                        className="mt-1 block w-full px-3 py-2 border rounded-xl text-sm"
                     />
                 </div>
+
                 <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="w-full px-3 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
                 >
-                    Atualizar Perfil
+                    Salvar alterações
                 </button>
             </form>
-
-            {msg && <p className="mt-3 text-sm text-gray-700">{msg}</p>}
         </div>
     );
 }
