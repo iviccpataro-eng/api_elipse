@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const API_BASE =
     import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -6,12 +6,38 @@ const API_BASE =
 export default function UpdateProfile() {
     const [fullname, setFullname] = useState("");
     const [matricula, setMatricula] = useState("");
-    const [senha, setSenha] = useState("");
+    const [username, setUsername] = useState("");
+    const [role, setRole] = useState("");
+    const [senhaAtual, setSenhaAtual] = useState("");
+    const [novaSenha, setNovaSenha] = useState("");
+    const [confirmaSenha, setConfirmaSenha] = useState("");
     const [msg, setMsg] = useState("");
+
+    useEffect(() => {
+        // Carregar dados do usuário do token (JWT)
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            setUsername(payload.user);
+            setRole(payload.role);
+
+            // 🚧 Aqui você pode puxar mais dados do backend se quiser,
+            // ex: fullname e matricula já salvos no banco.
+        } catch {
+            console.warn("Token inválido");
+        }
+    }, []);
 
     const handleUpdate = async (e) => {
         e.preventDefault();
         setMsg("");
+
+        if (novaSenha && novaSenha !== confirmaSenha) {
+            setMsg("Nova senha e confirmação não coincidem.");
+            return;
+        }
 
         try {
             const token = localStorage.getItem("token");
@@ -21,7 +47,13 @@ export default function UpdateProfile() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ fullname, matricula, senha }),
+                body: JSON.stringify({
+                    fullname,
+                    matricula,
+                    username,
+                    senhaAtual,
+                    novaSenha,
+                }),
             });
 
             const data = await res.json();
@@ -37,53 +69,117 @@ export default function UpdateProfile() {
 
     return (
         <div>
-            <h1 className="text-2xl font-bold mb-4">Configurações de Usuário</h1>
-            <form onSubmit={handleUpdate} className="space-y-4 max-w-md">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Nome Completo *
-                    </label>
-                    <input
-                        type="text"
-                        value={fullname}
-                        onChange={(e) => setFullname(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite seu nome completo"
-                    />
+            <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
+            <form onSubmit={handleUpdate} className="space-y-6 max-w-lg">
+                {/* Dados do usuário */}
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Nome Completo *
+                        </label>
+                        <input
+                            type="text"
+                            value={fullname}
+                            onChange={(e) => setFullname(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Digite seu nome completo"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Matrícula
+                        </label>
+                        <input
+                            type="text"
+                            value={matricula}
+                            onChange={(e) => setMatricula(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Opcional"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Nome de Usuário *
+                        </label>
+                        <input
+                            type="text"
+                            value={username}
+                            disabled
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-100 cursor-not-allowed"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Tipo (Role)
+                        </label>
+                        <input
+                            type="text"
+                            value={role}
+                            disabled
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-100 cursor-not-allowed"
+                        />
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Matrícula
-                    </label>
-                    <input
-                        type="text"
-                        value={matricula}
-                        onChange={(e) => setMatricula(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Opcional"
-                    />
+
+                {/* Quebra de seção */}
+                <hr className="my-6" />
+                <h2 className="text-xl font-semibold">Mudança de Senha</h2>
+
+                {/* Senhas */}
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Senha Atual
+                        </label>
+                        <input
+                            type="password"
+                            value={senhaAtual}
+                            onChange={(e) => setSenhaAtual(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Digite sua senha atual"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Nova Senha
+                        </label>
+                        <input
+                            type="password"
+                            value={novaSenha}
+                            onChange={(e) => setNovaSenha(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Digite a nova senha"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Repetir Nova Senha
+                        </label>
+                        <input
+                            type="password"
+                            value={confirmaSenha}
+                            onChange={(e) => setConfirmaSenha(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Confirme a nova senha"
+                        />
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Nova senha
-                    </label>
-                    <input
-                        type="password"
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite para alterar"
-                    />
-                </div>
+
+                {/* Botão */}
                 <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                    Atualizar Perfil
+                    Salvar Alterações
                 </button>
             </form>
 
-            {msg && <p className="mt-3 text-sm text-gray-700">{msg}</p>}
+            {msg && <p className="mt-4 text-sm text-gray-700">{msg}</p>}
         </div>
     );
 }
