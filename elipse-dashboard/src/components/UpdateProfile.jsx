@@ -17,6 +17,15 @@ export default function UpdateProfile() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            setUsername(payload.user);
+            setRole(payload.role);
+        } catch {
+            console.warn("Token inválido");
+        }
+
+        // buscar fullname e matricula do backend
         const fetchProfile = async () => {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -26,10 +35,6 @@ export default function UpdateProfile() {
                 if (data.ok && data.usuario) {
                     setFullname(data.usuario.fullname || "");
                     setMatricula(data.usuario.matricula || "");
-                    setUsername(data.usuario.username || "");
-                    setRole(data.usuario.rolename || "");
-                } else {
-                    console.warn("Falha ao buscar perfil:", data.erro);
                 }
             } catch (err) {
                 console.error("Erro ao carregar perfil:", err);
