@@ -113,7 +113,7 @@ export default function UpdateProfile() {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Tipo (Role)
+                            Grupo de Usuário
                         </label>
                         <input
                             type="text"
