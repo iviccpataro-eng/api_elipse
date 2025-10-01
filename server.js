@@ -340,7 +340,7 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
 app.get("/auth/me", autenticar, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT username, rolename, fullname, matricula FROM users WHERE username = $1",
+      "SELECT username, rolename, COALESCE(fullname, '') as fullname, COALESCE(matricula, '') as matricula FROM users WHERE username = $1",
       [req.user.user]
     );
 
