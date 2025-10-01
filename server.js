@@ -297,7 +297,7 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
         return res.status(401).json({ erro: "Senha atual incorreta." });
       }
     }
-
+    
     // Monta query dinâmica (fullname, matricula e senha se aplicável)
     const updates = [];
     const values = [];
@@ -333,6 +333,26 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
   } catch (err) {
     console.error("[PROFILE] ❌ Erro:", err);
     res.status(500).json({ erro: "Erro ao atualizar perfil." });
+  }
+});
+
+// --------- Obter Perfil do Usuário ---------
+app.get("/auth/me", autenticar, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT username, rolename, fullname, matricula FROM users WHERE username = $1",
+      [req.user.user]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ erro: "Usuário não encontrado" });
+    }
+
+    const usuario = result.rows[0];
+    res.json({ ok: true, usuario });
+  } catch (err) {
+    console.error("[PROFILE] ❌ Erro ao buscar perfil:", err);
+    res.status(500).json({ erro: "Erro ao buscar perfil." });
   }
 });
 

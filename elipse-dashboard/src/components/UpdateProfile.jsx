@@ -14,20 +14,29 @@ export default function UpdateProfile() {
     const [msg, setMsg] = useState("");
 
     useEffect(() => {
-        // Carregar dados do usuário do token (JWT)
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            setUsername(payload.user);
-            setRole(payload.role);
+        const fetchProfile = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (data.ok && data.usuario) {
+                    setFullname(data.usuario.fullname || "");
+                    setMatricula(data.usuario.matricula || "");
+                    setUsername(data.usuario.username || "");
+                    setRole(data.usuario.rolename || "");
+                } else {
+                    console.warn("Falha ao buscar perfil:", data.erro);
+                }
+            } catch (err) {
+                console.error("Erro ao carregar perfil:", err);
+            }
+        };
 
-            // 🚧 Aqui você pode puxar mais dados do backend se quiser,
-            // ex: fullname e matricula já salvos no banco.
-        } catch {
-            console.warn("Token inválido");
-        }
+        fetchProfile();
     }, []);
 
     const handleUpdate = async (e) => {
