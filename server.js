@@ -249,6 +249,76 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
+// --------- Atualização de Perfil ---------
+app.post("/auth/update-profile", autenticar, async (req, res) => {
+  const { fullname, matricula, username, senhaAtual, novaSenha } = req.body || {};
+
+  if (!username) {
+    return res.status(400).json({ erro: "Usuário é obrigatório" });
+  }
+
+  try {
+    // Busca usuário no banco
+    const result = await pool.query(
+      "SELECT username, passhash, rolename, fullname, matricula FROM users WHERE username = $1",
+      [username]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ erro: "Usuário não encontrado" });
+    }
+
+    const usuario = result.rows[0];
+
+    // Verifica senha atual se for alterar senha
+    if (novaSenha) {
+      if (!senhaAtual) {
+        return res.status(400).json({ erro: "Senha atual é obrigatória para trocar a senha." });
+      }
+
+      const match = await bcrypt.compare(senhaAtual, usuario.passhash);
+      if (!match) {
+        return res.status(401).json({ erro: "Senha atual incorreta." });
+      }
+    }
+
+    // Monta query dinâmica (fullname, matricula e senha se aplicável)
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (fullname) {
+      updates.push(`fullname = $${idx++}`);
+      values.push(fullname);
+    }
+    if (matricula) {
+      updates.push(`matricula = $${idx++}`);
+      values.push(matricula);
+    }
+    if (novaSenha) {
+      const hash = await bcrypt.hash(novaSenha, 10);
+      updates.push(`passhash = $${idx++}`);
+      values.push(hash);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ erro: "Nenhuma alteração enviada." });
+    }
+
+    values.push(username);
+
+    await pool.query(
+      `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
+      values
+    );
+
+    console.log("[PROFILE] ✅ Perfil atualizado:", username);
+    res.json({ ok: true, msg: "Perfil atualizado com sucesso!" });
+  } catch (err) {
+    console.error("[PROFILE] ❌ Erro:", err);
+    res.status(500).json({ erro: "Erro ao atualizar perfil." });
+  }
+});
+
 // --------- CRUD de usuários (apenas exemplo em memória) ---------
 app.get("/usuarios", autenticar, somenteAdmin, (req, res) => {
   console.log("[USUÁRIOS] Listando usuários em memória");
