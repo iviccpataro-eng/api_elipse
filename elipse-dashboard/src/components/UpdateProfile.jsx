@@ -17,7 +17,6 @@ export default function UpdateProfile() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        // Preenche username e role direto do JWT
         try {
             const payload = JSON.parse(atob(token.split(".")[1]));
             setUsername(payload.user);
@@ -26,19 +25,16 @@ export default function UpdateProfile() {
             console.warn("Token inválido");
         }
 
-        // Busca dados adicionais do backend (/auth/me)
+        // Buscar dados do perfil (fullname, matricula)
         const fetchProfile = async () => {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const data = await res.json();
-
                 if (data.ok && data.usuario) {
                     setFullname(data.usuario.fullname || "");
                     setMatricula(data.usuario.matricula || "");
-                    setUsername(data.usuario.username || "");
-                    setRole(data.usuario.rolename || "");
                 }
             } catch (err) {
                 console.error("Erro ao carregar perfil:", err);
@@ -78,6 +74,17 @@ export default function UpdateProfile() {
             if (!res.ok || !data.ok) {
                 throw new Error(data.erro || "Erro ao atualizar perfil.");
             }
+
+            // Atualizar estados com os valores retornados pelo backend
+            if (data.usuario) {
+                setFullname(data.usuario.fullname || "");
+                setMatricula(data.usuario.matricula || "");
+            }
+
+            // Reset de senhas após atualizar
+            setSenhaAtual("");
+            setNovaSenha("");
+            setConfirmaSenha("");
 
             setMsg("Perfil atualizado com sucesso!");
         } catch (err) {
@@ -131,7 +138,7 @@ export default function UpdateProfile() {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Grupo de Usuário
+                            Grupo de Usuário *
                         </label>
                         <input
                             type="text"
