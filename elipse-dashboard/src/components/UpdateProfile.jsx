@@ -14,7 +14,7 @@ export default function UpdateProfile() {
     const [msg, setMsg] = useState("");
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("authToken");
         if (!token) return;
 
         try {
@@ -54,7 +54,7 @@ export default function UpdateProfile() {
         }
 
         try {
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("authToken");
             const res = await fetch(`${API_BASE}/auth/update-profile`, {
                 method: "POST",
                 headers: {
