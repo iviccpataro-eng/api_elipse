@@ -3,6 +3,18 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
+import {
+  Eye,
+  Fan,
+  Lightbulb,
+  Zap,
+  Droplet,
+  Flame,
+  Radio,
+  Settings,
+  LogOut,
+  Menu
+} from "lucide-react";
 
 import ToolsPage from "./ToolsPage";
 
@@ -250,20 +262,89 @@ function LeafNode({ node, filter }) {
   );
 }
 
-/* --- Navbar ---: use links that resolve to /dashboard/... (explicit, seguro) --- */
+/* --- Navbar responsiva --- */
 function Navbar({ onLogout }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [buildingName] = useState("Edifício Exemplo"); // futuramente virá das configs
+
+  const links = [
+    { to: "/dashboard", label: "Dashboard", icon: <Eye size={18} /> },
+    { to: "/dashboard/ar", label: "Ar Condicionado", icon: <Fan size={18} /> },
+    { to: "/dashboard/iluminacao", label: "Iluminação", icon: <Lightbulb size={18} /> },
+    { to: "/dashboard/eletrica", label: "Elétrica", icon: <Zap size={18} /> },
+    { to: "/dashboard/hidraulica", label: "Hidráulica", icon: <Droplet size={18} /> },
+    { to: "/dashboard/incendio", label: "Incêndio", icon: <Flame size={18} /> },
+    { to: "/dashboard/comunicacao", label: "Comunicação", icon: <Radio size={18} /> },
+    { to: "/dashboard/tools", label: "Ferramentas", icon: <Settings size={18} /> },
+  ];
+
   return (
-    <div className="bg-gray-800 text-white px-4 py-3 flex gap-4">
-      <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-      <Link to="/dashboard/ar" className="hover:underline">Ar Condicionado</Link>
-      <Link to="/dashboard/iluminacao" className="hover:underline">Iluminação</Link>
-      <Link to="/dashboard/eletrica" className="hover:underline">Elétrica</Link>
-      <Link to="/dashboard/hidraulica" className="hover:underline">Hidráulica</Link>
-      <Link to="/dashboard/incendio" className="hover:underline">Incêndio</Link>
-      <Link to="/dashboard/comunicacao" className="hover:underline">Comunicação</Link>
-      <Link to="/dashboard/tools" className="hover:underline">Ferramentas</Link>
-      <button onClick={onLogout} className="ml-auto bg-red-600 hover:bg-red-700 px-3 py-1 rounded">Logout</button>
-    </div>
+    <header className="bg-gray-800 text-white">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 h-16 md:h-20">
+        {/* Logo + Nome Edifício */}
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
+          <div className="h-8 w-px bg-gray-500" />
+          <span className="font-semibold text-lg hidden sm:inline">{buildingName}</span>
+        </div>
+
+        {/* Links (desktop/tablet) */}
+        <nav className="hidden lg:flex items-center gap-6">
+          {links.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className="flex items-center gap-2 hover:text-blue-400 transition"
+            >
+              <span className="hidden md:inline">{l.label}</span>
+              <span className="md:hidden">{l.icon}</span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Botão Logout */}
+        <div className="hidden lg:flex">
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-3 py-2 rounded-lg"
+          >
+            <LogOut size={18} />
+            <span className="hidden md:inline">Sair</span>
+          </button>
+        </div>
+
+        {/* Menu sanduíche (mobile) */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="lg:hidden p-2 rounded hover:bg-gray-700"
+        >
+          <Menu size={22} />
+        </button>
+      </div>
+
+      {/* Dropdown mobile */}
+      {menuOpen && (
+        <div className="lg:hidden bg-gray-700 flex flex-col items-center gap-4 py-4">
+          {links.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2 hover:text-blue-400 transition"
+            >
+              {l.icon}
+              <span>{l.label}</span>
+            </Link>
+          ))}
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-3 py-2 rounded-lg"
+          >
+            <LogOut size={18} /> Sair
+          </button>
+        </div>
+      )}
+    </header>
   );
 }
 

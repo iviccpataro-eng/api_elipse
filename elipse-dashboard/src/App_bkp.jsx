@@ -269,7 +269,7 @@ function Navbar({ onLogout }) {
 
 /* --- Root component exported (mounted in main.jsx at /dashboard/*) --- */
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem("authToken"));
+  const [token, setToken] = useState(localStorage.getItem("authToken")); ""
   const [user, setUser] = useState(() => {
     const t = localStorage.getItem("authToken");
     return t ? jwtDecode(t) : null;
