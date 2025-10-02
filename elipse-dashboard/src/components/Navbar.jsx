@@ -1,5 +1,5 @@
 // src/components/Navbar.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
     Eye,
@@ -15,8 +15,32 @@ import {
     X,
 } from "lucide-react";
 
+import logo from "../images/logo.png";
+
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+
 export default function Navbar({ onLogout }) {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [buildingName, setBuildingName] = useState("Carregando...");
+
+    useEffect(() => {
+        const fetchBuildingName = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/config/building`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setBuildingName(data.name || "Edifício Padrão");
+                } else {
+                    setBuildingName("Edifício Padrão");
+                }
+            } catch (err) {
+                console.error("Erro ao buscar nome do edifício:", err);
+                setBuildingName("Edifício Padrão");
+            }
+        };
+        fetchBuildingName();
+    }, []);
 
     const navItems = [
         { to: "/dashboard", label: "Dashboard", icon: <Eye className="w-5 h-5" /> },
@@ -30,12 +54,12 @@ export default function Navbar({ onLogout }) {
     ];
 
     return (
-        <header className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between">
+        <header className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between relative">
             {/* Logo + Nome do prédio */}
             <div className="flex items-center gap-3">
-                <img src=".\images\logo.png" alt="Logo" className="h-10 w-10" />
+                <img src={logo} alt="Logo" className="h-10 w-10" />
                 <div className="h-8 w-px bg-gray-500" />
-                <span className="text-lg font-semibold">Edifício Exemplo</span>
+                <span className="text-lg font-semibold">{buildingName}</span>
             </div>
 
             {/* Menu Desktop (≥1280px) - Texto */}
@@ -83,9 +107,10 @@ export default function Navbar({ onLogout }) {
                             key={item.to}
                             to={item.to}
                             onClick={() => setMenuOpen(false)}
-                            className="hover:text-blue-400"
+                            className="hover:text-blue-400 flex items-center gap-2"
                         >
-                            {item.label}
+                            {item.icon}
+                            <span>{item.label}</span>
                         </Link>
                     ))}
                     <button
