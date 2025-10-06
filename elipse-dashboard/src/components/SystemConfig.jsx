@@ -1,3 +1,4 @@
+// src/components/SystemConfig.jsx
 import React, { useState, useEffect } from "react";
 
 const API_BASE =
@@ -15,6 +16,9 @@ export default function SystemConfig({ token, user }) {
     const [updatedAt, setUpdatedAt] = useState(null);
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // Determina se é admin
+    const isAdmin = user?.role === "admin";
 
     // --- Buscar configuração existente ---
     useEffect(() => {
@@ -77,6 +81,11 @@ export default function SystemConfig({ token, user }) {
         }
     };
 
+    // --- Estilo padrão de campo (com bloqueio dinâmico) ---
+    const fieldStyle = (extra = "") =>
+        `mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm ${extra} ${!isAdmin ? "bg-gray-100 cursor-not-allowed" : ""
+        }`;
+
     return (
         <div className="p-6">
             <h1 className="text-2xl font-bold mb-6">Configurações do Sistema</h1>
@@ -100,7 +109,8 @@ export default function SystemConfig({ token, user }) {
                                 type="text"
                                 value={buildingName}
                                 onChange={(e) => setBuildingName(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                disabled={!isAdmin}
+                                className={fieldStyle()}
                                 placeholder="Digite o nome do edifício"
                             />
                         </div>
@@ -114,7 +124,8 @@ export default function SystemConfig({ token, user }) {
                                 value={address}
                                 onChange={(e) => setAddress(e.target.value)}
                                 rows={3}
-                                className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                disabled={!isAdmin}
+                                className={fieldStyle()}
                                 placeholder="Digite o endereço completo do empreendimento"
                             />
                             {address && (
@@ -138,7 +149,8 @@ export default function SystemConfig({ token, user }) {
                                 type="text"
                                 value={adminName}
                                 onChange={(e) => setAdminName(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                disabled={!isAdmin}
+                                className={fieldStyle()}
                                 placeholder="Digite o nome da administradora"
                             />
                         </div>
@@ -153,7 +165,8 @@ export default function SystemConfig({ token, user }) {
                                     type="text"
                                     value={responsavelNome}
                                     onChange={(e) => setResponsavelNome(e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                    disabled={!isAdmin}
+                                    className={fieldStyle()}
                                     placeholder="Ex: João Silva"
                                 />
                             </div>
@@ -164,8 +177,11 @@ export default function SystemConfig({ token, user }) {
                                 <input
                                     type="text"
                                     value={responsavelTelefone}
-                                    onChange={(e) => setResponsavelTelefone(e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                    onChange={(e) =>
+                                        setResponsavelTelefone(e.target.value)
+                                    }
+                                    disabled={!isAdmin}
+                                    className={fieldStyle()}
                                     placeholder="(99) 99999-9999"
                                 />
                             </div>
@@ -191,7 +207,6 @@ export default function SystemConfig({ token, user }) {
 
                 {/* --- Seção 2: Aparência e Temas --- */}
                 <section>
-                    {/* Quebra de seção */}
                     <hr className="my-6" />
                     <h2 className="text-xl font-semibold mb-4 text-gray-800">
                         Aparência e Temas
@@ -204,7 +219,8 @@ export default function SystemConfig({ token, user }) {
                             <select
                                 value={theme}
                                 onChange={(e) => setTheme(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                disabled={!isAdmin}
+                                className={fieldStyle()}
                             >
                                 <option value="light">Claro</option>
                                 <option value="dark">Escuro</option>
@@ -215,7 +231,6 @@ export default function SystemConfig({ token, user }) {
 
                 {/* --- Seção 3: Ajustes do Sistema --- */}
                 <section>
-                    {/* Quebra de seção */}
                     <hr className="my-6" />
                     <h2 className="text-xl font-semibold mb-4 text-gray-800">
                         Ajustes do Sistema
@@ -230,33 +245,36 @@ export default function SystemConfig({ token, user }) {
                                 min={5}
                                 value={refreshTime}
                                 onChange={(e) => setRefreshTime(Number(e.target.value))}
-                                className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                                disabled={!isAdmin}
+                                className={fieldStyle()}
                             />
                         </div>
                     </div>
                 </section>
 
                 {/* Botão salvar */}
-                <div className="flex items-center gap-4">
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className={`px-4 py-2 rounded-lg text-white font-medium transition ${loading
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700"
-                            }`}
-                    >
-                        {loading ? "Salvando..." : "Salvar Configurações"}
-                    </button>
-                    {msg && (
-                        <span
-                            className={`text-sm ${msg.startsWith("✅") ? "text-green-600" : "text-red-600"
+                {isAdmin && (
+                    <div className="flex items-center gap-4">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`px-4 py-2 rounded-lg text-white font-medium transition ${loading
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-blue-600 hover:bg-blue-700"
                                 }`}
                         >
-                            {msg}
-                        </span>
-                    )}
-                </div>
+                            {loading ? "Salvando..." : "Salvar Configurações"}
+                        </button>
+                        {msg && (
+                            <span
+                                className={`text-sm ${msg.startsWith("✅") ? "text-green-600" : "text-red-600"
+                                    }`}
+                            >
+                                {msg}
+                            </span>
+                        )}
+                    </div>
+                )}
             </form>
         </div>
     );

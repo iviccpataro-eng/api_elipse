@@ -1,4 +1,4 @@
-// config/db.js
+// server/db.js
 import pkg from "pg";
 const { Pool } = pkg;
 
