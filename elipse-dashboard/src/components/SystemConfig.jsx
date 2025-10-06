@@ -191,6 +191,8 @@ export default function SystemConfig({ token, user }) {
 
                 {/* --- Seção 2: Aparência e Temas --- */}
                 <section>
+                    {/* Quebra de seção */}
+                    <hr className="my-6" />
                     <h2 className="text-xl font-semibold mb-4 text-gray-800">
                         Aparência e Temas
                     </h2>
@@ -213,6 +215,8 @@ export default function SystemConfig({ token, user }) {
 
                 {/* --- Seção 3: Ajustes do Sistema --- */}
                 <section>
+                    {/* Quebra de seção */}
+                    <hr className="my-6" />
                     <h2 className="text-xl font-semibold mb-4 text-gray-800">
                         Ajustes do Sistema
                     </h2>
