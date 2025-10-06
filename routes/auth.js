@@ -1,4 +1,4 @@
-// server/routes/auth.js
+// /routes/auth.js
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -38,7 +38,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-/* --- PERFIL DO USUÁRIO --- */
+/* --- PERFIL --- */
 router.get("/me", autenticar, async (req, res) => {
   try {
     const result = await pool.query(
@@ -53,7 +53,7 @@ router.get("/me", autenticar, async (req, res) => {
   }
 });
 
-/* --- ATUALIZA PERFIL / TEMA --- */
+/* --- ATUALIZA TEMA --- */
 router.post("/update-theme", autenticar, async (req, res) => {
   const { theme } = req.body || {};
   if (!theme) return res.status(400).json({ erro: "Tema é obrigatório" });

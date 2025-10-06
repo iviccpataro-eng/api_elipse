@@ -1,4 +1,4 @@
-// server/routes/config.js
+// /routes/config.js
 import express from "express";
 import { pool } from "../config/db.js";
 import { autenticar, somenteAdmin } from "../middleware/auth.js";
@@ -46,7 +46,6 @@ router.post("/system", autenticar, somenteAdmin, async (req, res) => {
         modified_by,
       ]
     );
-
     res.json({ ok: true, msg: "Configuração salva com sucesso." });
   } catch (err) {
     console.error("Erro ao salvar configuração:", err);

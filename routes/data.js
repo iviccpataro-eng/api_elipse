@@ -1,18 +1,20 @@
-// server/routes/data.js
+// /routes/data.js
 import express from "express";
 import { autenticar } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Dados em memória (sem persistência)
 let dados = {};
 
+// Funções utilitárias
 function setByPath(root, pathStr, value) {
   const parts = pathStr.split("/").filter(Boolean);
   let ref = root;
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
-    if (i === parts.length - 1) {
-      ref[p] = value;
-    } else {
+    if (i === parts.length - 1) ref[p] = value;
+    else {
       if (!ref[p] || typeof ref[p] !== "object") ref[p] = {};
       ref = ref[p];
     }
@@ -23,16 +25,13 @@ function getByPath(root, pathStr) {
   const parts = pathStr.split("/").filter(Boolean);
   let ref = root;
   for (const p of parts) {
-    if (ref && Object.prototype.hasOwnProperty.call(ref, p)) {
-      ref = ref[p];
-    } else {
-      return undefined;
-    }
+    if (ref && Object.prototype.hasOwnProperty.call(ref, p)) ref = ref[p];
+    else return undefined;
   }
   return ref;
 }
 
-/* --- GET e POST --- */
+// --- Rotas ---
 router.get(["/dados", "/data"], autenticar, (req, res) => res.json(dados));
 
 router.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
