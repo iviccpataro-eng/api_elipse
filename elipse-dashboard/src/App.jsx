@@ -6,6 +6,7 @@ import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
+import { apiFetch } from "./api";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -76,7 +77,9 @@ function LoginPage({ onLogin }) {
         body: JSON.stringify({ user, senha }),
       });
       const data = await res.json();
+
       if (res.ok && data.token && data.token !== "undefined") {
+        // Armazena token e dados decodificados
         localStorage.setItem("authToken", data.token);
         const decoded = jwtDecode(data.token);
         localStorage.setItem("userInfo", JSON.stringify(decoded));
@@ -85,6 +88,7 @@ function LoginPage({ onLogin }) {
         setErro(data.erro || "Falha ao autenticar");
       }
     } catch (err) {
+      console.error("[Login] Erro de conexão:", err);
       setErro("Erro de conexão com servidor");
     } finally {
       setLoading(false);
@@ -141,8 +145,7 @@ function Dashboard({ token }) {
     setError("");
     try {
       const fixedToken = import.meta.env.VITE_REACT_TOKEN;
-      const res = await fetch(`${API_BASE}/dados`, {
-        cache: "no-store",
+      const res = await apiFetch(`${API_BASE}/dados`, {
         headers: { Authorization: `Bearer ${fixedToken}` },
       });
 
@@ -150,8 +153,8 @@ function Dashboard({ token }) {
       const json = await res.json();
       setData(json || {});
     } catch (e) {
+      console.error("[Dashboard] Erro ao buscar dados:", e);
       setError("Falha ao buscar dados da API.");
-      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -355,6 +358,16 @@ export default function App() {
     setUser(null);
   };
 
+  useEffect(() => {
+    // Logout automático se o token expirar ou estiver malformado
+    try {
+      if (token) jwtDecode(token);
+    } catch {
+      console.warn("[Auth] Token expirado ou malformado — logout");
+      handleLogout();
+    }
+  }, [token]);
+
   if (!token) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -364,12 +377,6 @@ export default function App() {
       <Navbar onLogout={handleLogout} />
       <Routes>
         <Route index element={<Dashboard token={token} />} />
-        <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
-        <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="eletrica" element={<div className="p-6">Elétrica</div>} />
-        <Route path="hidraulica" element={<div className="p-6">Hidráulica</div>} />
-        <Route path="incendio" element={<div className="p-6">Incêndio</div>} />
-        <Route path="comunicacao" element={<div className="p-6">Comunicação</div>} />
         <Route path="tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>

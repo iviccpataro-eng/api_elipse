@@ -7,19 +7,19 @@ export async function apiFetch(url, options = {}) {
     ...(options.headers || {}),
   };
 
-  // Adiciona Authorization apenas se houver token válido
+  // Só adiciona Authorization se o token for válido
   if (token && token !== "undefined") {
     headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(url, { ...options, headers });
 
-  // Se token inválido → força logout automático
+  // Tratamento automático de erro 401/403
   if (response.status === 401 || response.status === 403) {
-    console.warn("[API] Token inválido ou expirado — limpando sessão");
+    console.warn("[API] Token inválido — limpando sessão");
     localStorage.removeItem("authToken");
     localStorage.removeItem("userInfo");
-    window.location.href = "/"; // redireciona para login
+    window.location.href = "/";
   }
 
   return response;
