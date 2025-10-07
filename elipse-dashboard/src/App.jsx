@@ -76,7 +76,7 @@ function LoginPage({ onLogin }) {
         body: JSON.stringify({ user, senha }),
       });
       const data = await res.json();
-      if (res.ok && data.token) {
+      if (res.ok && data.token && data.token !== "undefined") {
         localStorage.setItem("authToken", data.token);
         const decoded = jwtDecode(data.token);
         localStorage.setItem("userInfo", JSON.stringify(decoded));
