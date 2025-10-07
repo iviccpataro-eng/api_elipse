@@ -1,23 +1,22 @@
-// /middleware/auth.js
+// server/middleware/auth.js
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Secret padrão usado nos tokens JWT de usuários normais
+// --- Configurações e tokens ---
 const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
-
-// Token fixo definido nas variáveis de ambiente do Render
 const FIXED_ENV_TOKEN = process.env.VITE_REACT_TOKEN || null;
 
-// Token fixo opcional (gerado internamente no server.js e exportado de lá)
-import { FIXED_TOKEN } from "../server.js";
+// Gera um token fixo interno opcional (para debug/local)
+export const FIXED_TOKEN = jwt.sign(
+  { id: "react-dashboard", user: "react", role: "reader" },
+  SECRET,
+  { expiresIn: "12h" }
+);
 
 /**
- * Middleware de autenticação principal
- * - Aceita tokens JWT válidos de usuários cadastrados
- * - Aceita token fixo da variável de ambiente (usado pelo Elipse ou dashboard público)
- * - Aceita o token fixo local (gerado no boot)
+ * Middleware de autenticação
  */
 export function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -28,19 +27,19 @@ export function autenticar(req, res, next) {
   const token = authHeader.split(" ")[1];
 
   try {
-    // --- Caso 1: Token fixo do ambiente (Render / Elipse)
-    if (token === FIXED_ENV_TOKEN) {
-      req.user = { id: "react-fixed", user: "react", role: "reader" };
+    // --- 1️⃣ Token fixo do ambiente (Render / Elipse E3)
+    if (FIXED_ENV_TOKEN && token === FIXED_ENV_TOKEN) {
+      req.user = { id: "react-fixed", user: "elipse", role: "reader" };
       return next();
     }
 
-    // --- Caso 2: Token fixo local (gerado no boot)
+    // --- 2️⃣ Token fixo local (usado apenas em desenvolvimento)
     if (token === FIXED_TOKEN) {
       req.user = { id: "react-dashboard", user: "react", role: "reader" };
       return next();
     }
 
-    // --- Caso 3: Token JWT válido (usuário autenticado)
+    // --- 3️⃣ Token JWT de usuário logado
     const payload = jwt.verify(token, SECRET);
     req.user = payload;
     return next();
@@ -51,11 +50,11 @@ export function autenticar(req, res, next) {
 }
 
 /**
- * Middleware que restringe acesso apenas a administradores
+ * Middleware para permitir apenas admins
  */
 export function somenteAdmin(req, res, next) {
-  if (!req.user || req.user.role !== "admin") {
-    return res.status(403).json({ erro: "Apenas administradores têm acesso." });
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ erro: "Acesso restrito a administradores." });
   }
   next();
 }
