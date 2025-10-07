@@ -1,31 +1,25 @@
-// server/server.js
+// server.js
 import express from "express";
 import cors from "cors";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 
-// ✅ Carrega .env apenas localmente (Render já injeta variáveis)
-if (process.env.NODE_ENV !== "production") {
-  const dotenv = await import("dotenv");
-  dotenv.config();
-}
-
-// ---- Imports dos módulos ----
-import { FIXED_TOKEN } from "./middleware/auth.js";
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import configRoutes from "./routes/config.js";
+
+dotenv.config();
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ---- Configuração de CORS ----
+// ---- CORS ----
 const allowedOrigins = [
-  "https://api-elipse.vercel.app", // frontend deployado
-  "http://localhost:5173",         // ambiente local (Vite)
+  "https://api-elipse.vercel.app",
+  "http://localhost:5173",
 ];
-
 app.use(
   cors({
     origin: (origin, cb) => {
@@ -35,20 +29,19 @@ app.use(
     credentials: true,
   })
 );
-
 app.use(express.json({ limit: "1mb" }));
 
-// ---- Rotas principais ----
+// ---- Rotas ----
 app.use("/auth", authRoutes);
-app.use("/config", configRoutes);
 app.use("/", dataRoutes);
+app.use("/config", configRoutes);
 
-// ---- Endpoint raiz ----
+// ---- Info ----
 app.get("/", (req, res) => {
   res.json({
-    status: "✅ API Elipse Online",
-    version: "2.0",
-    fixedToken: FIXED_TOKEN ? "Ativo (Render)" : "Não configurado",
+    status: "API Elipse Online",
+    ambiente: process.env.NODE_ENV || "development",
+    fixedTokenLoaded: !!process.env.VITE_REACT_TOKEN,
   });
 });
 
@@ -57,26 +50,20 @@ const clientBuildPath = path.resolve(__dirname, "elipse-dashboard", "dist");
 app.use(express.static(clientBuildPath));
 
 app.get("*", (req, res, next) => {
-  // Ignora chamadas de API
   if (
     req.originalUrl.startsWith("/auth") ||
     req.originalUrl.startsWith("/dados") ||
-    req.originalUrl.startsWith("/data") ||
     req.originalUrl.startsWith("/config")
-  ) {
+  )
     return next();
-  }
   res.sendFile(path.join(clientBuildPath, "index.html"));
 });
 
-// ---- Inicialização do servidor ----
+// ---- Inicialização ----
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`[BOOT] Servidor rodando na porta ${PORT}`);
-  console.log(`[INFO] Ambiente: ${process.env.NODE_ENV}`);
-  console.log(
-    `[INFO] Token fixo ${
-      process.env.VITE_REACT_TOKEN ? "carregado do Render" : "não definido"
-    }`
-  );
+  console.log(`[INFO] Ambiente: ${process.env.NODE_ENV || "development"}`);
+  if (process.env.VITE_REACT_TOKEN)
+    console.log("[INFO] Token fixo carregado do Render");
 });
