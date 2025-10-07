@@ -1,4 +1,4 @@
-// /routes/auth.js
+// server/routes/auth.js
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -34,26 +34,35 @@ router.post("/login", async (req, res) => {
 
     res.json({ token });
   } catch (err) {
+    console.error("[AUTH] Erro interno no login:", err);
     res.status(500).json({ erro: "Erro interno no servidor" });
   }
 });
 
-/* --- PERFIL --- */
+/* --- PERFIL DO USUÁRIO --- */
 router.get("/me", autenticar, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT username, rolename, COALESCE(fullname,'') as fullname, COALESCE(matricula,'') as matricula, COALESCE(theme,'light') as theme FROM users WHERE username = $1",
+      `SELECT username, rolename, 
+              COALESCE(fullname,'') as fullname, 
+              COALESCE(matricula,'') as matricula, 
+              COALESCE(theme,'light') as theme 
+         FROM users 
+        WHERE username = $1`,
       [req.user.user]
     );
+
     if (result.rows.length === 0)
       return res.status(404).json({ erro: "Usuário não encontrado" });
+
     res.json({ ok: true, usuario: result.rows[0] });
-  } catch {
+  } catch (err) {
+    console.error("[AUTH] Erro ao buscar perfil:", err);
     res.status(500).json({ erro: "Erro ao buscar perfil." });
   }
 });
 
-/* --- ATUALIZA TEMA --- */
+/* --- ATUALIZA PERFIL / TEMA --- */
 router.post("/update-theme", autenticar, async (req, res) => {
   const { theme } = req.body || {};
   if (!theme) return res.status(400).json({ erro: "Tema é obrigatório" });
@@ -64,8 +73,87 @@ router.post("/update-theme", autenticar, async (req, res) => {
       req.user.user,
     ]);
     res.json({ ok: true, msg: "Tema atualizado!" });
-  } catch {
+  } catch (err) {
+    console.error("[AUTH] Erro ao atualizar tema:", err);
     res.status(500).json({ erro: "Erro ao atualizar tema." });
+  }
+});
+
+/* --- GERAR CONVITE (ADMIN APENAS) --- */
+router.post("/invite", autenticar, somenteAdmin, async (req, res) => {
+  const { username, role } = req.body || {};
+
+  if (!username || !role)
+    return res.status(400).json({ erro: "Usuário e papel são obrigatórios" });
+
+  try {
+    // Gera um token temporário de convite (expira em 24 horas)
+    const inviteToken = jwt.sign(
+      { invited_user: username, invited_role: role, invited_by: req.user.user },
+      SECRET,
+      { expiresIn: "24h" }
+    );
+
+    console.log(`[AUTH] Convite gerado por ${req.user.user} → ${username} (${role})`);
+    res.json({
+      ok: true,
+      msg: "Convite gerado com sucesso!",
+      token: inviteToken,
+      expires_in: "24h",
+    });
+  } catch (err) {
+    console.error("[AUTH] Erro ao gerar convite:", err);
+    res.status(500).json({ erro: "Erro ao gerar convite." });
+  }
+});
+
+/* --- REGISTRAR NOVO USUÁRIO (USANDO CONVITE) --- */
+router.post("/register", async (req, res) => {
+  const { token, senha, fullname, matricula } = req.body || {};
+
+  if (!token || !senha)
+    return res.status(400).json({ erro: "Token de convite e senha são obrigatórios" });
+
+  try {
+    // Valida o token de convite
+    const payload = jwt.verify(token, SECRET);
+
+    if (!payload.invited_user || !payload.invited_role) {
+      return res.status(400).json({ erro: "Token de convite inválido" });
+    }
+
+    const username = payload.invited_user;
+    const role = payload.invited_role;
+
+    // Verifica se usuário já existe
+    const check = await pool.query("SELECT username FROM users WHERE username = $1", [username]);
+    if (check.rows.length > 0) {
+      return res.status(409).json({ erro: "Usuário já existe." });
+    }
+
+    // Cria o hash da senha
+    const passhash = await bcrypt.hash(senha, 10);
+
+    // Insere o novo usuário
+    await pool.query(
+      `INSERT INTO users (username, passhash, rolename, fullname, matricula, created_at)
+       VALUES ($1, $2, $3, $4, $5, now())`,
+      [username, passhash, role, fullname || null, matricula || null]
+    );
+
+    console.log(`[AUTH] Novo usuário criado via convite: ${username} (role: ${role})`);
+    res.json({
+      ok: true,
+      msg: "Usuário criado com sucesso!",
+      created_user: username,
+      invited_by: payload.invited_by,
+    });
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ erro: "Token de convite expirado" });
+    }
+    console.error("[AUTH] Erro ao registrar novo usuário:", err);
+    res.status(400).json({ erro: "Token de convite inválido ou malformado" });
   }
 });
 
