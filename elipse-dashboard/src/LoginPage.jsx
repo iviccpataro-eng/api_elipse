@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { apiFetch } from "./api";
+
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function LoginPage() {
     const [user, setUser] = useState("");
@@ -16,11 +20,9 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const resp = await fetch("https://api-elipse.onrender.com/auth/login", {
+            // 🔐 Requisição de login
+            const resp = await apiFetch(`${API_BASE}/auth/login`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify({ user, senha }),
             });
 
@@ -31,25 +33,28 @@ export default function LoginPage() {
                 data = {};
             }
 
-            if (resp.ok && data.token) {
-                // ✅ salvar token no localStorage com a chave correta
-                localStorage.setItem("authToken", data.token);
-
-                // ✅ salvar informações do usuário decodificado
+            if (resp.ok && data.token && data.token !== "undefined") {
                 try {
+                    // ✅ Valida o token imediatamente
                     const decoded = jwtDecode(data.token);
-                    localStorage.setItem("userInfo", JSON.stringify(decoded));
-                } catch (err) {
-                    console.warn("Não foi possível decodificar o token:", err);
-                }
 
-                // ✅ redirecionar para o dashboard
-                navigate("/dashboard");
+                    // Armazena token e info do usuário
+                    localStorage.setItem("authToken", data.token);
+                    localStorage.setItem("userInfo", JSON.stringify(decoded));
+
+                    // Redireciona
+                    navigate("/dashboard");
+                } catch (err) {
+                    console.warn("[Login] Token inválido recebido:", err);
+                    setErro("Token inválido recebido do servidor.");
+                    localStorage.removeItem("authToken");
+                    localStorage.removeItem("userInfo");
+                }
             } else {
-                setErro(data.erro || "Falha desconhecida no login");
+                setErro(data.erro || "Usuário ou senha incorretos");
             }
         } catch (e) {
-            console.error(e);
+            console.error("[Login] Erro de conexão:", e);
             setErro("Erro ao conectar ao servidor");
         } finally {
             setLoading(false);
@@ -60,38 +65,47 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <form
                 onSubmit={handleSubmit}
-                className="bg-white p-8 rounded shadow-md w-full max-w-sm"
+                className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm"
             >
-                <h2 className="text-2xl font-bold mb-6 text-center">Entrar</h2>
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+                    Entrar no Sistema
+                </h2>
 
-                {erro && <div className="text-red-500 mb-4 text-center">{erro}</div>}
+                {erro && (
+                    <div className="text-red-500 mb-4 text-center border border-red-300 bg-red-50 rounded p-2">
+                        {erro}
+                    </div>
+                )}
 
                 <label className="block mb-2">
-                    <span className="text-gray-700">Usuário</span>
+                    <span className="text-gray-700 font-medium">Usuário</span>
                     <input
                         type="text"
                         value={user}
                         onChange={(e) => setUser(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        autoComplete="username"
                     />
                 </label>
 
                 <label className="block mb-4">
-                    <span className="text-gray-700">Senha</span>
+                    <span className="text-gray-700 font-medium">Senha</span>
                     <input
                         type="password"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        autoComplete="current-password"
                     />
                 </label>
 
                 <button
                     type="submit"
-                    className={`w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-full py-2 px-4 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-all ${loading ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
                     disabled={loading}
                 >
-                    {loading ? "Carregando..." : "Entrar"}
+                    {loading ? "Verificando..." : "Entrar"}
                 </button>
             </form>
         </div>
