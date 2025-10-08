@@ -19,6 +19,7 @@ const __dirname = dirname(__filename);
 const allowedOrigins = [
   "https://api-elipse.vercel.app",
   "http://localhost:5173",
+  "https://api-elipse.onrender.com",
 ];
 app.use(
   cors({
@@ -31,31 +32,31 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 
-// ---- Rotas ----
+// ---- Rotas principais ----
 app.use("/auth", authRoutes);
 app.use("/", dataRoutes);
 app.use("/config", configRoutes);
 
-// ---- Info ----
-app.get("/", (req, res) => {
-  res.json({
-    status: "API Elipse Online",
-    ambiente: process.env.NODE_ENV || "development",
-    fixedTokenLoaded: !!process.env.VITE_REACT_TOKEN,
-  });
-});
+// ---- Status ----
+app.get("/status", (req, res) =>
+  res.json({ status: "API Elipse Online", env: process.env.NODE_ENV })
+);
 
 // ---- Servir build do React ----
 const clientBuildPath = path.resolve(__dirname, "elipse-dashboard", "dist");
 app.use(express.static(clientBuildPath));
 
+// ✅ Importante: qualquer rota não-API deve retornar o index.html (React Router)
 app.get("*", (req, res, next) => {
   if (
     req.originalUrl.startsWith("/auth") ||
     req.originalUrl.startsWith("/dados") ||
-    req.originalUrl.startsWith("/config")
-  )
+    req.originalUrl.startsWith("/config") ||
+    req.originalUrl.startsWith("/api")
+  ) {
     return next();
+  }
+
   res.sendFile(path.join(clientBuildPath, "index.html"));
 });
 
@@ -63,7 +64,5 @@ app.get("*", (req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`[BOOT] Servidor rodando na porta ${PORT}`);
-  console.log(`[INFO] Ambiente: ${process.env.NODE_ENV || "development"}`);
-  if (process.env.VITE_REACT_TOKEN)
-    console.log("[INFO] Token fixo carregado do Render");
+  console.log(`[INFO] Ambiente: ${process.env.NODE_ENV}`);
 });

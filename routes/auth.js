@@ -176,4 +176,23 @@ router.post("/register", async (req, res) => {
   }
 });
 
+/* --- VALIDAR TOKEN DE CONVITE --- */
+router.get("/validate-invite", async (req, res) => {
+  const { token } = req.query || {};
+  if (!token) return res.status(400).json({ erro: "Token não fornecido." });
+
+  try {
+    const payload = jwt.verify(token, SECRET);
+    if (!payload.invited_role)
+      return res.status(400).json({ erro: "Convite inválido." });
+
+    res.json({ ok: true, role: payload.invited_role });
+  } catch (err) {
+    if (err.name === "TokenExpiredError")
+      return res.status(401).json({ erro: "Convite expirado." });
+    return res.status(400).json({ erro: "Token inválido." });
+  }
+});
+
+
 export default router;
