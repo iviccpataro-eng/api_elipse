@@ -1,88 +1,118 @@
-import React, { useState, useEffect } from "react";
+// components/InviteGenerator.jsx
+import React, { useState } from "react";
 
-const API_BASE =
-    import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function InviteGenerator() {
-    const [role, setRole] = useState("user");
-    const [invite, setInvite] = useState("");
+    const [username, setUsername] = useState("");
+    const [role, setRole] = useState("reader");
+    const [token, setToken] = useState("");
     const [msg, setMsg] = useState("");
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [erro, setErro] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+    const isAdmin =
+        (() => {
+            try {
+                const user = JSON.parse(localStorage.getItem("userInfo"));
+                return user?.role === "admin";
+            } catch {
+                return false;
+            }
+        })();
 
-        try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            setIsAdmin(payload.role === "admin");
-        } catch {
-            setIsAdmin(false);
+    async function gerarConvite(e) {
+        e.preventDefault();
+        if (!isAdmin) {
+            return setErro("Apenas administradores podem gerar convites.");
         }
-    }, []);
 
-    const handleInvite = async () => {
+        setLoading(true);
+        setErro("");
         setMsg("");
+        setToken("");
+
         try {
-            const token = localStorage.getItem("token");
+            const tokenAuth = localStorage.getItem("authToken");
             const res = await fetch(`${API_BASE}/auth/invite`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${tokenAuth}`,
                 },
-                body: JSON.stringify({ role }),
+                body: JSON.stringify({ username, role }),
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.erro || "Erro ao gerar convite.");
+            if (!res.ok) throw new Error(data.erro || "Falha ao gerar convite");
 
-            setInvite(data.link);
             setMsg("Convite gerado com sucesso!");
+            setToken(data.token || "");
         } catch (err) {
-            setMsg(`Erro: ${err.message}`);
+            console.error(err);
+            setErro("Erro ao gerar convite.");
+        } finally {
+            setLoading(false);
         }
-    };
-
-    if (!isAdmin) {
-        return (
-            <div>
-                <h1 className="text-2xl font-bold mb-4">Gerar Convite</h1>
-                <p className="text-gray-700">Apenas administradores podem gerar convites.</p>
-            </div>
-        );
     }
 
     return (
-        <div>
-            <h1 className="text-2xl font-bold mb-4">Gerar Convite</h1>
-            <div className="space-y-4 max-w-md">
+        <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
+            <h2 className="text-2xl font-bold mb-4">Gerar Convite</h2>
+
+            {erro && <p className="text-red-500 mb-3">{erro}</p>}
+            {msg && <p className="text-green-600 mb-3">{msg}</p>}
+
+            <form onSubmit={gerarConvite} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
-                        Papel do Usuário *
+                        Usuário convidado
+                    </label>
+                    <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="mt-1 block w-full border rounded p-2"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                        Tipo de acesso
                     </label>
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                        className="mt-1 block w-full border rounded p-2"
                     >
-                        <option value="user">Usuário</option>
+                        <option value="reader">Leitor</option>
+                        <option value="operator">Operador</option>
                         <option value="admin">Administrador</option>
                     </select>
                 </div>
+
                 <button
-                    onClick={handleInvite}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    type="submit"
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 >
-                    Gerar Convite
+                    {loading ? "Gerando..." : "Gerar Convite"}
                 </button>
-                {msg && <p className="text-sm text-gray-700">{msg}</p>}
-                {invite && (
-                    <div className="mt-3 p-2 border rounded bg-gray-50 text-sm break-all">
-                        {invite}
-                    </div>
-                )}
-            </div>
+            </form>
+
+            {token && (
+                <div className="mt-4">
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">
+                        Token de Convite:
+                    </h3>
+                    <textarea
+                        value={token}
+                        readOnly
+                        className="w-full h-24 border rounded p-2 bg-gray-100 text-xs"
+                    />
+                </div>
+            )}
         </div>
     );
 }

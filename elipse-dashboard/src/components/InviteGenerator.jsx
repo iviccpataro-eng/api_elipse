@@ -1,116 +1,107 @@
 // components/InviteGenerator.jsx
 import React, { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
-
 export default function InviteGenerator() {
-    const [username, setUsername] = useState("");
     const [role, setRole] = useState("reader");
-    const [token, setToken] = useState("");
-    const [msg, setMsg] = useState("");
-    const [erro, setErro] = useState("");
+    const [invite, setInvite] = useState("");
     const [loading, setLoading] = useState(false);
+    const [erro, setErro] = useState("");
 
-    const isAdmin =
-        (() => {
-            try {
-                const user = JSON.parse(localStorage.getItem("userInfo"));
-                return user?.role === "admin";
-            } catch {
-                return false;
-            }
-        })();
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    async function gerarConvite(e) {
-        e.preventDefault();
-        if (!isAdmin) {
-            return setErro("Apenas administradores podem gerar convites.");
-        }
-
+    async function gerarConvite() {
         setLoading(true);
         setErro("");
-        setMsg("");
-        setToken("");
+        setInvite("");
+
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+            setErro("Usuário não autenticado.");
+            setLoading(false);
+            return;
+        }
 
         try {
-            const tokenAuth = localStorage.getItem("authToken");
-            const res = await fetch(`${API_BASE}/auth/invite`, {
+            const resp = await fetch(`${API_BASE}/auth/invite`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${tokenAuth}`,
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ username, role }),
+                body: JSON.stringify({ role }),
             });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.erro || "Falha ao gerar convite");
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.erro || "Falha ao gerar convite.");
+            }
 
-            setMsg("Convite gerado com sucesso!");
-            setToken(data.token || "");
+            // 🔗 Monta o link completo para envio ao novo usuário
+            const frontBase =
+                import.meta.env.VITE_FRONT_URL ||
+                "https://api-elipse.onrender.com";
+
+            const fullLink = `${frontBase}/register?invite=${data.token}`;
+            setInvite(fullLink);
         } catch (err) {
             console.error(err);
-            setErro("Erro ao gerar convite.");
+            setErro("Erro ao gerar convite: " + err.message);
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
-            <h2 className="text-2xl font-bold mb-4">Gerar Convite</h2>
+        <div className="max-w-lg mx-auto bg-white shadow rounded-xl p-6">
+            <h2 className="text-xl font-semibold mb-4">Gerar Convite</h2>
 
-            {erro && <p className="text-red-500 mb-3">{erro}</p>}
-            {msg && <p className="text-green-600 mb-3">{msg}</p>}
-
-            <form onSubmit={gerarConvite} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Usuário convidado
-                    </label>
-                    <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="mt-1 block w-full border rounded p-2"
-                        required
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Tipo de acesso
-                    </label>
-                    <select
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
-                        className="mt-1 block w-full border rounded p-2"
-                    >
-                        <option value="reader">Leitor</option>
-                        <option value="operator">Operador</option>
-                        <option value="admin">Administrador</option>
-                    </select>
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            <label className="block mb-4">
+                <span className="text-gray-700">Função do novo usuário:</span>
+                <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="mt-1 block w-full border border-gray-300 rounded-lg p-2"
                 >
-                    {loading ? "Gerando..." : "Gerar Convite"}
-                </button>
-            </form>
+                    <option value="reader">Leitor</option>
+                    <option value="editor">Editor</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </label>
 
-            {token && (
-                <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1">
-                        Token de Convite:
-                    </h3>
+            <button
+                onClick={gerarConvite}
+                disabled={loading}
+                className={`px-4 py-2 rounded-lg text-white w-full ${loading
+                    ? "bg-blue-300 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+            >
+                {loading ? "Gerando..." : "Gerar Convite"}
+            </button>
+
+            {erro && (
+                <div className="mt-4 text-red-500 text-sm text-center">{erro}</div>
+            )}
+
+            {invite && (
+                <div className="mt-6">
+                    <p className="text-gray-700 text-sm mb-1">🔗 Link de convite gerado:</p>
                     <textarea
-                        value={token}
                         readOnly
-                        className="w-full h-24 border rounded p-2 bg-gray-100 text-xs"
+                        value={invite}
+                        className="w-full p-2 border rounded text-xs bg-gray-50"
+                        rows={3}
                     />
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(invite);
+                            alert("Link copiado para a área de transferência!");
+                        }}
+                        className="mt-2 w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+                    >
+                        Copiar Link
+                    </button>
                 </div>
             )}
         </div>
