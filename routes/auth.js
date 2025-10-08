@@ -87,22 +87,22 @@ router.post("/invite", autenticar, somenteAdmin, async (req, res) => {
     return res.status(400).json({ erro: "O papel do usuário é obrigatório" });
 
   try {
-    // 🔒 Gera token de convite com ID aleatório para o novo usuário
-    const randomId = `user_${Math.random().toString(36).substring(2, 10)}`;
+    // 🔒 Gera token de convite com ID aleatório (só para referência)
+    const randomId = `invite_${Math.random().toString(36).substring(2, 10)}`;
 
     // Gera token temporário de convite (expira em 24 horas)
     const inviteToken = jwt.sign(
       {
-        invited_user: randomId, // agora gerado automaticamente
         invited_role: role,
         invited_by: req.user.user,
+        invite_id: randomId,
       },
       SECRET,
       { expiresIn: "24h" }
     );
 
     console.log(
-      `[AUTH] Convite gerado por ${req.user.user} → (role: ${role}, id: ${randomId})`
+      `[AUTH] Convite gerado por ${req.user.user} → (role: ${role}, token id: ${randomId})`
     );
 
     res.json({
@@ -119,22 +119,21 @@ router.post("/invite", autenticar, somenteAdmin, async (req, res) => {
 
 /* --- REGISTRAR NOVO USUÁRIO (USANDO CONVITE) --- */
 router.post("/register", async (req, res) => {
-  const { token, senha, fullname, matricula } = req.body || {};
+  const { token, username, senha, fullname, matricula } = req.body || {};
 
-  if (!token || !senha)
+  if (!token || !username || !senha)
     return res
       .status(400)
-      .json({ erro: "Token de convite e senha são obrigatórios" });
+      .json({ erro: "Token de convite, usuário e senha são obrigatórios." });
 
   try {
     // Valida o token de convite
     const payload = jwt.verify(token, SECRET);
 
-    if (!payload.invited_user || !payload.invited_role) {
-      return res.status(400).json({ erro: "Token de convite inválido" });
+    if (!payload.invited_role) {
+      return res.status(400).json({ erro: "Token de convite inválido." });
     }
 
-    const username = payload.invited_user;
     const role = payload.invited_role;
 
     // Verifica se usuário já existe
@@ -143,7 +142,7 @@ router.post("/register", async (req, res) => {
       [username]
     );
     if (check.rows.length > 0) {
-      return res.status(409).json({ erro: "Usuário já existe." });
+      return res.status(409).json({ erro: "Nome de usuário já está em uso." });
     }
 
     // Cria o hash da senha
@@ -167,12 +166,10 @@ router.post("/register", async (req, res) => {
     });
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      return res.status(401).json({ erro: "Token de convite expirado" });
+      return res.status(401).json({ erro: "Token de convite expirado." });
     }
     console.error("[AUTH] Erro ao registrar novo usuário:", err);
-    res
-      .status(400)
-      .json({ erro: "Token de convite inválido ou malformado" });
+    res.status(400).json({ erro: "Token de convite inválido ou malformado." });
   }
 });
 
@@ -193,6 +190,5 @@ router.get("/validate-invite", async (req, res) => {
     return res.status(400).json({ erro: "Token inválido." });
   }
 });
-
 
 export default router;
