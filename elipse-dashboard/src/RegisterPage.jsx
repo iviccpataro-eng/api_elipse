@@ -1,5 +1,5 @@
 // components/RegisterPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const API_BASE =
@@ -20,6 +20,7 @@ export default function RegisterPage() {
     const [userError, setUserError] = useState(""); // ⚠️ erro específico do campo usuário
     const [success, setSuccess] = useState("");
     const [validating, setValidating] = useState(true);
+    const typingTimeoutRef = useRef(null);
 
     // 🔍 Valida o convite no backend
     useEffect(() => {
@@ -47,6 +48,33 @@ export default function RegisterPage() {
 
         validar();
     }, [invite]);
+
+    // 🔎 Verifica se o nome de usuário já existe (em tempo real)
+    const checkUsername = async (nome) => {
+        if (!nome) return;
+        try {
+            const res = await fetch(`${API_BASE}/auth/check-username?u=${encodeURIComponent(nome)}`);
+            const data = await res.json();
+            if (data.exists) {
+                setUserError("Nome de usuário já cadastrado");
+            } else {
+                setUserError("");
+            }
+        } catch {
+            // ignora erros de rede silenciosamente
+        }
+    };
+
+    const handleUsernameChange = (e) => {
+        const nome = e.target.value.trim();
+        setUsername(nome);
+        setUserError("");
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        // aguarda o usuário parar de digitar por 600ms
+        typingTimeoutRef.current = setTimeout(() => {
+            if (nome.length >= 3) checkUsername(nome);
+        }, 600);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -79,7 +107,6 @@ export default function RegisterPage() {
             const data = await res.json();
 
             if (data.erro_code === "USERNAME_TAKEN") {
-                // ⚠️ Mostra o erro específico abaixo do campo "Usuário"
                 setUserError("Nome de usuário já cadastrado");
                 return;
             }
@@ -119,10 +146,8 @@ export default function RegisterPage() {
                                 <input
                                     type="text"
                                     value={username}
-                                    onChange={(e) => {
-                                        setUsername(e.target.value);
-                                        if (userError) setUserError(""); // limpa erro ao digitar
-                                    }}
+                                    onChange={handleUsernameChange}
+                                    onBlur={() => checkUsername(username)}
                                     className={`mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm ${userError ? "border-red-400" : "border-gray-300"
                                         }`}
                                     placeholder="Digite o nome de usuário"

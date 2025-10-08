@@ -196,4 +196,18 @@ router.get("/validate-invite", async (req, res) => {
   }
 });
 
+/* --- VALIDAR NOME DE USUÁRIO EXISTENTE --- */
+router.get("/check-username", async (req, res) => {
+  const { u } = req.query || {};
+  if (!u) return res.status(400).json({ erro: "Usuário não fornecido." });
+
+  try {
+    const result = await pool.query("SELECT 1 FROM users WHERE username = $1", [u]);
+    res.json({ exists: result.rows.length > 0 });
+  } catch (err) {
+    console.error("[AUTH] Erro ao verificar usuário:", err);
+    res.status(500).json({ erro: "Erro interno ao verificar usuário." });
+  }
+});
+
 export default router;
