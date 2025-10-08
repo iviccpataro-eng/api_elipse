@@ -52,7 +52,7 @@ export default function RegisterPage() {
         setError("");
         setSuccess("");
 
-        if (!fullname || !senha || !confirm) {
+        if (!username || !fullname || !senha || !confirm) {
             setError("Preencha todos os campos obrigatórios.");
             return;
         }
@@ -67,6 +67,7 @@ export default function RegisterPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     token: invite,
+                    username,
                     senha,
                     fullname,
                     matricula,
@@ -101,6 +102,18 @@ export default function RegisterPage() {
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Usuário <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                                    placeholder="Digite o nome de usuário"
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Nome completo <span className="text-red-500">*</span>
