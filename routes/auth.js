@@ -81,20 +81,30 @@ router.post("/update-theme", autenticar, async (req, res) => {
 
 /* --- GERAR CONVITE (ADMIN APENAS) --- */
 router.post("/invite", autenticar, somenteAdmin, async (req, res) => {
-  const { username, role } = req.body || {};
+  const { role } = req.body || {};
 
-  if (!username || !role)
-    return res.status(400).json({ erro: "Usuário e papel são obrigatórios" });
+  if (!role)
+    return res.status(400).json({ erro: "O papel do usuário é obrigatório" });
 
   try {
-    // Gera um token temporário de convite (expira em 24 horas)
+    // 🔒 Gera token de convite com ID aleatório para o novo usuário
+    const randomId = `user_${Math.random().toString(36).substring(2, 10)}`;
+
+    // Gera token temporário de convite (expira em 24 horas)
     const inviteToken = jwt.sign(
-      { invited_user: username, invited_role: role, invited_by: req.user.user },
+      {
+        invited_user: randomId, // agora gerado automaticamente
+        invited_role: role,
+        invited_by: req.user.user,
+      },
       SECRET,
       { expiresIn: "24h" }
     );
 
-    console.log(`[AUTH] Convite gerado por ${req.user.user} → ${username} (${role})`);
+    console.log(
+      `[AUTH] Convite gerado por ${req.user.user} → (role: ${role}, id: ${randomId})`
+    );
+
     res.json({
       ok: true,
       msg: "Convite gerado com sucesso!",
@@ -112,7 +122,9 @@ router.post("/register", async (req, res) => {
   const { token, senha, fullname, matricula } = req.body || {};
 
   if (!token || !senha)
-    return res.status(400).json({ erro: "Token de convite e senha são obrigatórios" });
+    return res
+      .status(400)
+      .json({ erro: "Token de convite e senha são obrigatórios" });
 
   try {
     // Valida o token de convite
@@ -126,7 +138,10 @@ router.post("/register", async (req, res) => {
     const role = payload.invited_role;
 
     // Verifica se usuário já existe
-    const check = await pool.query("SELECT username FROM users WHERE username = $1", [username]);
+    const check = await pool.query(
+      "SELECT username FROM users WHERE username = $1",
+      [username]
+    );
     if (check.rows.length > 0) {
       return res.status(409).json({ erro: "Usuário já existe." });
     }
@@ -141,7 +156,9 @@ router.post("/register", async (req, res) => {
       [username, passhash, role, fullname || null, matricula || null]
     );
 
-    console.log(`[AUTH] Novo usuário criado via convite: ${username} (role: ${role})`);
+    console.log(
+      `[AUTH] Novo usuário criado via convite: ${username} (role: ${role})`
+    );
     res.json({
       ok: true,
       msg: "Usuário criado com sucesso!",
@@ -153,7 +170,9 @@ router.post("/register", async (req, res) => {
       return res.status(401).json({ erro: "Token de convite expirado" });
     }
     console.error("[AUTH] Erro ao registrar novo usuário:", err);
-    res.status(400).json({ erro: "Token de convite inválido ou malformado" });
+    res
+      .status(400)
+      .json({ erro: "Token de convite inválido ou malformado" });
   }
 });
 
