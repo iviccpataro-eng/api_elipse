@@ -142,7 +142,12 @@ router.post("/register", async (req, res) => {
       [username]
     );
     if (check.rows.length > 0) {
-      return res.status(409).json({ erro: "Nome de usuário já está em uso." });
+      return res
+        .status(409)
+        .json({
+          erro: "Nome de usuário já cadastrado.",
+          erro_code: "USERNAME_TAKEN",
+        });
     }
 
     // Cria o hash da senha

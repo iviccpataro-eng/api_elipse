@@ -17,6 +17,7 @@ export default function RegisterPage() {
     const [senha, setSenha] = useState("");
     const [confirm, setConfirm] = useState("");
     const [error, setError] = useState("");
+    const [userError, setUserError] = useState(""); // ⚠️ erro específico do campo usuário
     const [success, setSuccess] = useState("");
     const [validating, setValidating] = useState(true);
 
@@ -50,6 +51,7 @@ export default function RegisterPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+        setUserError("");
         setSuccess("");
 
         if (!username || !fullname || !senha || !confirm) {
@@ -75,6 +77,13 @@ export default function RegisterPage() {
             });
 
             const data = await res.json();
+
+            if (data.erro_code === "USERNAME_TAKEN") {
+                // ⚠️ Mostra o erro específico abaixo do campo "Usuário"
+                setUserError("Nome de usuário já cadastrado");
+                return;
+            }
+
             if (!res.ok || !data.ok) {
                 throw new Error(data.erro || "Erro ao registrar.");
             }
@@ -102,6 +111,7 @@ export default function RegisterPage() {
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Usuário */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Usuário <span className="text-red-500">*</span>
@@ -109,11 +119,20 @@ export default function RegisterPage() {
                                 <input
                                     type="text"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
+                                    onChange={(e) => {
+                                        setUsername(e.target.value);
+                                        if (userError) setUserError(""); // limpa erro ao digitar
+                                    }}
+                                    className={`mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm ${userError ? "border-red-400" : "border-gray-300"
+                                        }`}
                                     placeholder="Digite o nome de usuário"
                                 />
+                                {userError && (
+                                    <p className="text-xs text-red-500 mt-1">{userError}</p>
+                                )}
                             </div>
+
+                            {/* Nome completo */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Nome completo <span className="text-red-500">*</span>
@@ -126,6 +145,8 @@ export default function RegisterPage() {
                                     placeholder="Digite seu nome completo"
                                 />
                             </div>
+
+                            {/* Matrícula */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Matrícula
@@ -138,6 +159,8 @@ export default function RegisterPage() {
                                     placeholder="Digite sua matrícula (opcional)"
                                 />
                             </div>
+
+                            {/* Perfil */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Perfil
@@ -149,6 +172,8 @@ export default function RegisterPage() {
                                     className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm bg-gray-100 cursor-not-allowed"
                                 />
                             </div>
+
+                            {/* Senha */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Senha <span className="text-red-500">*</span>
@@ -161,6 +186,8 @@ export default function RegisterPage() {
                                     placeholder="Digite sua senha"
                                 />
                             </div>
+
+                            {/* Confirmar Senha */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Confirmar Senha <span className="text-red-500">*</span>
@@ -173,6 +200,8 @@ export default function RegisterPage() {
                                     placeholder="Confirme sua senha"
                                 />
                             </div>
+
+                            {/* Botão */}
                             <button
                                 type="submit"
                                 disabled={!invite}
