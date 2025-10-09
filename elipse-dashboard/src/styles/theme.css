@@ -1,0 +1,61 @@
+/* src/styles/theme.css */
+
+/* Tema Azul Claro */
+[data-theme="light-blue"] {
+    --bg-color: #f0f6ff;
+    --bg-card: #ffffff;
+    --text-color: #1e3a8a;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --border-color: #cbd5e1;
+}
+
+/* Tema Azul Escuro */
+[data-theme="dark-blue"] {
+    --bg-color: #0f172a;
+    --bg-card: #1e293b;
+    --text-color: #e2e8f0;
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --border-color: #334155;
+}
+
+/* Tema Verde Claro */
+[data-theme="light-green"] {
+    --bg-color: #f4fdf6;
+    --bg-card: #ffffff;
+    --text-color: #064e3b;
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --border-color: #a7f3d0;
+}
+
+/* Tema Verde Escuro */
+[data-theme="dark-green"] {
+    --bg-color: #022c22;
+    --bg-card: #064e3b;
+    --text-color: #ecfdf5;
+    --accent: #34d399;
+    --accent-hover: #10b981;
+    --border-color: #065f46;
+}
+
+/* Tema Rosa Claro */
+[data-theme="light-rose"] {
+    --bg-color: #fff1f2;
+    --bg-card: #ffffff;
+    --text-color: #881337;
+    --accent: #f43f5e;
+    --accent-hover: #e11d48;
+    --border-color: #fecdd3;
+}
+
+/* Tema Neutro Escuro (padrão dark) */
+[data-theme="dark"] {
+    --bg-color: #111827;
+    --bg-card: #1f2937;
+    --text-color: #f9fafb;
+    --accent: #9ca3af;
+    --accent-hover: #6b7280;
+    --border-color: #374151;
+}

@@ -1,5 +1,6 @@
 // components/SystemConfig.jsx
 import React, { useEffect, useState } from "react";
+import "@/styles/theme.css";
 
 const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -10,7 +11,7 @@ export default function SystemConfig({ userRole }) {
     const [saving, setSaving] = useState(false);
     const [erro, setErro] = useState("");
     const [msg, setMsg] = useState("");
-    const [themePreview, setThemePreview] = useState("slate"); // tema visual aplicado
+    const [themePreview, setThemePreview] = useState("light-blue");
     const isAdmin = userRole === "admin";
 
     useEffect(() => {
@@ -28,7 +29,11 @@ export default function SystemConfig({ userRole }) {
             const data = await res.json();
             if (!res.ok) throw new Error(data.erro || "Falha ao buscar configuração");
             setConfig(data.config || {});
-            setThemePreview(data.config?.theme || "slate");
+            setThemePreview(data.config?.theme || "light-blue");
+            document.documentElement.setAttribute(
+                "data-theme",
+                data.config?.theme || "light-blue"
+            );
         } catch (err) {
             console.error(err);
             setErro("Falha ao buscar configuração");
@@ -81,7 +86,8 @@ export default function SystemConfig({ userRole }) {
             });
             setConfig((prev) => ({ ...prev, theme }));
             setThemePreview(theme);
-            setMsg(`Tema atualizado para "${theme}"`);
+            document.documentElement.setAttribute("data-theme", theme);
+            setMsg(`Tema alterado para "${theme}"`);
         } catch (err) {
             console.error("[SystemConfig] Erro ao atualizar tema:", err);
             setErro("Erro ao salvar tema.");
@@ -93,33 +99,22 @@ export default function SystemConfig({ userRole }) {
         setConfig((prev) => ({ ...prev, [name]: value }));
     };
 
-    const themeColors = [
-        "slate",
-        "blue",
-        "emerald",
-        "violet",
-        "rose",
-        "amber",
-        "cyan",
-        "neutral",
+    const temas = [
+        { nome: "Azul Claro", valor: "light-blue" },
+        { nome: "Azul Escuro", valor: "dark-blue" },
+        { nome: "Verde Claro", valor: "light-green" },
+        { nome: "Verde Escuro", valor: "dark-green" },
+        { nome: "Rosa Claro", valor: "light-rose" },
+        { nome: "Escuro Neutro", valor: "dark" },
     ];
-
-    // Mapeamento de cores para pré-visualização
-    const themeClasses = {
-        slate: "bg-slate-50 text-slate-800",
-        blue: "bg-blue-50 text-blue-800",
-        emerald: "bg-emerald-50 text-emerald-800",
-        violet: "bg-violet-50 text-violet-800",
-        rose: "bg-rose-50 text-rose-800",
-        amber: "bg-amber-50 text-amber-800",
-        cyan: "bg-cyan-50 text-cyan-800",
-        neutral: "bg-neutral-50 text-neutral-800",
-    };
 
     return (
         <div
-            className={`max-w-3xl mx-auto rounded-xl shadow p-6 text-left transition-colors duration-300 ${themeClasses[themePreview] || "bg-white text-gray-800"
-                }`}
+            className="max-w-3xl mx-auto rounded-xl shadow p-6 text-left transition-colors duration-300"
+            style={{
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-color)",
+            }}
         >
             <h2 className="text-2xl font-bold mb-4">Configurações do Sistema</h2>
 
@@ -134,44 +129,50 @@ export default function SystemConfig({ userRole }) {
                     <section>
                         <h3 className="text-lg font-semibold mb-2">🏢 Dados do Edifício</h3>
 
-                        <div className="mb-3">
-                            <label className="block text-sm font-medium">
-                                Nome do Edifício
-                            </label>
-                            <input
-                                type="text"
-                                name="building_name"
-                                value={config.building_name || ""}
-                                onChange={handleChange}
-                                className="mt-1 block w-full border rounded p-2"
-                                disabled={!isAdmin}
-                            />
-                        </div>
+                        <label className="block text-sm font-medium">Nome do Edifício</label>
+                        <input
+                            type="text"
+                            name="building_name"
+                            value={config.building_name || ""}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border rounded p-2"
+                            disabled={!isAdmin}
+                        />
 
-                        <div className="mb-3">
-                            <label className="block text-sm font-medium">Endereço</label>
-                            <input
-                                type="text"
-                                name="address"
-                                value={config.address || ""}
-                                onChange={handleChange}
-                                className="mt-1 block w-full border rounded p-2"
-                                disabled={!isAdmin}
-                            />
-                            {config.address && (
-                                <iframe
-                                    src={`https://www.google.com/maps?q=${encodeURIComponent(
-                                        config.address
-                                    )}&output=embed`}
-                                    width="100%"
-                                    height="250"
-                                    className="rounded-xl mt-3 border"
-                                    loading="lazy"
-                                ></iframe>
-                            )}
-                        </div>
+                        <label className="block text-sm font-medium mt-3">Endereço</label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={config.address || ""}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border rounded p-2"
+                            disabled={!isAdmin}
+                        />
+                        {config.address && (
+                            <iframe
+                                src={`https://www.google.com/maps?q=${encodeURIComponent(
+                                    config.address
+                                )}&output=embed`}
+                                width="100%"
+                                height="250"
+                                className="rounded-xl mt-3 border"
+                                loading="lazy"
+                            ></iframe>
+                        )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className="block text-sm font-medium mt-3">
+                            Empresa Administradora
+                        </label>
+                        <input
+                            type="text"
+                            name="admin_name"
+                            value={config.admin_name || ""}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border rounded p-2"
+                            disabled={!isAdmin}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                             <div>
                                 <label className="block text-sm font-medium">
                                     Gerente/Contato Responsável
@@ -198,45 +199,30 @@ export default function SystemConfig({ userRole }) {
                             </div>
                         </div>
 
-                        <div className="mt-4">
-                            <label className="block text-sm font-medium">
-                                Empresa Administradora
-                            </label>
-                            <input
-                                type="text"
-                                name="admin_name"
-                                value={config.admin_name || ""}
-                                onChange={handleChange}
-                                className="mt-1 block w-full border rounded p-2"
-                                disabled={!isAdmin}
-                            />
-                        </div>
                     </section>
 
-                    {/* --- Seção: Temas e Aparência --- */}
+                    {/* --- Seção: Temas --- */}
                     <section>
                         <h3 className="text-lg font-semibold mb-2">🎨 Temas e Aparência</h3>
-                        <div className="flex flex-wrap gap-3 mt-2">
-                            {themeColors.map((cor) => (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                            {temas.map((t) => (
                                 <button
-                                    key={cor}
+                                    key={t.valor}
                                     type="button"
-                                    className={`h-8 w-8 rounded-full border-2 transition transform ${themePreview === cor
-                                        ? "scale-110 border-black"
-                                        : "border-transparent hover:scale-105"
-                                        } bg-${cor}-500`}
-                                    onClick={() => atualizarTema(cor)}
+                                    onClick={() => atualizarTema(t.valor)}
                                     disabled={!isAdmin}
-                                    title={`Tema ${cor}`}
-                                ></button>
+                                    className={`p-3 rounded-lg border transition-all ${themePreview === t.valor
+                                        ? "border-[var(--accent)] ring-2 ring-[var(--accent)]"
+                                        : "border-[var(--border-color)] hover:ring-1"
+                                        }`}
+                                    style={{
+                                        backgroundColor: "var(--bg-card)",
+                                        color: "var(--text-color)",
+                                    }}
+                                >
+                                    {t.nome}
+                                </button>
                             ))}
-                        </div>
-
-                        <div className="mt-4 p-4 border rounded-lg bg-white/60">
-                            <p className="text-sm">
-                                <strong>Pré-visualização:</strong> O painel acima já reflete o tema
-                                selecionado (<em>{themePreview}</em>).
-                            </p>
                         </div>
                     </section>
 
@@ -260,7 +246,11 @@ export default function SystemConfig({ userRole }) {
                         <button
                             type="submit"
                             disabled={saving}
-                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                            style={{
+                                backgroundColor: "var(--accent)",
+                                color: "white",
+                            }}
+                            className="px-4 py-2 rounded hover:opacity-90 transition"
                         >
                             {saving ? "Salvando..." : "Salvar Configuração"}
                         </button>
