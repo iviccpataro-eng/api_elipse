@@ -1,6 +1,6 @@
 // components/SystemConfig.jsx
 import React, { useEffect, useState } from "react";
-import "@/styles/theme.css";
+import "../styles/theme.css";
 
 const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";

@@ -8,7 +8,7 @@ import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import { apiFetch } from "./api";
 import ThemeProvider from "./components/ThemeProvider"; // 🆕 Importa o provedor de tema
-import "@/styles/theme.css"; // 🆕 Importa os estilos de temas
+import "./styles/theme.css"; // 🆕 Importa os estilos de temas
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
