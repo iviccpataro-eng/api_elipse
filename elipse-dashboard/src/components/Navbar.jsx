@@ -73,15 +73,15 @@ export default function Navbar({ onLogout }) {
                 <span className="text-lg font-semibold">{buildingName}</span>
             </div>
 
-            {/* Menu Desktop (≥1280px) - Texto */}
+            {/* Menu Desktop (≥1280px) */}
             <nav className="hidden xl:flex gap-6 items-center">
                 {navItems.map((item) => (
                     <Link
                         key={item.to}
                         to={item.to}
                         className={`hover:text-[var(--accent)] transition-colors ${location.pathname === item.to
-                            ? "font-semibold text-[var(--accent)]"
-                            : ""
+                                ? "font-semibold text-[var(--accent)]"
+                                : ""
                             }`}
                     >
                         {item.label}
@@ -111,9 +111,7 @@ export default function Navbar({ onLogout }) {
                     <Link
                         key={item.to}
                         to={item.to}
-                        className={`hover:text-[var(--accent)] ${location.pathname === item.to
-                            ? "text-[var(--accent)]"
-                            : ""
+                        className={`hover:text-[var(--accent)] ${location.pathname === item.to ? "text-[var(--accent)]" : ""
                             }`}
                     >
                         {item.icon}
@@ -159,9 +157,7 @@ export default function Navbar({ onLogout }) {
                             key={item.to}
                             to={item.to}
                             onClick={() => setMenuOpen(false)}
-                            className={`flex items-center gap-2 hover:text-[var(--accent)] ${location.pathname === item.to
-                                ? "text-[var(--accent)]"
-                                : ""
+                            className={`flex items-center gap-2 hover:text-[var(--accent)] ${location.pathname === item.to ? "text-[var(--accent)]" : ""
                                 }`}
                         >
                             {item.icon}
@@ -179,8 +175,7 @@ export default function Navbar({ onLogout }) {
                             color: "#fff",
                         }}
                         onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor =
-                            "var(--danger-hover)")
+                            (e.currentTarget.style.backgroundColor = "var(--danger-hover)")
                         }
                         onMouseLeave={(e) =>
                             (e.currentTarget.style.backgroundColor = "var(--danger)")
