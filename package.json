@@ -5,10 +5,9 @@
   "description": "API de integração com Elipse E3 e painel React (Elipse Dashboard)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js",
+    "dev": "cross-env NODE_ENV=development node server.js",
     "build:client": "cd elipse-dashboard && npm install && npm run build",
-    "postinstall": "npm run build:client"
+    "start": "node server.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -33,5 +32,8 @@
     "automation"
   ],
   "author": "Ivic Pataro",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
 }
