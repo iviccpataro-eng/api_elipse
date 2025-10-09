@@ -400,8 +400,8 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <Navbar onLogout={handleLogout} />
       <Routes>
-        <Route index element={<Dashboard token={token} />} />
-        <Route path="tools" element={<ToolsPage token={token} user={user} />} />
+        <Route path="/dashboard" element={<Dashboard token={token} />} />
+        <Route path="/dashboard/tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </ThemeProvider>
