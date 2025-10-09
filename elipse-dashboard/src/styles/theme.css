@@ -1,61 +1,151 @@
-/* src/styles/theme.css */
+/* ===============================
+   SISTEMA DE TEMAS GLOBAIS
+   =============================== */
 
-/* Tema Azul Claro */
-[data-theme="light-blue"] {
-    --bg-color: #f0f6ff;
-    --bg-card: #ffffff;
-    --text-color: #1e3a8a;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
+/* 🌐 Padrão: tema claro */
+:root {
+    --bg-color: #f9fafb;
+    --text-color: #111827;
+    --card-bg: #ffffff;
+    --card-border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --navbar-bg: #1e293b;
+    --navbar-text: #ffffff;
     --border-color: #cbd5e1;
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
 }
 
-/* Tema Azul Escuro */
+/* ===============================
+   🩵 TEMA: Azul Claro (light-blue)
+   =============================== */
+[data-theme="light-blue"] {
+    --bg-color: #e0f2fe;
+    /* Fundo geral azul clarinho */
+    --text-color: #0f172a;
+    /* Texto escuro */
+    --card-bg: #f8fafc;
+    /* Fundo dos cards */
+    --card-border: #cbd5e1;
+    /* Bordas suaves */
+    --accent: #0284c7;
+    /* Botões e links */
+    --accent-hover: #0369a1;
+    --navbar-bg: #0ea5e9;
+    /* Cabeçalho */
+    --navbar-text: #ffffff;
+    --border-color: #bae6fd;
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+}
+
+/* ===============================
+   💙 TEMA: Azul Escuro (dark-blue)
+   =============================== */
 [data-theme="dark-blue"] {
     --bg-color: #0f172a;
-    --bg-card: #1e293b;
     --text-color: #e2e8f0;
-    --accent: #60a5fa;
-    --accent-hover: #3b82f6;
-    --border-color: #334155;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --navbar-bg: #1e3a8a;
+    --navbar-text: #f1f5f9;
+    --border-color: #475569;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
 }
 
-/* Tema Verde Claro */
+/* ===============================
+   ⚫ TEMA: Cinza Escuro (dark-gray)
+   =============================== */
+[data-theme="dark-gray"] {
+    --bg-color: #111827;
+    --text-color: #f9fafb;
+    --card-bg: #1f2937;
+    --card-border: #374151;
+    --accent: #4b5563;
+    --accent-hover: #6b7280;
+    --navbar-bg: #1f2937;
+    --navbar-text: #f3f4f6;
+    --border-color: #374151;
+    --danger: #f87171;
+    --danger-hover: #ef4444;
+}
+
+/* ===============================
+   🟢 TEMA: Verde Suave (light-green)
+   =============================== */
 [data-theme="light-green"] {
-    --bg-color: #f4fdf6;
-    --bg-card: #ffffff;
+    --bg-color: #ecfdf5;
     --text-color: #064e3b;
+    --card-bg: #ffffff;
+    --card-border: #a7f3d0;
     --accent: #10b981;
     --accent-hover: #059669;
-    --border-color: #a7f3d0;
+    --navbar-bg: #059669;
+    --navbar-text: #ffffff;
+    --border-color: #6ee7b7;
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
 }
 
-/* Tema Verde Escuro */
-[data-theme="dark-green"] {
-    --bg-color: #022c22;
-    --bg-card: #064e3b;
-    --text-color: #ecfdf5;
-    --accent: #34d399;
-    --accent-hover: #10b981;
-    --border-color: #065f46;
-}
-
-/* Tema Rosa Claro */
-[data-theme="light-rose"] {
-    --bg-color: #fff1f2;
-    --bg-card: #ffffff;
-    --text-color: #881337;
-    --accent: #f43f5e;
-    --accent-hover: #e11d48;
-    --border-color: #fecdd3;
-}
-
-/* Tema Neutro Escuro (padrão dark) */
+/* ===============================
+   🌙 TEMA: Dark Neutro (dark)
+   =============================== */
 [data-theme="dark"] {
-    --bg-color: #111827;
-    --bg-card: #1f2937;
+    --bg-color: #0a0a0a;
     --text-color: #f9fafb;
-    --accent: #9ca3af;
-    --accent-hover: #6b7280;
-    --border-color: #374151;
+    --card-bg: #1a1a1a;
+    --card-border: #2e2e2e;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --navbar-bg: #111111;
+    --navbar-text: #f9fafb;
+    --border-color: #2e2e2e;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+}
+
+/* ===============================
+   🌈 ELEMENTOS GERAIS
+   =============================== */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+button {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+input,
+select,
+textarea {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+input:disabled,
+select:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+a {
+    color: var(--accent);
+}
+
+a:hover {
+    color: var(--accent-hover);
 }

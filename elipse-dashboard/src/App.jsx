@@ -7,6 +7,8 @@ import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import { apiFetch } from "./api";
+import ThemeProvider from "./components/ThemeProvider"; // 🆕 Importa o provedor de tema
+import "@/styles/theme.css"; // 🆕 Importa os estilos de temas
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -79,7 +81,6 @@ function LoginPage({ onLogin }) {
       const data = await res.json();
 
       if (res.ok && data.token && data.token !== "undefined") {
-        // Armazena token e dados decodificados
         localStorage.setItem("authToken", data.token);
         const decoded = jwtDecode(data.token);
         localStorage.setItem("userInfo", JSON.stringify(decoded));
@@ -185,17 +186,23 @@ function Dashboard({ token }) {
   const navigateCrumb = (idx) => setPath((p) => p.slice(0, idx));
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto p-4">
+    <div
+      className="min-h-screen p-4 transition-colors"
+      style={{ backgroundColor: "var(--bg-color)", color: "var(--text-color)" }}
+    >
+      <div className="max-w-7xl mx-auto">
         <div className="mb-3 text-sm flex items-center gap-2 flex-wrap">
-          <Button className="bg-gray-50" onClick={goHome}>
+          <Button
+            className="bg-[var(--bg-card)] text-[var(--text-color)] border-[var(--border-color)]"
+            onClick={goHome}
+          >
             🏠 Home
           </Button>
           {path.map((k, i) => (
             <React.Fragment key={i}>
               <span className="text-gray-400">/</span>
               <Button
-                className="bg-gray-50"
+                className="bg-[var(--bg-card)] text-[var(--text-color)] border-[var(--border-color)]"
                 onClick={() => navigateCrumb(i + 1)}
               >
                 {formatKeyLabel(k)}
@@ -204,9 +211,7 @@ function Dashboard({ token }) {
           ))}
         </div>
 
-        {loading && (
-          <div className="mb-3 text-sm text-gray-500">Carregando…</div>
-        )}
+        {loading && <div className="mb-3 text-sm">Carregando…</div>}
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
         {isLeafNode ? (
@@ -230,9 +235,15 @@ function FolderNode({ node, filter, onOpen }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {keys.map((k) => (
-        <div key={k} className="rounded-xl border bg-white shadow p-4">
+        <div
+          key={k}
+          className="rounded-xl border bg-[var(--bg-card)] shadow p-4 text-[var(--text-color)]"
+        >
           <div className="font-medium">{formatKeyLabel(k)}</div>
-          <Button className="mt-2 bg-blue-50" onClick={() => onOpen(k)}>
+          <Button
+            className="mt-2 bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]"
+            onClick={() => onOpen(k)}
+          >
             Abrir →
           </Button>
         </div>
@@ -247,12 +258,15 @@ function LeafNode({ node, filter }) {
   return (
     <div className="space-y-4">
       {info.length > 0 && (
-        <div className="rounded-xl border bg-white shadow p-4">
+        <div className="rounded-xl border bg-[var(--bg-card)] shadow p-4 text-[var(--text-color)]">
           <h2 className="text-lg font-semibold mb-2">Cabeçalho</h2>
           <div className="flex flex-wrap gap-2">
             {Object.entries(info[0]).map(([k, v]) => (
-              <Badge key={k} className="bg-gray-50 border-gray-200">
-                <span className="text-gray-600 mr-1">{formatKeyLabel(k)}:</span>
+              <Badge
+                key={k}
+                className="bg-[var(--bg-color)] border-[var(--border-color)]"
+              >
+                <span className="mr-1">{formatKeyLabel(k)}:</span>
                 <span className="font-medium">{String(v)}</span>
               </Badge>
             ))}
@@ -281,7 +295,10 @@ function LeafNode({ node, filter }) {
               const chartData = [{ name, value: percent, fill }];
 
               return (
-                <div key={idx} className="rounded-xl border bg-white shadow p-4">
+                <div
+                  key={idx}
+                  className="rounded-xl border bg-[var(--bg-card)] shadow p-4"
+                >
                   <div className="font-medium mb-2">{name}</div>
                   <div className="flex justify-center">
                     <RadialBarChart
@@ -317,7 +334,10 @@ function LeafNode({ node, filter }) {
             }
 
             return (
-              <div key={idx} className="rounded-xl border bg-white shadow p-4">
+              <div
+                key={idx}
+                className="rounded-xl border bg-[var(--bg-card)] shadow p-4"
+              >
                 <div className="font-medium">{name}</div>
                 <div className="text-2xl font-semibold">
                   {value}
@@ -344,11 +364,13 @@ export default function App() {
     const t = localStorage.getItem("authToken");
     return t ? jwtDecode(t) : null;
   });
+  const [theme, setTheme] = useState("light-blue");
 
   const handleLogin = (tk, decodedUser) => {
     localStorage.setItem("authToken", tk);
     setToken(tk);
     setUser(decodedUser || jwtDecode(tk));
+    if (decodedUser?.theme) setTheme(decodedUser.theme);
   };
 
   const handleLogout = () => {
@@ -359,9 +381,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Logout automático se o token expirar ou estiver malformado
     try {
-      if (token) jwtDecode(token);
+      if (token) {
+        const decoded = jwtDecode(token);
+        setTheme(decoded?.theme || localStorage.getItem("userTheme") || "light-blue");
+      }
     } catch {
       console.warn("[Auth] Token expirado ou malformado — logout");
       handleLogout();
@@ -373,13 +397,13 @@ export default function App() {
   }
 
   return (
-    <>
+    <ThemeProvider theme={theme}>
       <Navbar onLogout={handleLogout} />
       <Routes>
         <Route index element={<Dashboard token={token} />} />
         <Route path="tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
-    </>
+    </ThemeProvider>
   );
 }

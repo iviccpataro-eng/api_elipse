@@ -1,15 +1,19 @@
-// src/components/ThemeProvider.jsx
+// components/ThemeProvider.jsx
 import React, { useEffect } from "react";
 
-export default function ThemeProvider({ theme, children }) {
+/**
+ * ThemeProvider
+ * Aplica o tema selecionado em toda a aplicação.
+ * Lê o valor de `theme` e atualiza o atributo `data-theme`
+ * na tag <html>, para que o CSS global (theme.css) entre em vigor.
+ */
+
+export default function ThemeProvider({ theme = "light-blue", children }) {
     useEffect(() => {
-        if (theme) {
-            document.documentElement.setAttribute("data-theme", theme);
-            localStorage.setItem("userTheme", theme);
-        } else {
-            const saved = localStorage.getItem("userTheme") || "light-blue";
-            document.documentElement.setAttribute("data-theme", saved);
-        }
+        // ✅ Aplica o tema globalmente
+        document.documentElement.setAttribute("data-theme", theme);
+        // ✅ Armazena o tema no localStorage para persistência
+        localStorage.setItem("userTheme", theme);
     }, [theme]);
 
     return <>{children}</>;
