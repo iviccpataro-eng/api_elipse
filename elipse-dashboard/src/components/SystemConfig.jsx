@@ -1,9 +1,11 @@
 // components/SystemConfig.jsx
 import React, { useEffect, useState } from "react";
+import { useTheme } from "../components/ThemeProvider"
 import "../styles/theme.css";
 
 const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const { theme, setTheme } = useTheme();
 
 export default function SystemConfig({ userRole }) {
     const [config, setConfig] = useState({});
@@ -209,7 +211,7 @@ export default function SystemConfig({ userRole }) {
                                 <button
                                     key={t.valor}
                                     type="button"
-                                    onClick={() => atualizarTema(t.valor)}
+                                    onClick={() => setTheme("dark-blue")}
                                     disabled={!isAdmin}
                                     className={`p-3 rounded-lg border transition-all ${themePreview === t.valor
                                         ? "border-[var(--accent)] ring-2 ring-[var(--accent)]"
