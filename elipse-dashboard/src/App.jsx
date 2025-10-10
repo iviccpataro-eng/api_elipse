@@ -148,7 +148,7 @@ function Dashboard({ token }) {
     setLoading(true);
     setError("");
     try {
-      const fixedToken = import.meta.env.VITE_REACT_TOKEN;
+      const fixedToken = import.meta.env.ELIPSE_FIXED_TOKEN;
       const res = await apiFetch(`${API_BASE}/dados`, {
         headers: { Authorization: `Bearer ${fixedToken}` },
       });
