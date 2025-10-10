@@ -1,13 +1,12 @@
 // src/App.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import { apiFetch } from "./api";
-import ThemeProvider from "./components/ThemeProvider";
 import "./styles/theme.css";
 
 const API_BASE =
@@ -408,15 +407,13 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <Navbar onLogout={handleLogout} />
-        <Routes>
-          <Route path="/" element={<Dashboard token={token} />} />
-          <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
-          <Route path="*" element={<Dashboard token={token} />} />
-        </Routes>
-      </ThemeProvider>
-    </BrowserRouter>
+    <>
+      <Navbar onLogout={handleLogout} />
+      <Routes>
+        <Route path="/" element={<Dashboard token={token} />} />
+        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
+        <Route path="*" element={<Dashboard token={token} />} />
+      </Routes>
+    </>
   );
 }
