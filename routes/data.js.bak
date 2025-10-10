@@ -1,9 +1,8 @@
+// routes/data.js
 import express from "express";
 import { autenticar } from "../middleware/auth.js";
 import { setByPath, getByPath, normalizeBody } from "../utils/helpers.js";
 import crypto from "crypto";
-import { limitElipse } from "../middleware/rateLimit.js";
-import fs from "fs";
 
 const router = express.Router();
 
@@ -44,7 +43,7 @@ router.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
  * - aceita também o token fixo do Elipse (conforme middleware) — porém o middleware
  *   já restringe o uso do fixed token apenas a POST /dados* e /data*.
  */
-router.post(["/dados/*", "/data/*"], limitElipse, autenticar, (req, res) => {
+router.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const path = req.params[0] || "";
 
   try {
@@ -70,13 +69,7 @@ router.post(["/dados/*", "/data/*"], limitElipse, autenticar, (req, res) => {
     // Grava em memória (igual ao comportamento original)
     setByPath(dados, path, payload);
 
-    fs.appendFileSync(
-      "logs_elipse.txt",
-      `${new Date().toISOString()} | ${req.user.user} | ${req.originalUrl} | ${JSON.stringify(payload)}\n`
-    );
-  
     return res.json({ status: "OK", salvo: payload, meta: { path: `/${path}`, hash: h, savedAt: ts } });
-  
   } catch (e) {
     console.error("[DATA] Erro ao processar POST /dados:", e && e.message ? e.message : e);
     return res.status(400).json({ erro: e.message || "Erro ao processar payload" });
