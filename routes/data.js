@@ -1,4 +1,3 @@
-// routes/data.js
 import express from "express";
 import { autenticar } from "../middleware/auth.js";
 import { setByPath, getByPath, normalizeBody } from "../utils/helpers.js";

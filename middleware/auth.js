@@ -1,11 +1,9 @@
-// middleware/auth.js
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
-// TOKEN FIXO do Elipse — **NÃO** usar VITE_ aqui (server-only)
 const FIXED_ENV_TOKEN = process.env.ELIPSE_FIXED_TOKEN || null;
 
 /**
