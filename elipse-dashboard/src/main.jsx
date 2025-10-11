@@ -8,7 +8,7 @@ import "./index.css";
 import ElipseDashboard from "./App";
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
-import ThemeProvider from "./components/ThemeProvider";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 // 🔒 Rota protegida: só deixa acessar se tiver token válido
 function PrivateRoute({ children }) {
