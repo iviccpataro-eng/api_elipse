@@ -7,47 +7,73 @@ import React, {
     useState,
 } from "react";
 
-// 🔹 Criação do contexto
+/* ============================================
+   🎨 Contexto de Tema
+============================================ */
 const ThemeContext = createContext(undefined);
 
-// 🔹 Hook seguro (verifica se está dentro do Provider)
+/* ============================================
+   🧩 Hook personalizado de uso do tema
+============================================ */
 export function useTheme() {
     const context = useContext(ThemeContext);
     if (!context) {
-        console.warn(
-            "[ThemeProvider] useTheme() foi usado fora do contexto do ThemeProvider."
-        );
+        console.warn("[ThemeProvider] useTheme() foi usado fora do ThemeProvider.");
         return { theme: "light-blue", setTheme: () => { } };
     }
     return context;
 }
 
-// 🔹 Componente provedor
-export default function ThemeProvider({ theme: initialTheme, children }) {
-    const [theme, setTheme] = useState(initialTheme || "light-blue");
+/* ============================================
+   🌈 ThemeProvider principal
+============================================ */
+export function ThemeProvider({ theme: initialTheme, children }) {
+    const getPreferredTheme = () => {
+        if (typeof window === "undefined") return initialTheme || "light-blue";
 
-    // Mantém o tema entre sessões
-    useEffect(() => {
-        const savedTheme = localStorage.getItem("userTheme");
-        if (savedTheme && savedTheme !== theme) {
-            setTheme(savedTheme);
-        }
-    }, []);
+        const saved = localStorage.getItem("userTheme");
+        if (saved) return saved;
 
-    // Aplica o tema no <html> e salva localmente
+        const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        return prefersDark ? "dark-blue" : "light-blue";
+    };
+
+    const [theme, setTheme] = useState(getPreferredTheme);
+
+    /* 🔄 Atualiza o atributo data-theme e salva no localStorage */
     useEffect(() => {
-        if (theme) {
+        if (typeof document !== "undefined" && theme) {
             document.documentElement.setAttribute("data-theme", theme);
             localStorage.setItem("userTheme", theme);
         }
     }, [theme]);
 
-    // Memoriza o valor do contexto (evita re-renderizações desnecessárias)
+    /* 💾 Mantém sincronizado se o usuário mudar o tema do sistema */
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const media = window.matchMedia("(prefers-color-scheme: dark)");
+        const handler = () => {
+            const prefersDark = media.matches;
+            setTheme((prev) =>
+                prev.includes("light") && prefersDark
+                    ? prev.replace("light", "dark")
+                    : prev.includes("dark") && !prefersDark
+                        ? prev.replace("dark", "light")
+                        : prev
+            );
+        };
+        media.addEventListener("change", handler);
+        return () => media.removeEventListener("change", handler);
+    }, []);
+
     const value = useMemo(() => ({ theme, setTheme }), [theme]);
 
     return (
-        <ThemeContext.Provider value={value}>
-            {children}
-        </ThemeContext.Provider>
+        <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
     );
 }
+
+export default ThemeProvider;
