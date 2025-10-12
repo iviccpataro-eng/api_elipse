@@ -7,43 +7,30 @@ import React, {
     useState,
 } from "react";
 
-/* ============================================
-   🎨 Contexto de Tema
-============================================ */
 const ThemeContext = createContext(undefined);
 
-/* ============================================
-   🧩 Hook personalizado de uso do tema
-============================================ */
 export function useTheme() {
     const context = useContext(ThemeContext);
     if (!context) {
-        console.warn("[ThemeProvider] useTheme() foi usado fora do ThemeProvider.");
+        console.warn("[ThemeProvider] useTheme() usado fora do ThemeProvider.");
         return { theme: "light-blue", setTheme: () => { } };
     }
     return context;
 }
 
-/* ============================================
-   🌈 ThemeProvider principal
-============================================ */
 export function ThemeProvider({ theme: initialTheme, children }) {
     const getPreferredTheme = () => {
         if (typeof window === "undefined") return initialTheme || "light-blue";
-
         const saved = localStorage.getItem("userTheme");
         if (saved) return saved;
-
         const prefersDark =
             window.matchMedia &&
             window.matchMedia("(prefers-color-scheme: dark)").matches;
-
         return prefersDark ? "dark-blue" : "light-blue";
     };
 
     const [theme, setTheme] = useState(getPreferredTheme);
 
-    /* 🔄 Atualiza o atributo data-theme e salva no localStorage */
     useEffect(() => {
         if (typeof document !== "undefined" && theme) {
             document.documentElement.setAttribute("data-theme", theme);
@@ -51,7 +38,6 @@ export function ThemeProvider({ theme: initialTheme, children }) {
         }
     }, [theme]);
 
-    /* 💾 Mantém sincronizado se o usuário mudar o tema do sistema */
     useEffect(() => {
         if (typeof window === "undefined") return;
         const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -70,10 +56,7 @@ export function ThemeProvider({ theme: initialTheme, children }) {
     }, []);
 
     const value = useMemo(() => ({ theme, setTheme }), [theme]);
-
-    return (
-        <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-    );
+    return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export default ThemeProvider;

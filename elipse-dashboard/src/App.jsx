@@ -1,9 +1,8 @@
 // src/App.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
-
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import { apiFetch } from "./api";
@@ -12,9 +11,9 @@ import "./styles/theme.css";
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-/* ============================
-   🔧 Funções utilitárias
-============================ */
+/* ============================================================
+   🧠 Funções utilitárias
+============================================================ */
 function formatKeyLabel(k) {
   if (!k) return "";
   return k.replace(/_/g, " ").replace(/\b([a-z])/g, (m, c) => c.toUpperCase());
@@ -40,9 +39,9 @@ function getNodeByPath(obj, path) {
   return ref;
 }
 
-/* ============================
-   🧩 Componentes base de UI
-============================ */
+/* ============================================================
+   🎨 UI básica
+============================================================ */
 const Button = ({ children, className = "", ...props }) => (
   <button
     className={`px-3 py-2 rounded-xl border shadow-sm hover:shadow transition text-sm ${className}`}
@@ -60,9 +59,9 @@ const Badge = ({ children, className = "" }) => (
   </span>
 );
 
-/* ============================
+/* ============================================================
    🔐 Tela de Login
-============================ */
+============================================================ */
 function LoginPage({ onLogin }) {
   const [user, setUser] = useState("");
   const [senha, setSenha] = useState("");
@@ -131,9 +130,9 @@ function LoginPage({ onLogin }) {
   );
 }
 
-/* ============================
+/* ============================================================
    📊 Dashboard principal
-============================ */
+============================================================ */
 function Dashboard({ token }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -152,7 +151,6 @@ function Dashboard({ token }) {
       const res = await apiFetch(`${API_BASE}/dados`, {
         headers: { Authorization: `Bearer ${fixedToken}` },
       });
-
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json || {});
@@ -169,7 +167,7 @@ function Dashboard({ token }) {
   }, [token]);
 
   useEffect(() => {
-    if (!autoRefresh) return () => { };
+    if (!autoRefresh) return;
     timerRef.current && clearInterval(timerRef.current);
     timerRef.current = setInterval(fetchData, Math.max(5, intervalSec) * 1000);
     return () => timerRef.current && clearInterval(timerRef.current);
@@ -231,9 +229,9 @@ function Dashboard({ token }) {
   );
 }
 
-/* ============================
+/* ============================================================
    🗂️ Renderização dos nós
-============================ */
+============================================================ */
 function FolderNode({ node, filter, onOpen }) {
   if (!node || typeof node !== "object") return null;
   const keys = Object.keys(node).filter((k) =>
@@ -283,13 +281,10 @@ function LeafNode({ node, filter }) {
           </div>
         </div>
       )}
-
-      {/* Renderização de dados */}
+      {/* Dados */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {data
-          .filter((d) =>
-            (d[0] || "").toLowerCase().includes(filter.toLowerCase())
-          )
+          .filter((d) => (d[0] || "").toLowerCase().includes(filter.toLowerCase()))
           .map((d, idx) => {
             const [name, value, unit, hasGraph, nominal] = d;
             const valNum = toNumberMaybe(value);
@@ -308,10 +303,7 @@ function LeafNode({ node, filter }) {
               const chartData = [{ name, value: percent, fill }];
 
               return (
-                <div
-                  key={idx}
-                  className="rounded-xl border bg-[var(--bg-card)] shadow p-4"
-                >
+                <div key={idx} className="rounded-xl border bg-[var(--bg-card)] shadow p-4">
                   <div className="font-medium mb-2">{name}</div>
                   <div className="flex justify-center">
                     <RadialBarChart
@@ -342,10 +334,7 @@ function LeafNode({ node, filter }) {
             }
 
             return (
-              <div
-                key={idx}
-                className="rounded-xl border bg-[var(--bg-card)] shadow p-4"
-              >
+              <div key={idx} className="rounded-xl border bg-[var(--bg-card)] shadow p-4">
                 <div className="font-medium">{name}</div>
                 <div className="text-2xl font-semibold">
                   {value}
@@ -365,46 +354,38 @@ function LeafNode({ node, filter }) {
   );
 }
 
-/* ============================
+/* ============================================================
    🌐 Aplicação principal
-============================ */
+============================================================ */
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
   const [user, setUser] = useState(() => {
     const t = localStorage.getItem("authToken");
     return t ? jwtDecode(t) : null;
   });
-  const [theme, setTheme] = useState("light-blue");
 
   const handleLogin = (tk, decodedUser) => {
     localStorage.setItem("authToken", tk);
     setToken(tk);
     setUser(decodedUser || jwtDecode(tk));
-    if (decodedUser?.theme) setTheme(decodedUser.theme);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userInfo");
+    localStorage.clear();
     setToken(null);
     setUser(null);
   };
 
   useEffect(() => {
     try {
-      if (token) {
-        const decoded = jwtDecode(token);
-        setTheme(decoded?.theme || localStorage.getItem("userTheme") || "light-blue");
-      }
+      if (token) jwtDecode(token);
     } catch {
-      console.warn("[Auth] Token expirado ou malformado — logout");
+      console.warn("[Auth] Token expirado — logout");
       handleLogout();
     }
   }, [token]);
 
-  if (!token) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
+  if (!token) return <LoginPage onLogin={handleLogin} />;
 
   return (
     <>
@@ -412,7 +393,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard token={token} />} />
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
-        <Route path="*" element={<Dashboard token={token} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
