@@ -13,23 +13,24 @@ const __dirname = dirname(__filename);
 
 const app = express();
 
-// --------- Middlewares globais ---------
+// --------- Middlewares globais / CORS ---------
 const allowedOrigins = [
-  "https://api-elipse.vercel.app",  // frontend em produção
-  "http://localhost:5173",          // desenvolvimento Vite padrão
-  "http://127.0.0.1:5173",          // variação comum local
-  "http://localhost:3000",          // outras portas locais
-  "http://127.0.0.1:3000"
+  "https://api-elipse.vercel.app",   // frontend em produção (Vercel)
+  "https://api-elipse.onrender.com", // domínio da própria API (Render)
+  "http://localhost:5173",           // desenvolvimento Vite padrão
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
 ];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS bloqueado para origem: " + origin));
-      }
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.warn("[CORS] Origem não permitida:", origin);
+      return callback(new Error("CORS bloqueado para origem: " + origin));
     },
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
@@ -37,12 +38,18 @@ app.use(
   })
 );
 
-// Pré-flights
+// Garantir resposta a preflight requests (OPTIONS) com o header correto
 app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    // Caso origin seja ausente (cliente curl) mantemos padrão
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  }
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.sendStatus(200);
+  return res.sendStatus(200);
 });
 
 app.use(express.json({ limit: "1mb" }));
@@ -104,39 +111,44 @@ function normalizeBody(req) {
 }
 
 // --------- Autenticação ---------
-// --------- Token fixo exclusivo para integração com o Elipse ---------
+// Token fixo exclusivo para integração com o Elipse (defina em ENV: ELIPSE_FIXED_TOKEN)
 const ELIPSE_FIXED_TOKEN =
   process.env.ELIPSE_FIXED_TOKEN ||
   jwt.sign({ id: "elipse-system", user: "elipse", role: "system" }, SECRET);
 
-console.log("[BOOT] Token fixo do Elipse gerado/definido com sucesso.");
+console.log("[BOOT] Token fixo do Elipse definido.");
 
-// Token usado somente para o POST de dados do Elipse
+// Token usado somente para o POST de dados do Elipse (/dados/*)
 function autenticar(req, res, next) {
   const authHeader = req.headers["authorization"];
-  if (!authHeader)
+  if (!authHeader) {
     return res.status(401).json({ erro: "Token não enviado" });
+  }
 
   const token = authHeader.split(" ")[1];
 
-  // Token fixo — apenas para o Elipse (uso restrito)
-  if (token === ELIPSE_FIXED_TOKEN && req.method === "POST") {
+  // Permitir ELIPSE_FIXED_TOKEN apenas para POSTs destinados a /dados (integração Elipse)
+  if (
+    token === ELIPSE_FIXED_TOKEN &&
+    req.method === "POST" &&
+    req.path.startsWith("/dados")
+  ) {
     req.user = { id: "elipse-system", role: "system" };
     return next();
   }
 
-  // Token de usuário comum
+  // Para todas as outras rotas, exigir JWT de usuário
   try {
     const payload = jwt.verify(token, SECRET);
     req.user = payload;
-    next();
+    return next();
   } catch (err) {
     return res.status(403).json({ erro: "Token inválido" });
   }
 }
 
 function somenteAdmin(req, res, next) {
-  if (req.user.role !== "admin") {
+  if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ erro: "Apenas administradores têm acesso." });
   }
   next();
@@ -169,6 +181,7 @@ app.post("/auth/login", async (req, res) => {
 
     res.json({ token });
   } catch (err) {
+    console.error("[AUTH LOGIN] Erro:", err && err.message ? err.message : err);
     res.status(500).json({ erro: "Erro interno no servidor" });
   }
 });
@@ -215,7 +228,8 @@ app.post("/auth/register", async (req, res) => {
     );
 
     res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
-  } catch {
+  } catch (err) {
+    console.error("[AUTH REGISTER] Erro:", err && err.message ? err.message : err);
     res.status(400).json({ erro: "Convite inválido ou expirado" });
   }
 });
@@ -267,7 +281,8 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
     await pool.query(`UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`, values);
 
     res.json({ ok: true, msg: "Perfil atualizado com sucesso!" });
-  } catch {
+  } catch (err) {
+    console.error("[AUTH UPDATE PROFILE] Erro:", err && err.message ? err.message : err);
     res.status(500).json({ erro: "Erro ao atualizar perfil." });
   }
 });
@@ -281,7 +296,8 @@ app.get("/auth/me", autenticar, async (req, res) => {
     if (result.rows.length === 0)
       return res.status(404).json({ erro: "Usuário não encontrado" });
     res.json({ ok: true, usuario: result.rows[0] });
-  } catch {
+  } catch (err) {
+    console.error("[AUTH ME] Erro:", err && err.message ? err.message : err);
     res.status(500).json({ erro: "Erro ao buscar perfil." });
   }
 });
@@ -318,6 +334,7 @@ app.get("/test-db", async (req, res) => {
     const result = await pool.query("SELECT NOW() as now");
     res.json({ ok: true, time: result.rows[0].now });
   } catch (err) {
+    console.error("[TEST-DB] Erro:", err && err.message ? err.message : err);
     res.status(500).json({ ok: false, erro: err.message });
   }
 });
@@ -327,6 +344,7 @@ app.get("/test-users", async (req, res) => {
     const result = await pool.query("SELECT username, rolename FROM users");
     res.json(result.rows);
   } catch (err) {
+    console.error("[TEST-USERS] Erro:", err && err.message ? err.message : err);
     res.status(500).json({ erro: err.message });
   }
 });
