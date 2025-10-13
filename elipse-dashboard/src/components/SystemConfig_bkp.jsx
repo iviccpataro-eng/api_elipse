@@ -1,50 +1,45 @@
 import React, { useState } from "react";
 
-export default function SystemConfig({ onChange }) {
-    const [refreshTime, setRefreshTime] = useState(5);
+export default function SystemConfig() {
+    const [refreshTime, setRefreshTime] = useState(10);
     const [theme, setTheme] = useState("light");
 
-    const handleSave = () => {
-        if (onChange) onChange({ refreshTime, theme });
-    };
-
     return (
-        <div className="bg-white rounded-2xl shadow-md p-4">
-            <h2 className="text-lg font-semibold mb-3">Configurações do Sistema</h2>
-
-            <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700">
-                    Tempo de recarga (segundos, mínimo 5)
-                </label>
-                <input
-                    type="number"
-                    min={5}
-                    value={refreshTime}
-                    onChange={(e) => setRefreshTime(parseInt(e.target.value, 10))}
-                    className="mt-1 block w-full px-3 py-2 border rounded-xl text-sm"
-                />
-            </div>
-
-            <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700">
-                    Tema
-                </label>
-                <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border rounded-xl text-sm"
+        <div>
+            <h1 className="text-2xl font-bold mb-4">Configurações do Sistema</h1>
+            <div className="space-y-4 max-w-md">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                        Tempo de recarga (segundos) *
+                    </label>
+                    <input
+                        type="number"
+                        min={5}
+                        value={refreshTime}
+                        onChange={(e) => setRefreshTime(Number(e.target.value))}
+                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                        Tema *
+                    </label>
+                    <select
+                        value={theme}
+                        onChange={(e) => setTheme(e.target.value)}
+                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                    >
+                        <option value="light">Claro</option>
+                        <option value="dark">Escuro</option>
+                    </select>
+                </div>
+                <button
+                    onClick={() => alert(`Configurações salvas!\nRefresh: ${refreshTime}s\nTema: ${theme}`)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                    <option value="light">Claro</option>
-                    <option value="dark">Escuro</option>
-                </select>
+                    Salvar
+                </button>
             </div>
-
-            <button
-                onClick={handleSave}
-                className="w-full px-3 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
-            >
-                Salvar
-            </button>
         </div>
     );
 }
