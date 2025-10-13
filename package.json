@@ -1,39 +1,20 @@
 {
   "name": "api_elipse",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "description": "API de integração com Elipse E3 e painel React (Elipse Dashboard)",
+  "description": "API simples para integração com Elipse E3",
   "main": "server.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development node server.js",
-    "build:client": "cd elipse-dashboard && npm install && npm run build",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:client": "cd elipse-dashboard && npm install && npm run build"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^4.19.2",
+    "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
     "pg": "^8.16.3"
-  },
-  "optionalDependencies": {
-    "bcryptjs": "^3.0.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [
-    "elipse",
-    "api",
-    "dashboard",
-    "scada",
-    "facilities",
-    "automation"
-  ],
-  "author": "Ivic Pataro",
-  "license": "MIT",
-  "devDependencies": {
-    "cross-env": "^10.1.0"
   }
 }

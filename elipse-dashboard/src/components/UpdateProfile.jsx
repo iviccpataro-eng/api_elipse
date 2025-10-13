@@ -1,139 +1,210 @@
-// components/UpdateProfile.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function UpdateProfile() {
-    const [perfil, setPerfil] = useState({});
-    const [erro, setErro] = useState("");
+    const [fullname, setFullname] = useState("");
+    const [matricula, setMatricula] = useState("");
+    const [username, setUsername] = useState("");
+    const [role, setRole] = useState("");
+    const [senhaAtual, setSenhaAtual] = useState("");
+    const [novaSenha, setNovaSenha] = useState("");
+    const [confirmaSenha, setConfirmaSenha] = useState("");
     const [msg, setMsg] = useState("");
-    const [saving, setSaving] = useState(false);
-    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        carregarPerfil();
+        const token = localStorage.getItem("authToken");
+        if (!token) return;
+
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            setUsername(payload.user);
+            setRole(payload.role);
+        } catch {
+            console.warn("Token inválido");
+        }
+
+        // Buscar dados do perfil (fullname, matricula)
+        const fetchProfile = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (data.ok && data.usuario) {
+                    setFullname(data.usuario.fullname || "");
+                    setMatricula(data.usuario.matricula || "");
+                }
+            } catch (err) {
+                console.error("Erro ao carregar perfil:", err);
+            }
+        };
+
+        fetchProfile();
     }, []);
 
-    async function carregarPerfil() {
-        setLoading(true);
-        setErro("");
-        try {
-            const token = localStorage.getItem("authToken");
-            const res = await fetch(`${API_BASE}/auth/me`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.erro || "Erro ao buscar perfil");
-            setPerfil(data.usuario);
-        } catch (err) {
-            console.error(err);
-            setErro("Falha ao carregar dados do perfil");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function salvarAlteracoes(e) {
+    const handleUpdate = async (e) => {
         e.preventDefault();
-        setSaving(true);
-        setErro("");
         setMsg("");
 
+        if (novaSenha && novaSenha !== confirmaSenha) {
+            setMsg("Nova senha e confirmação não coincidem.");
+            return;
+        }
+
         try {
             const token = localStorage.getItem("authToken");
-            const res = await fetch(`${API_BASE}/auth/update-theme`, {
+            const res = await fetch(`${API_BASE}/auth/update-profile`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ theme: perfil.theme }),
+                body: JSON.stringify({
+                    fullname,
+                    matricula,
+                    username,
+                    senhaAtual,
+                    novaSenha,
+                }),
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.erro || "Falha ao atualizar tema");
-            setMsg(data.msg || "Tema atualizado com sucesso!");
+            if (!res.ok || !data.ok) {
+                throw new Error(data.erro || "Erro ao atualizar perfil.");
+            }
+
+            // Atualizar estados com os valores retornados pelo backend
+            if (data.usuario) {
+                setFullname(data.usuario.fullname || "");
+                setMatricula(data.usuario.matricula || "");
+            }
+
+            // Reset de senhas após atualizar
+            setSenhaAtual("");
+            setNovaSenha("");
+            setConfirmaSenha("");
+
+            setMsg("Perfil atualizado com sucesso!");
         } catch (err) {
-            console.error(err);
-            setErro("Erro ao salvar alterações.");
-        } finally {
-            setSaving(false);
+            setMsg(`Erro: ${err.message}`);
         }
-    }
+    };
 
     return (
-        <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
-            <h2 className="text-2xl font-bold mb-4">Configurações de Usuário</h2>
-
-            {erro && <p className="text-red-500 mb-2">{erro}</p>}
-            {msg && <p className="text-green-600 mb-2">{msg}</p>}
-
-            {loading ? (
-                <p>Carregando perfil...</p>
-            ) : (
-                <form onSubmit={salvarAlteracoes} className="space-y-4">
+        <div>
+            <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
+            <form onSubmit={handleUpdate} className="space-y-6 max-w-lg">
+                {/* Dados do usuário */}
+                <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Usuário
+                            Nome Completo *
                         </label>
                         <input
                             type="text"
-                            value={perfil.username || ""}
-                            className="mt-1 block w-full border rounded p-2 bg-gray-100"
-                            readOnly
+                            value={fullname}
+                            onChange={(e) => setFullname(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Digite seu nome completo"
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Nome Completo
+                            Matrícula
                         </label>
                         <input
                             type="text"
-                            value={perfil.fullname || ""}
-                            className="mt-1 block w-full border rounded p-2 bg-gray-100"
-                            readOnly
+                            value={matricula}
+                            onChange={(e) => setMatricula(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Opcional"
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Cargo / Role
+                            Nome de Usuário *
                         </label>
                         <input
                             type="text"
-                            value={perfil.rolename || ""}
-                            className="mt-1 block w-full border rounded p-2 bg-gray-100"
-                            readOnly
+                            value={username}
+                            disabled
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-100 cursor-not-allowed"
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Tema do Sistema
+                            Grupo de Usuário *
                         </label>
-                        <select
-                            value={perfil.theme || "light"}
-                            onChange={(e) =>
-                                setPerfil((p) => ({ ...p, theme: e.target.value }))
-                            }
-                            className="mt-1 block w-full border rounded p-2"
-                        >
-                            <option value="light">Claro</option>
-                            <option value="dark">Escuro</option>
-                        </select>
+                        <input
+                            type="text"
+                            value={role}
+                            disabled
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-100 cursor-not-allowed"
+                        />
+                    </div>
+                </div>
+
+                {/* Quebra de seção */}
+                <hr className="my-6" />
+                <h2 className="text-xl font-semibold">Mudança de Senha</h2>
+
+                {/* Senhas */}
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Senha Atual
+                        </label>
+                        <input
+                            type="password"
+                            value={senhaAtual}
+                            onChange={(e) => setSenhaAtual(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Digite sua senha atual"
+                        />
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    >
-                        {saving ? "Salvando..." : "Salvar Alterações"}
-                    </button>
-                </form>
-            )}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Nova Senha
+                        </label>
+                        <input
+                            type="password"
+                            value={novaSenha}
+                            onChange={(e) => setNovaSenha(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Digite a nova senha"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Repetir Nova Senha
+                        </label>
+                        <input
+                            type="password"
+                            value={confirmaSenha}
+                            onChange={(e) => setConfirmaSenha(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            placeholder="Confirme a nova senha"
+                        />
+                    </div>
+                </div>
+
+                {/* Botão */}
+                <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                    Salvar Alterações
+                </button>
+            </form>
+
+            {msg && <p className="mt-4 text-sm text-gray-700">{msg}</p>}
         </div>
     );
 }

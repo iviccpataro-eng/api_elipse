@@ -1,19 +1,16 @@
-// src/App.jsx
+// App.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
+
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
-import { apiFetch } from "./api";
-import "./styles/theme.css";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-/* ============================================================
-   🧠 Funções utilitárias
-============================================================ */
+/* --- Funções utilitárias --- */
 function formatKeyLabel(k) {
   if (!k) return "";
   return k.replace(/_/g, " ").replace(/\b([a-z])/g, (m, c) => c.toUpperCase());
@@ -31,7 +28,11 @@ function toNumberMaybe(v) {
 function getNodeByPath(obj, path) {
   let ref = obj;
   for (const key of path) {
-    if (!ref || typeof ref !== "object" || !Object.prototype.hasOwnProperty.call(ref, key)) {
+    if (
+      !ref ||
+      typeof ref !== "object" ||
+      !Object.prototype.hasOwnProperty.call(ref, key)
+    ) {
       return undefined;
     }
     ref = ref[key];
@@ -39,9 +40,7 @@ function getNodeByPath(obj, path) {
   return ref;
 }
 
-/* ============================================================
-   🎨 UI básica
-============================================================ */
+/* --- UI primitives --- */
 const Button = ({ children, className = "", ...props }) => (
   <button
     className={`px-3 py-2 rounded-xl border shadow-sm hover:shadow transition text-sm ${className}`}
@@ -59,9 +58,7 @@ const Badge = ({ children, className = "" }) => (
   </span>
 );
 
-/* ============================================================
-   🔐 Tela de Login
-============================================================ */
+/* --- Login --- */
 function LoginPage({ onLogin }) {
   const [user, setUser] = useState("");
   const [senha, setSenha] = useState("");
@@ -79,8 +76,7 @@ function LoginPage({ onLogin }) {
         body: JSON.stringify({ user, senha }),
       });
       const data = await res.json();
-
-      if (res.ok && data.token && data.token !== "undefined") {
+      if (res.ok && data.token) {
         localStorage.setItem("authToken", data.token);
         const decoded = jwtDecode(data.token);
         localStorage.setItem("userInfo", JSON.stringify(decoded));
@@ -89,7 +85,6 @@ function LoginPage({ onLogin }) {
         setErro(data.erro || "Falha ao autenticar");
       }
     } catch (err) {
-      console.error("[Login] Erro de conexão:", err);
       setErro("Erro de conexão com servidor");
     } finally {
       setLoading(false);
@@ -130,9 +125,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-/* ============================================================
-   📊 Dashboard principal
-============================================================ */
+/* --- Dashboard --- */
 function Dashboard({ token }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -147,16 +140,18 @@ function Dashboard({ token }) {
     setLoading(true);
     setError("");
     try {
-      const fixedToken = import.meta.env.ELIPSE_FIXED_TOKEN;
-      const res = await apiFetch(`${API_BASE}/dados`, {
+      const fixedToken = import.meta.env.VITE_REACT_TOKEN;
+      const res = await fetch(`${API_BASE}/dados`, {
+        cache: "no-store",
         headers: { Authorization: `Bearer ${fixedToken}` },
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json || {});
     } catch (e) {
-      console.error("[Dashboard] Erro ao buscar dados:", e);
       setError("Falha ao buscar dados da API.");
+      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -167,7 +162,7 @@ function Dashboard({ token }) {
   }, [token]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh) return () => { };
     timerRef.current && clearInterval(timerRef.current);
     timerRef.current = setInterval(fetchData, Math.max(5, intervalSec) * 1000);
     return () => timerRef.current && clearInterval(timerRef.current);
@@ -177,7 +172,6 @@ function Dashboard({ token }) {
     () => getNodeByPath(data, path) ?? data,
     [data, path]
   );
-
   const isLeafNode =
     currentNode &&
     typeof currentNode === "object" &&
@@ -188,26 +182,17 @@ function Dashboard({ token }) {
   const navigateCrumb = (idx) => setPath((p) => p.slice(0, idx));
 
   return (
-    <div
-      className="min-h-screen p-4 transition-colors"
-      style={{
-        backgroundColor: "var(--bg-color)",
-        color: "var(--text-color)",
-      }}
-    >
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-7xl mx-auto p-4">
         <div className="mb-3 text-sm flex items-center gap-2 flex-wrap">
-          <Button
-            className="bg-[var(--bg-card)] text-[var(--text-color)] border-[var(--border-color)]"
-            onClick={goHome}
-          >
+          <Button className="bg-gray-50" onClick={goHome}>
             🏠 Home
           </Button>
           {path.map((k, i) => (
             <React.Fragment key={i}>
               <span className="text-gray-400">/</span>
               <Button
-                className="bg-[var(--bg-card)] text-[var(--text-color)] border-[var(--border-color)]"
+                className="bg-gray-50"
                 onClick={() => navigateCrumb(i + 1)}
               >
                 {formatKeyLabel(k)}
@@ -216,7 +201,9 @@ function Dashboard({ token }) {
           ))}
         </div>
 
-        {loading && <div className="mb-3 text-sm">Carregando…</div>}
+        {loading && (
+          <div className="mb-3 text-sm text-gray-500">Carregando…</div>
+        )}
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
         {isLeafNode ? (
@@ -229,9 +216,7 @@ function Dashboard({ token }) {
   );
 }
 
-/* ============================================================
-   🗂️ Renderização dos nós
-============================================================ */
+/* --- Folder / Leaf renderers --- */
 function FolderNode({ node, filter, onOpen }) {
   if (!node || typeof node !== "object") return null;
   const keys = Object.keys(node).filter((k) =>
@@ -239,19 +224,12 @@ function FolderNode({ node, filter, onOpen }) {
   );
   if (keys.length === 0)
     return <div className="text-gray-500">Nenhum item encontrado.</div>;
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {keys.map((k) => (
-        <div
-          key={k}
-          className="rounded-xl border bg-[var(--bg-card)] shadow p-4 text-[var(--text-color)]"
-        >
+        <div key={k} className="rounded-xl border bg-white shadow p-4">
           <div className="font-medium">{formatKeyLabel(k)}</div>
-          <Button
-            className="mt-2 bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]"
-            onClick={() => onOpen(k)}
-          >
+          <Button className="mt-2 bg-blue-50" onClick={() => onOpen(k)}>
             Abrir →
           </Button>
         </div>
@@ -266,22 +244,18 @@ function LeafNode({ node, filter }) {
   return (
     <div className="space-y-4">
       {info.length > 0 && (
-        <div className="rounded-xl border bg-[var(--bg-card)] shadow p-4 text-[var(--text-color)]">
+        <div className="rounded-xl border bg-white shadow p-4">
           <h2 className="text-lg font-semibold mb-2">Cabeçalho</h2>
           <div className="flex flex-wrap gap-2">
             {Object.entries(info[0]).map(([k, v]) => (
-              <Badge
-                key={k}
-                className="bg-[var(--bg-color)] border-[var(--border-color)]"
-              >
-                <span className="mr-1">{formatKeyLabel(k)}:</span>
+              <Badge key={k} className="bg-gray-50 border-gray-200">
+                <span className="text-gray-600 mr-1">{formatKeyLabel(k)}:</span>
                 <span className="font-medium">{String(v)}</span>
               </Badge>
             ))}
           </div>
         </div>
       )}
-      {/* Dados */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {data
           .filter((d) => (d[0] || "").toLowerCase().includes(filter.toLowerCase()))
@@ -297,13 +271,14 @@ function LeafNode({ node, filter }) {
               const percent = ((clamped - min) / (max - min)) * 100;
 
               let fill = "#22c55e";
-              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
+              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05)
+                fill = "#f97316";
               if (valNum < min || valNum > max) fill = "#ef4444";
 
               const chartData = [{ name, value: percent, fill }];
 
               return (
-                <div key={idx} className="rounded-xl border bg-[var(--bg-card)] shadow p-4">
+                <div key={idx} className="rounded-xl border bg-white shadow p-4">
                   <div className="font-medium mb-2">{name}</div>
                   <div className="flex justify-center">
                     <RadialBarChart
@@ -316,7 +291,12 @@ function LeafNode({ node, filter }) {
                       data={chartData}
                     >
                       <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                      <RadialBar dataKey="value" cornerRadius={10} background clockWise />
+                      <RadialBar
+                        dataKey="value"
+                        cornerRadius={10}
+                        background
+                        clockWise
+                      />
                     </RadialBarChart>
                   </div>
                   <div className="text-center mt-2">
@@ -334,7 +314,7 @@ function LeafNode({ node, filter }) {
             }
 
             return (
-              <div key={idx} className="rounded-xl border bg-[var(--bg-card)] shadow p-4">
+              <div key={idx} className="rounded-xl border bg-white shadow p-4">
                 <div className="font-medium">{name}</div>
                 <div className="text-2xl font-semibold">
                   {value}
@@ -354,9 +334,7 @@ function LeafNode({ node, filter }) {
   );
 }
 
-/* ============================================================
-   🌐 Aplicação principal
-============================================================ */
+/* --- Root component --- */
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
   const [user, setUser] = useState(() => {
@@ -371,29 +349,29 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userInfo");
     setToken(null);
     setUser(null);
   };
 
-  useEffect(() => {
-    try {
-      if (token) jwtDecode(token);
-    } catch {
-      console.warn("[Auth] Token expirado — logout");
-      handleLogout();
-    }
-  }, [token]);
-
-  if (!token) return <LoginPage onLogin={handleLogin} />;
+  if (!token) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
 
   return (
     <>
       <Navbar onLogout={handleLogout} />
       <Routes>
-        <Route path="/" element={<Dashboard token={token} />} />
-        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route index element={<Dashboard token={token} />} />
+        <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
+        <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
+        <Route path="eletrica" element={<div className="p-6">Elétrica</div>} />
+        <Route path="hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="incendio" element={<div className="p-6">Incêndio</div>} />
+        <Route path="comunicacao" element={<div className="p-6">Comunicação</div>} />
+        <Route path="tools" element={<ToolsPage token={token} user={user} />} />
+        <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </>
   );
