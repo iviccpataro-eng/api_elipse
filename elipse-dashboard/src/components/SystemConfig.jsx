@@ -1,42 +1,60 @@
 import React, { useState, useEffect } from "react";
+const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function SystemConfig() {
-    const [nomeEmpreendimento, setNomeEmpreendimento] = useState("");
-    const [enderecoEmpreendimento, setEnderecoEmpreendimento] = useState("");
-    const [nomeAdministradora, setNomeAdministradora] = useState("");
-    const [nomeResponsavel, setNomeResponsavel] = useState("");
-    const [telefoneResponsavel, setTelefoneResponsavel] = useState("");
+    const [config, setConfig] = useState({
+        buildingname: "",
+        buildingaddress: "",
+        adminenterprise: "",
+        adminname: "",
+        admincontact: "",
+    });
     const [refreshTime, setRefreshTime] = useState(10);
     const [theme, setTheme] = useState("light");
+    const [msg, setMsg] = useState("");
 
-    // Carregar configurações salvas
+    // === Carregar configuração do banco ===
     useEffect(() => {
-        const saved = localStorage.getItem("systemConfig");
-        if (saved) {
-            const conf = JSON.parse(saved);
-            setNomeEmpreendimento(conf.nomeEmpreendimento || "");
-            setEnderecoEmpreendimento(conf.enderecoEmpreendimento || "");
-            setNomeAdministradora(conf.nomeAdministradora || "");
-            setNomeResponsavel(conf.nomeResponsavel || "");
-            setTelefoneResponsavel(conf.telefoneResponsavel || "");
-            setRefreshTime(conf.refreshTime || 10);
-            setTheme(conf.theme || "light");
-        }
+        const token = localStorage.getItem("authToken");
+        if (!token) return;
+        const loadConfig = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/config/system`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (data.ok && data.config) {
+                    setConfig(data.config);
+                }
+            } catch (err) {
+                console.error("Erro ao carregar configurações:", err);
+            }
+        };
+        loadConfig();
     }, []);
 
-    // Salvar configurações no localStorage (pode ser substituído por API futuramente)
-    const handleSave = () => {
-        const config = {
-            nomeEmpreendimento,
-            enderecoEmpreendimento,
-            nomeAdministradora,
-            nomeResponsavel,
-            telefoneResponsavel,
-            refreshTime,
-            theme,
-        };
-        localStorage.setItem("systemConfig", JSON.stringify(config));
-        alert("Configurações do sistema salvas com sucesso!");
+    // === Salvar configurações ===
+    const handleSave = async () => {
+        setMsg("");
+        const token = localStorage.getItem("authToken");
+        if (!token) return alert("Usuário não autenticado.");
+
+        try {
+            const res = await fetch(`${API_BASE}/config/system`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(config),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.erro || "Erro ao salvar");
+            setMsg("Configurações salvas com sucesso!");
+        } catch (err) {
+            console.error("Erro ao salvar:", err);
+            setMsg("Erro ao salvar configurações: " + err.message);
+        }
     };
 
     return (
@@ -53,10 +71,9 @@ export default function SystemConfig() {
                     </label>
                     <input
                         type="text"
-                        value={nomeEmpreendimento}
-                        onChange={(e) => setNomeEmpreendimento(e.target.value)}
+                        value={config.buildingname}
+                        onChange={(e) => setConfig({ ...config, buildingname: e.target.value })}
                         className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Ex: Condomínio Solar das Árvores"
                     />
                 </div>
 
@@ -66,18 +83,17 @@ export default function SystemConfig() {
                     </label>
                     <input
                         type="text"
-                        value={enderecoEmpreendimento}
-                        onChange={(e) => setEnderecoEmpreendimento(e.target.value)}
+                        value={config.buildingaddress}
+                        onChange={(e) => setConfig({ ...config, buildingaddress: e.target.value })}
                         className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Ex: Av. Paulista, 1000 - São Paulo/SP"
                     />
                 </div>
 
-                {enderecoEmpreendimento && (
+                {config.buildingaddress && (
                     <div className="mt-4">
                         <iframe
                             src={`https://www.google.com/maps?q=${encodeURIComponent(
-                                enderecoEmpreendimento
+                                config.buildingaddress
                             )}&output=embed`}
                             className="w-full h-64 rounded-lg border"
                             allowFullScreen
@@ -93,37 +109,31 @@ export default function SystemConfig() {
                     </label>
                     <input
                         type="text"
-                        value={nomeAdministradora}
-                        onChange={(e) => setNomeAdministradora(e.target.value)}
+                        value={config.adminenterprise}
+                        onChange={(e) => setConfig({ ...config, adminenterprise: e.target.value })}
                         className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Ex: Alpha Gestão Predial"
                     />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Nome do Supervisor/Responsável
+                            Supervisor/Responsável
                         </label>
                         <input
                             type="text"
-                            value={nomeResponsavel}
-                            onChange={(e) => setNomeResponsavel(e.target.value)}
+                            value={config.adminname}
+                            onChange={(e) => setConfig({ ...config, adminname: e.target.value })}
                             className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                            placeholder="Ex: João da Silva"
                         />
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                            Telefone
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700">Telefone</label>
                         <input
                             type="tel"
-                            value={telefoneResponsavel}
-                            onChange={(e) => setTelefoneResponsavel(e.target.value)}
+                            value={config.admincontact}
+                            onChange={(e) => setConfig({ ...config, admincontact: e.target.value })}
                             className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                            placeholder="Ex: (11) 99999-9999"
                         />
                     </div>
                 </div>
@@ -150,7 +160,6 @@ export default function SystemConfig() {
             {/* === Temas e Aparência === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">
                 <h2 className="text-xl font-semibold mb-4">Temas e Aparência</h2>
-
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
                         Seletor de Tema
@@ -167,7 +176,6 @@ export default function SystemConfig() {
                 </div>
             </section>
 
-            {/* === Botão de Salvar === */}
             <div className="text-right">
                 <button
                     onClick={handleSave}
@@ -176,6 +184,8 @@ export default function SystemConfig() {
                     Salvar Configurações
                 </button>
             </div>
+
+            {msg && <p className="text-sm text-green-600">{msg}</p>}
         </div>
     );
 }

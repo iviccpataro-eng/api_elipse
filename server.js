@@ -349,6 +349,67 @@ app.get("/test-users", async (req, res) => {
   }
 });
 
+// --------- Rotas de Configurações do Sistema ---------
+
+// Buscar configurações do sistema
+app.get("/config/system", autenticar, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM buildings LIMIT 1");
+    if (result.rows.length === 0) {
+      return res.json({
+        ok: true,
+        config: {
+          buildingname: "",
+          buildingaddress: "",
+          adminenterprise: "",
+          adminname: "",
+          admincontact: "",
+        },
+      });
+    }
+    res.json({ ok: true, config: result.rows[0] });
+  } catch (err) {
+    console.error("[ERRO] /config/system GET:", err);
+    res.status(500).json({ ok: false, erro: "Erro ao buscar configurações." });
+  }
+});
+
+// Salvar ou atualizar configurações do sistema
+app.post("/config/system", autenticar, somenteAdmin, async (req, res) => {
+  const {
+    buildingname,
+    buildingaddress,
+    adminenterprise,
+    adminname,
+    admincontact,
+  } = req.body || {};
+
+  try {
+    // Verifica se já existe registro
+    const check = await pool.query("SELECT buildingid FROM buildings LIMIT 1");
+    if (check.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO buildings (buildingname, buildingaddress, adminenterprise, adminname, admincontact)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [buildingname, buildingaddress, adminenterprise, adminname, admincontact]
+      );
+    } else {
+      const id = check.rows[0].buildingid;
+      await pool.query(
+        `UPDATE buildings
+         SET buildingname=$1, buildingaddress=$2, adminenterprise=$3, adminname=$4, admincontact=$5
+         WHERE buildingid=$6`,
+        [buildingname, buildingaddress, adminenterprise, adminname, admincontact, id]
+      );
+    }
+
+    res.json({ ok: true, msg: "Configurações atualizadas com sucesso!" });
+  } catch (err) {
+    console.error("[ERRO] /config/system POST:", err);
+    res.status(500).json({ ok: false, erro: "Erro ao salvar configurações." });
+  }
+});
+
 // --------- Servir React buildado ---------
 const clientBuildPath = path.resolve(__dirname, "elipse-dashboard", "dist");
 app.use(express.static(clientBuildPath));
