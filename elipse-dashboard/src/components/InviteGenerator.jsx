@@ -10,7 +10,7 @@ export default function InviteGenerator() {
     const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("authToken"); // corrigido
         if (!token) return;
 
         try {
@@ -24,7 +24,7 @@ export default function InviteGenerator() {
     const handleInvite = async () => {
         setMsg("");
         try {
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("authToken"); // corrigido
             const res = await fetch(`${API_BASE}/auth/invite`, {
                 method: "POST",
                 headers: {
@@ -48,7 +48,9 @@ export default function InviteGenerator() {
         return (
             <div>
                 <h1 className="text-2xl font-bold mb-4">Gerar Convite</h1>
-                <p className="text-gray-700">Apenas administradores podem gerar convites.</p>
+                <p className="text-gray-700">
+                    Apenas administradores podem gerar convites.
+                </p>
             </div>
         );
     }
