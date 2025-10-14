@@ -22,7 +22,14 @@ export default function SystemConfig() {
                 const res = await fetch(`${API_BASE}/config/system`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                const data = await res.json();
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    console.error("Resposta inesperada da API:", text);
+                    return;
+                }
                 if (data.ok && data.config) {
                     setConfig(data.config);
                 }
