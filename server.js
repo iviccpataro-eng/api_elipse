@@ -389,7 +389,8 @@ app.get("/config/system", autenticar, async (req, res) => {
   }
 });
 
-app.post("/config/system", autenticar, somenteAdmin, async (req, res) => {
+// Salvar ou atualizar configurações do sistema
+app.post("/config/system", autenticar, async (req, res) => {
   const {
     buildingname,
     buildingaddress,
@@ -399,8 +400,16 @@ app.post("/config/system", autenticar, somenteAdmin, async (req, res) => {
   } = req.body || {};
 
   try {
-    const check = await pool.query("SELECT buildingid FROM buildings LIMIT 1");
+    // Permitir edição apenas para admin e supervisor
+    if (!["admin", "supervisor"].includes(req.user.role)) {
+      return res.status(403).json({
+        ok: false,
+        erro: "Apenas administradores e supervisores podem editar as configurações.",
+      });
+    }
 
+    // Verifica se já existe registro
+    const check = await pool.query("SELECT buildingid FROM buildings LIMIT 1");
     if (check.rows.length === 0) {
       await pool.query(
         `INSERT INTO buildings (buildingname, buildingaddress, adminenterprise, adminname, admincontact)
