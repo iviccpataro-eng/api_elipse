@@ -57,7 +57,7 @@ export default function Navbar({ onLogout }) {
         <header className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between relative">
             {/* Logo + Nome do prédio */}
             <div className="flex items-center gap-3">
-                <img src={logo} alt="Logo" className="h-10 w-10" />
+                <img src={logo} alt="Logo" className="h-10 w-20" />
                 <div className="h-8 w-px bg-gray-500" />
                 <span className="text-lg font-semibold">{buildingName}</span>
             </div>
