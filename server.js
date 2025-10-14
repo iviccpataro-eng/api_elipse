@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -242,9 +241,20 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
+// 🔧 Atualizado para suportar refreshTime e userTheme
 app.post("/auth/update-profile", autenticar, async (req, res) => {
-  const { fullname, matricula, username, senhaAtual, novaSenha } = req.body || {};
-  if (!username) return res.status(400).json({ erro: "Usuário é obrigatório" });
+  const {
+    fullname,
+    matricula,
+    username,
+    senhaAtual,
+    novaSenha,
+    refreshtime,
+    usertheme,
+  } = req.body || {};
+
+  if (!username)
+    return res.status(400).json({ erro: "Usuário é obrigatório" });
 
   try {
     const result = await pool.query(
@@ -255,15 +265,6 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
       return res.status(404).json({ erro: "Usuário não encontrado" });
 
     const usuario = result.rows[0];
-
-    if (novaSenha) {
-      if (!senhaAtual)
-        return res.status(400).json({ erro: "Senha atual obrigatória" });
-      const match = await bcrypt.compare(senhaAtual, usuario.passhash);
-      if (!match)
-        return res.status(401).json({ erro: "Senha atual incorreta" });
-    }
-
     const updates = [];
     const values = [];
     let idx = 1;
@@ -276,7 +277,20 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
       updates.push(`matricula = $${idx++}`);
       values.push(matricula);
     }
+    if (refreshtime !== undefined) {
+      updates.push(`refreshtime = $${idx++}`);
+      values.push(refreshtime);
+    }
+    if (usertheme !== undefined) {
+      updates.push(`usertheme = $${idx++}`);
+      values.push(usertheme);
+    }
     if (novaSenha) {
+      if (!senhaAtual)
+        return res.status(400).json({ erro: "Senha atual obrigatória" });
+      const match = await bcrypt.compare(senhaAtual, usuario.passhash);
+      if (!match)
+        return res.status(401).json({ erro: "Senha atual incorreta" });
       const hash = await bcrypt.hash(novaSenha, 10);
       updates.push(`passhash = $${idx++}`);
       values.push(hash);
@@ -301,7 +315,11 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
 app.get("/auth/me", autenticar, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT username, rolename, COALESCE(fullname, '') as fullname, COALESCE(matricula, '') as matricula FROM users WHERE username = $1",
+      `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
+              COALESCE(matricula,'') AS matricula,
+              COALESCE(refreshtime,10) AS refreshtime,
+              COALESCE(usertheme,'light') AS usertheme
+       FROM users WHERE username = $1`,
       [req.user.user]
     );
     if (result.rows.length === 0)
@@ -356,7 +374,9 @@ app.get("/test-db", async (req, res) => {
 
 app.get("/test-users", async (req, res) => {
   try {
-    const result = await pool.query("SELECT username, rolename FROM users");
+    const result = await pool.query(
+      "SELECT username, rolename, refreshtime, usertheme FROM users"
+    );
     res.json(result.rows);
   } catch (err) {
     console.error("[TEST-USERS] Erro:", err.message);
@@ -389,7 +409,6 @@ app.get("/config/system", autenticar, async (req, res) => {
   }
 });
 
-// Salvar ou atualizar configurações do sistema
 app.post("/config/system", autenticar, async (req, res) => {
   const {
     buildingname,
@@ -400,7 +419,6 @@ app.post("/config/system", autenticar, async (req, res) => {
   } = req.body || {};
 
   try {
-    // Permitir edição apenas para admin e supervisor
     if (!["admin", "supervisor"].includes(req.user.role)) {
       return res.status(403).json({
         ok: false,
@@ -408,12 +426,11 @@ app.post("/config/system", autenticar, async (req, res) => {
       });
     }
 
-    // Verifica se já existe registro
     const check = await pool.query("SELECT buildingid FROM buildings LIMIT 1");
     if (check.rows.length === 0) {
       await pool.query(
         `INSERT INTO buildings (buildingname, buildingaddress, adminenterprise, adminname, admincontact)
-         VALUES ($1, $2, $3, $4, $5)`,
+         VALUES ($1,$2,$3,$4,$5)`,
         [buildingname, buildingaddress, adminenterprise, adminname, admincontact]
       );
     } else {
