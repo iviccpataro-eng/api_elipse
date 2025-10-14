@@ -14,6 +14,7 @@ export default function SystemConfig() {
     const [theme, setTheme] = useState("light");
     const [msg, setMsg] = useState("");
     const [userRole, setUserRole] = useState("");
+    const [username, setUsername] = useState("");
     const [isEditable, setIsEditable] = useState(false);
 
     // === Carregar dados do usuário ===
@@ -23,9 +24,10 @@ export default function SystemConfig() {
             try {
                 const parsed = JSON.parse(userInfo);
                 setUserRole(parsed.role || "");
+                setUsername(parsed.user || "");
                 setIsEditable(["admin", "supervisor"].includes(parsed.role));
             } catch {
-                console.warn("Falha ao ler role do usuário.");
+                console.warn("Falha ao ler informações do usuário.");
             }
         }
     }, []);
@@ -52,7 +54,7 @@ export default function SystemConfig() {
                     setConfig(data.config);
                 }
 
-                // Carregar preferências do usuário (refreshTime e theme)
+                // Carregar preferências pessoais
                 const userRes = await fetch(`${API_BASE}/auth/me`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -80,8 +82,8 @@ export default function SystemConfig() {
             let res, data;
 
             if (isEditable) {
-                // Admin/Supervisor: salva todas as configs do sistema
-                res = await fetch(`${API_BASE}/config/system`, {
+                // Admin / Supervisor → Salva tudo (sistema + preferências)
+                const systemSave = fetch(`${API_BASE}/config/system`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -89,14 +91,32 @@ export default function SystemConfig() {
                     },
                     body: JSON.stringify(config),
                 });
-                data = await res.json();
-                if (!res.ok || !data.ok) {
-                    const msg = data.erro || `Erro HTTP ${res.status}`;
-                    throw new Error(msg);
-                }
-                setMsg("Configurações do sistema salvas com sucesso!");
+
+                const prefsSave = fetch(`${API_BASE}/auth/update-profile`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        username,
+                        refreshtime: refreshTime,
+                        usertheme: theme,
+                    }),
+                });
+
+                const [sysRes, prefRes] = await Promise.all([systemSave, prefsSave]);
+                const sysData = await sysRes.json();
+                const prefData = await prefRes.json();
+
+                if (!sysRes.ok || !sysData.ok)
+                    throw new Error(sysData.erro || "Erro ao salvar configurações.");
+                if (!prefRes.ok || !prefData.ok)
+                    throw new Error(prefData.erro || "Erro ao salvar preferências.");
+
+                setMsg("Configurações do sistema e preferências salvas com sucesso!");
             } else {
-                // Usuário comum: salva apenas refreshTime e userTheme
+                // Outros usuários → Salva apenas preferências pessoais
                 res = await fetch(`${API_BASE}/auth/update-profile`, {
                     method: "POST",
                     headers: {
@@ -104,6 +124,7 @@ export default function SystemConfig() {
                         Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({
+                        username,
                         refreshtime: refreshTime,
                         usertheme: theme,
                     }),
@@ -131,7 +152,9 @@ export default function SystemConfig() {
 
             {/* === Características do Sistema === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">
-                <h2 className="text-xl font-semibold mb-4">Características do Sistema</h2>
+                <h2 className="text-xl font-semibold mb-4">
+                    Características do Sistema
+                </h2>
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
@@ -227,7 +250,6 @@ export default function SystemConfig() {
             {/* === Ajustes do Sistema === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">
                 <h2 className="text-xl font-semibold mb-4">Ajustes do Sistema</h2>
-
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
                         Tempo de Recarga (segundos)
@@ -261,7 +283,6 @@ export default function SystemConfig() {
                 </div>
             </section>
 
-            {/* === Botão e mensagens === */}
             <div className="text-right">
                 <button
                     onClick={handleSave}

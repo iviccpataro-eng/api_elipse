@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function SystemConfig() {
     const [config, setConfig] = useState({
@@ -12,8 +13,24 @@ export default function SystemConfig() {
     const [refreshTime, setRefreshTime] = useState(10);
     const [theme, setTheme] = useState("light");
     const [msg, setMsg] = useState("");
+    const [userRole, setUserRole] = useState("");
+    const [isEditable, setIsEditable] = useState(false);
 
-    // === Carregar configuração do banco ===
+    // === Carregar dados do usuário ===
+    useEffect(() => {
+        const userInfo = localStorage.getItem("userInfo");
+        if (userInfo) {
+            try {
+                const parsed = JSON.parse(userInfo);
+                setUserRole(parsed.role || "");
+                setIsEditable(["admin", "supervisor"].includes(parsed.role));
+            } catch {
+                console.warn("Falha ao ler role do usuário.");
+            }
+        }
+    }, []);
+
+    // === Carregar configuração do sistema ===
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
@@ -30,8 +47,21 @@ export default function SystemConfig() {
                     console.error("Resposta inesperada da API:", text);
                     return;
                 }
+
                 if (data.ok && data.config) {
                     setConfig(data.config);
+                }
+
+                // Carregar preferências do usuário (refreshTime e theme)
+                const userRes = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const userData = await userRes.json();
+                if (userData.ok && userData.usuario) {
+                    if (userData.usuario.refreshtime)
+                        setRefreshTime(userData.usuario.refreshtime);
+                    if (userData.usuario.usertheme)
+                        setTheme(userData.usuario.usertheme);
                 }
             } catch (err) {
                 console.error("Erro ao carregar configurações:", err);
@@ -47,25 +77,53 @@ export default function SystemConfig() {
         if (!token) return alert("Usuário não autenticado.");
 
         try {
-            const res = await fetch(`${API_BASE}/config/system`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(config),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) {
-                const msg = data.erro || `Erro HTTP ${res.status}`;
-                throw new Error(msg);
+            let res, data;
+
+            if (isEditable) {
+                // Admin/Supervisor: salva todas as configs do sistema
+                res = await fetch(`${API_BASE}/config/system`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(config),
+                });
+                data = await res.json();
+                if (!res.ok || !data.ok) {
+                    const msg = data.erro || `Erro HTTP ${res.status}`;
+                    throw new Error(msg);
+                }
+                setMsg("Configurações do sistema salvas com sucesso!");
+            } else {
+                // Usuário comum: salva apenas refreshTime e userTheme
+                res = await fetch(`${API_BASE}/auth/update-profile`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        refreshtime: refreshTime,
+                        usertheme: theme,
+                    }),
+                });
+                data = await res.json();
+                if (!res.ok || !data.ok) {
+                    const msg = data.erro || `Erro HTTP ${res.status}`;
+                    throw new Error(msg);
+                }
+                setMsg("Preferências pessoais salvas com sucesso!");
             }
-            setMsg("Configurações salvas com sucesso!");
         } catch (err) {
             console.error("Erro ao salvar:", err);
             setMsg("Erro ao salvar configurações: " + err.message);
         }
     };
+
+    const inputClass =
+        "mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm " +
+        (isEditable ? "bg-white" : "bg-gray-100 cursor-not-allowed text-gray-600");
 
     return (
         <div className="space-y-10 max-w-4xl">
@@ -82,8 +140,11 @@ export default function SystemConfig() {
                     <input
                         type="text"
                         value={config.buildingname}
-                        onChange={(e) => setConfig({ ...config, buildingname: e.target.value })}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                        onChange={(e) =>
+                            setConfig({ ...config, buildingname: e.target.value })
+                        }
+                        className={inputClass}
+                        disabled={!isEditable}
                     />
                 </div>
 
@@ -94,8 +155,11 @@ export default function SystemConfig() {
                     <input
                         type="text"
                         value={config.buildingaddress}
-                        onChange={(e) => setConfig({ ...config, buildingaddress: e.target.value })}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                        onChange={(e) =>
+                            setConfig({ ...config, buildingaddress: e.target.value })
+                        }
+                        className={inputClass}
+                        disabled={!isEditable}
                     />
                 </div>
 
@@ -120,8 +184,11 @@ export default function SystemConfig() {
                     <input
                         type="text"
                         value={config.adminenterprise}
-                        onChange={(e) => setConfig({ ...config, adminenterprise: e.target.value })}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                        onChange={(e) =>
+                            setConfig({ ...config, adminenterprise: e.target.value })
+                        }
+                        className={inputClass}
+                        disabled={!isEditable}
                     />
                 </div>
 
@@ -133,17 +200,25 @@ export default function SystemConfig() {
                         <input
                             type="text"
                             value={config.adminname}
-                            onChange={(e) => setConfig({ ...config, adminname: e.target.value })}
-                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            onChange={(e) =>
+                                setConfig({ ...config, adminname: e.target.value })
+                            }
+                            className={inputClass}
+                            disabled={!isEditable}
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Telefone</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Telefone
+                        </label>
                         <input
                             type="tel"
                             value={config.admincontact}
-                            onChange={(e) => setConfig({ ...config, admincontact: e.target.value })}
-                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                            onChange={(e) =>
+                                setConfig({ ...config, admincontact: e.target.value })
+                            }
+                            className={inputClass}
+                            disabled={!isEditable}
                         />
                     </div>
                 </div>
@@ -186,16 +261,29 @@ export default function SystemConfig() {
                 </div>
             </section>
 
+            {/* === Botão e mensagens === */}
             <div className="text-right">
                 <button
                     onClick={handleSave}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className={`px-4 py-2 rounded-lg text-white ${isEditable
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : "bg-green-600 hover:bg-green-700"
+                        }`}
                 >
-                    Salvar Configurações
+                    {isEditable
+                        ? "Salvar Configurações do Sistema"
+                        : "Salvar Preferências Pessoais"}
                 </button>
             </div>
 
             {msg && <p className="text-sm text-green-600">{msg}</p>}
+
+            {!isEditable && (
+                <p className="text-sm text-gray-500 italic">
+                    Somente leitura para configurações do sistema — você pode alterar
+                    apenas suas preferências pessoais.
+                </p>
+            )}
         </div>
     );
 }

@@ -253,13 +253,15 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
     usertheme,
   } = req.body || {};
 
-  if (!username)
+  // Usa o username do token JWT se não vier no body
+  const targetUser = username || req.user?.user;
+  if (!targetUser)
     return res.status(400).json({ erro: "Usuário é obrigatório" });
 
   try {
     const result = await pool.query(
       "SELECT username, passhash FROM users WHERE username = $1",
-      [username]
+      [targetUser]
     );
     if (result.rows.length === 0)
       return res.status(404).json({ erro: "Usuário não encontrado" });
@@ -299,7 +301,7 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
     if (updates.length === 0)
       return res.status(400).json({ erro: "Nenhuma alteração enviada." });
 
-    values.push(username);
+    values.push(targetUser);
     await pool.query(
       `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
       values
