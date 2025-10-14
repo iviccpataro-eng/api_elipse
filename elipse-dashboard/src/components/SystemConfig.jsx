@@ -56,7 +56,10 @@ export default function SystemConfig() {
                 body: JSON.stringify(config),
             });
             const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.erro || "Erro ao salvar");
+            if (!res.ok || !data.ok) {
+                const msg = data.erro || `Erro HTTP ${res.status}`;
+                throw new Error(msg);
+            }
             setMsg("Configurações salvas com sucesso!");
         } catch (err) {
             console.error("Erro ao salvar:", err);
