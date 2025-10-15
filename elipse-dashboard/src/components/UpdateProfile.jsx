@@ -5,7 +5,7 @@ const API_BASE =
 
 export default function UpdateProfile() {
     const [fullname, setFullname] = useState("");
-    const [matricula, setMatricula] = useState("");
+    const [registernumb, setRegisterNumb] = useState("");
     const [username, setUsername] = useState("");
     const [role, setRole] = useState("");
     const [senhaAtual, setSenhaAtual] = useState("");
@@ -25,7 +25,7 @@ export default function UpdateProfile() {
             console.warn("Token inválido");
         }
 
-        // Buscar dados do perfil (fullname, matricula)
+        // Buscar dados do perfil (fullname, registernumb)
         const fetchProfile = async () => {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -34,7 +34,7 @@ export default function UpdateProfile() {
                 const data = await res.json();
                 if (data.ok && data.usuario) {
                     setFullname(data.usuario.fullname || "");
-                    setMatricula(data.usuario.matricula || "");
+                    setRegisterNumb(data.usuario.registernumb || "");
                 }
             } catch (err) {
                 console.error("Erro ao carregar perfil:", err);
@@ -63,7 +63,7 @@ export default function UpdateProfile() {
                 },
                 body: JSON.stringify({
                     fullname,
-                    matricula,
+                    registernumb,
                     username,
                     senhaAtual,
                     novaSenha,
@@ -78,7 +78,7 @@ export default function UpdateProfile() {
             // Atualizar estados com os valores retornados pelo backend
             if (data.usuario) {
                 setFullname(data.usuario.fullname || "");
-                setMatricula(data.usuario.matricula || "");
+                setRegisterNumb(data.usuario.registernumb || "");
             }
 
             // Reset de senhas após atualizar
@@ -117,8 +117,8 @@ export default function UpdateProfile() {
                         </label>
                         <input
                             type="text"
-                            value={matricula}
-                            onChange={(e) => setMatricula(e.target.value)}
+                            value={registernumb}
+                            onChange={(e) => setRegisterNumb(e.target.value)}
                             className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
                             placeholder="Opcional"
                         />

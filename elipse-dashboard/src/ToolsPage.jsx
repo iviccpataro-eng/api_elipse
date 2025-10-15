@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import InviteGenerator from "./components/InviteGenerator";
 import SystemConfig from "./components/SystemConfig";
-import UpdateProfile from "./components/UpdateProfile";
+import UserConfig from "./components/UserConfig"; // ✅ novo componente principal
 
 export default function ToolsPage() {
     const [selected, setSelected] = useState("system");
@@ -11,7 +11,7 @@ export default function ToolsPage() {
             case "system":
                 return <SystemConfig />;
             case "user":
-                return <UpdateProfile />;
+                return <UserConfig />; // ✅ substitui o antigo UpdateProfile
             case "invite":
                 return <InviteGenerator />;
             default:
@@ -27,21 +27,27 @@ export default function ToolsPage() {
                 <nav className="space-y-2">
                     <button
                         onClick={() => setSelected("system")}
-                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "system" ? "bg-blue-600 text-white" : "hover:bg-gray-200"
+                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "system"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200"
                             }`}
                     >
                         Configurações do Sistema
                     </button>
                     <button
                         onClick={() => setSelected("user")}
-                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "user" ? "bg-blue-600 text-white" : "hover:bg-gray-200"
+                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "user"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200"
                             }`}
                     >
                         Configurações de Usuário
                     </button>
                     <button
                         onClick={() => setSelected("invite")}
-                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "invite" ? "bg-blue-600 text-white" : "hover:bg-gray-200"
+                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "invite"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200"
                             }`}
                     >
                         Gerar Convite
