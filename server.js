@@ -1,3 +1,5 @@
+// server.js
+
 import express from "express";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -246,14 +248,14 @@ app.post("/auth/register", async (req, res) => {
 app.post("/auth/update-profile", autenticar, async (req, res) => {
   const {
     fullname,
-    matricula,
+    registernumb,
     username,
     senhaAtual,
     novaSenha,
     refreshtime,
     usertheme,
-    role, // pode vir do admin/supervisor
-    newUsername, // usado apenas pelo admin
+    role,
+    newUsername,
   } = req.body || {};
 
   if (!username)
@@ -272,15 +274,15 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
     const values = [];
     let idx = 1;
 
-    // 1️⃣ Qualquer usuário pode atualizar suas próprias informações
+    // 1️⃣ Atualização do próprio usuário
     if (req.user.user === username) {
       if (fullname) {
         updates.push(`fullname = $${idx++}`);
         values.push(fullname);
       }
-      if (matricula) {
-        updates.push(`matricula = $${idx++}`);
-        values.push(matricula);
+      if (registernumb) {
+        updates.push(`registernumb = $${idx++}`);
+        values.push(registernumb);
       }
       if (refreshtime !== undefined) {
         updates.push(`refreshtime = $${idx++}`);
@@ -302,7 +304,7 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
       }
     }
 
-    // 2️⃣ Supervisor pode alterar apenas o role (dele mesmo ou de outros)
+    // 2️⃣ Supervisor: pode alterar apenas o role
     if (req.user.role === "supervisor") {
       if (role && usuario.rolename !== role) {
         updates.push(`rolename = $${idx++}`);
@@ -310,15 +312,15 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
       }
     }
 
-    // 3️⃣ Admin pode alterar tudo, incluindo username e role
+    // 3️⃣ Admin: pode alterar tudo
     if (req.user.role === "admin") {
       if (fullname) {
         updates.push(`fullname = $${idx++}`);
         values.push(fullname);
       }
-      if (matricula) {
-        updates.push(`matricula = $${idx++}`);
-        values.push(matricula);
+      if (registernumb) {
+        updates.push(`registernumb = $${idx++}`);
+        values.push(registernumb);
       }
       if (role && usuario.rolename !== role) {
         updates.push(`rolename = $${idx++}`);
@@ -350,7 +352,7 @@ app.get("/auth/me", autenticar, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
-              COALESCE(matricula,'') AS matricula,
+              COALESCE(registernumb,'') AS registernumb,
               COALESCE(refreshtime,10) AS refreshtime,
               COALESCE(usertheme,'light') AS usertheme
        FROM users WHERE username = $1`,
@@ -365,42 +367,59 @@ app.get("/auth/me", autenticar, async (req, res) => {
   }
 });
 
-// Lista todos os usuários (visível para admin e supervisor)
-app.get("/auth/list-users", autenticar, async (req, res) => {
-  if (!["admin", "supervisor"].includes(req.user.role)) {
-    return res.status(403).json({ ok: false, erro: "Acesso negado." });
-  }
-
+// 🔧 Admin / Supervisor: atualizar outro usuário
+app.post("/auth/admin-update-user", autenticar, async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT username, rolename FROM users ORDER BY username ASC"
+    const { targetUser, fullname, registernumb, username, role } = req.body || {};
+    const callerRole = req.user.role;
+
+    if (!["admin", "supervisor"].includes(callerRole)) {
+      return res.status(403).json({ ok: false, erro: "Acesso negado." });
+    }
+
+    if (!targetUser) {
+      return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
+    }
+
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (fullname) {
+      updates.push(`fullname = $${idx++}`);
+      values.push(fullname);
+    }
+
+    if (registernumb) {
+      updates.push(`registernumb = $${idx++}`);
+      values.push(registernumb);
+    }
+
+    if (role) {
+      updates.push(`rolename = $${idx++}`);
+      values.push(role);
+    }
+
+    if (callerRole === "admin" && username) {
+      updates.push(`username = $${idx++}`);
+      values.push(username);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
+    }
+
+    values.push(targetUser);
+
+    await pool.query(
+      `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
+      values
     );
-    res.json({ ok: true, usuarios: result.rows });
+
+    res.json({ ok: true, msg: "Usuário atualizado com sucesso!" });
   } catch (err) {
-    console.error("[LIST USERS] Erro:", err.message);
-    res.status(500).json({ ok: false, erro: "Erro ao listar usuários." });
-  }
-});
-
-// Buscar informações de um usuário específico
-app.get("/auth/user/:username", autenticar, async (req, res) => {
-  const { username } = req.params;
-
-  if (!["admin", "supervisor"].includes(req.user.role)) {
-    return res.status(403).json({ ok: false, erro: "Acesso negado." });
-  }
-
-  try {
-    const result = await pool.query(
-      "SELECT username, rolename, fullname, matricula FROM users WHERE username = $1",
-      [username]
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ ok: false, erro: "Usuário não encontrado" });
-    res.json({ ok: true, usuario: result.rows[0] });
-  } catch (err) {
-    console.error("[GET USER] Erro:", err.message);
-    res.status(500).json({ ok: false, erro: "Erro ao buscar usuário." });
+    console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message);
+    res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
   }
 });
 
@@ -545,4 +564,6 @@ app.get("*", (req, res, next) => {
 // 🔟 PORTA
 // -------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`[BOOT] Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`[BOOT] Servidor rodando na porta ${PORT}`)
+);
