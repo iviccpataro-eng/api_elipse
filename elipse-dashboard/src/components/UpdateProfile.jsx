@@ -94,10 +94,10 @@ export default function UpdateProfile() {
 
     return (
         <div>
-            <div className="bg-white rounded-xl shadow p-6">
-                {/*<h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>*/}
-                <form onSubmit={handleUpdate} className="space-y-6 max-w-lg">
-                    {/* Dados do usuário */}
+            {/*<h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>*/}
+            <form onSubmit={handleUpdate} className="space-y-6 max-w-lg">
+                {/* Dados do usuário */}
+                <div className="bg-white rounded-xl shadow p-6">
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
@@ -149,9 +149,8 @@ export default function UpdateProfile() {
                             />
                         </div>
                     </div>
-
-                    {/* Quebra de seção */}
-                    <hr className="my-6" />
+                </div>
+                <div className="bg-white rounded-xl shadow p-6">
                     <h2 className="text-xl font-semibold">Mudança de Senha</h2>
 
                     {/* Senhas */}
@@ -195,7 +194,8 @@ export default function UpdateProfile() {
                             />
                         </div>
                     </div>
-
+                </div>
+                <div className="text-right">
                     {/* Botão */}
                     <button
                         type="submit"
@@ -203,10 +203,10 @@ export default function UpdateProfile() {
                     >
                         Salvar Alterações
                     </button>
-                </form>
+                </div>
+            </form>
 
-                {msg && <p className="mt-4 text-sm text-gray-700">{msg}</p>}
-            </div>
+            {msg && <p className="mt-4 text-sm text-gray-700">{msg}</p>}
         </div>
     );
 }
