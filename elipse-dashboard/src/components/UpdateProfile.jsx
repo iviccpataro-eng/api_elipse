@@ -94,7 +94,7 @@ export default function UpdateProfile() {
 
     return (
         <div>
-            <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
+            {/*<h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>*/}
             <form onSubmit={handleUpdate} className="space-y-6 max-w-lg">
                 {/* Dados do usuário */}
                 <div className="space-y-4">
