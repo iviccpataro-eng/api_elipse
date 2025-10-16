@@ -32,7 +32,7 @@ export default function UserConfig() {
     }, []);
 
     return (
-        <div className="max-w-5xl mx-auto">
+        <div className="bg-white rounded-xl shadow p-6"> {/*className="max-w-5xl mx-auto"*/}
             <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
 
             {/* Abas superiores */}
