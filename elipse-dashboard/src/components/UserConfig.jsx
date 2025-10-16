@@ -32,7 +32,7 @@ export default function UserConfig() {
     }, []);
 
     return (
-        <div>
+        <div className="space-y-10 max-w-4xl">
             <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
             <div className="bg-white rounded-xl shadow p-6"> {/*className="max-w-5xl mx-auto"*/}
 
