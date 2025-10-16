@@ -1,3 +1,5 @@
+// server.js
+
 import express from "express";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -242,26 +244,27 @@ app.post("/auth/register", async (req, res) => {
 });
 
 // 🔧 Atualizado para suportar refreshTime e userTheme
+// Atualizado: suporte a edição avançada de perfil e permissões
 app.post("/auth/update-profile", autenticar, async (req, res) => {
   const {
     fullname,
-    matricula,
+    registernumb,
     username,
     senhaAtual,
     novaSenha,
     refreshtime,
     usertheme,
+    role,
+    newUsername,
   } = req.body || {};
 
-  // Usa o username do token JWT se não vier no body
-  const targetUser = username || req.user?.user;
-  if (!targetUser)
+  if (!username)
     return res.status(400).json({ erro: "Usuário é obrigatório" });
 
   try {
     const result = await pool.query(
-      "SELECT username, passhash FROM users WHERE username = $1",
-      [targetUser]
+      "SELECT username, passhash, rolename FROM users WHERE username = $1",
+      [username]
     );
     if (result.rows.length === 0)
       return res.status(404).json({ erro: "Usuário não encontrado" });
@@ -271,37 +274,68 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
     const values = [];
     let idx = 1;
 
-    if (fullname) {
-      updates.push(`fullname = $${idx++}`);
-      values.push(fullname);
+    // 1️⃣ Atualização do próprio usuário
+    if (req.user.user === username) {
+      if (fullname) {
+        updates.push(`fullname = $${idx++}`);
+        values.push(fullname);
+      }
+      if (registernumb) {
+        updates.push(`registernumb = $${idx++}`);
+        values.push(registernumb);
+      }
+      if (refreshtime !== undefined) {
+        updates.push(`refreshtime = $${idx++}`);
+        values.push(refreshtime);
+      }
+      if (usertheme !== undefined) {
+        updates.push(`usertheme = $${idx++}`);
+        values.push(usertheme);
+      }
+      if (novaSenha) {
+        if (!senhaAtual)
+          return res.status(400).json({ erro: "Senha atual obrigatória" });
+        const match = await bcrypt.compare(senhaAtual, usuario.passhash);
+        if (!match)
+          return res.status(401).json({ erro: "Senha atual incorreta" });
+        const hash = await bcrypt.hash(novaSenha, 10);
+        updates.push(`passhash = $${idx++}`);
+        values.push(hash);
+      }
     }
-    if (matricula) {
-      updates.push(`matricula = $${idx++}`);
-      values.push(matricula);
+
+    // 2️⃣ Supervisor: pode alterar apenas o role
+    if (req.user.role === "supervisor") {
+      if (role && usuario.rolename !== role) {
+        updates.push(`rolename = $${idx++}`);
+        values.push(role);
+      }
     }
-    if (refreshtime !== undefined) {
-      updates.push(`refreshtime = $${idx++}`);
-      values.push(refreshtime);
-    }
-    if (usertheme !== undefined) {
-      updates.push(`usertheme = $${idx++}`);
-      values.push(usertheme);
-    }
-    if (novaSenha) {
-      if (!senhaAtual)
-        return res.status(400).json({ erro: "Senha atual obrigatória" });
-      const match = await bcrypt.compare(senhaAtual, usuario.passhash);
-      if (!match)
-        return res.status(401).json({ erro: "Senha atual incorreta" });
-      const hash = await bcrypt.hash(novaSenha, 10);
-      updates.push(`passhash = $${idx++}`);
-      values.push(hash);
+
+    // 3️⃣ Admin: pode alterar tudo
+    if (req.user.role === "admin") {
+      if (fullname) {
+        updates.push(`fullname = $${idx++}`);
+        values.push(fullname);
+      }
+      if (registernumb) {
+        updates.push(`registernumb = $${idx++}`);
+        values.push(registernumb);
+      }
+      if (role && usuario.rolename !== role) {
+        updates.push(`rolename = $${idx++}`);
+        values.push(role);
+      }
+      if (newUsername && newUsername !== usuario.username) {
+        updates.push(`username = $${idx++}`);
+        values.push(newUsername);
+      }
     }
 
     if (updates.length === 0)
       return res.status(400).json({ erro: "Nenhuma alteração enviada." });
 
-    values.push(targetUser);
+    values.push(username);
     await pool.query(
       `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
       values
@@ -314,12 +348,11 @@ app.post("/auth/update-profile", autenticar, async (req, res) => {
   }
 });
 
-
 app.get("/auth/me", autenticar, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
-              COALESCE(matricula,'') AS matricula,
+              COALESCE(registernumb,'') AS registernumb,
               COALESCE(refreshtime,10) AS refreshtime,
               COALESCE(usertheme,'light') AS usertheme
        FROM users WHERE username = $1`,
@@ -331,6 +364,62 @@ app.get("/auth/me", autenticar, async (req, res) => {
   } catch (err) {
     console.error("[AUTH ME] Erro:", err.message);
     res.status(500).json({ erro: "Erro ao buscar perfil." });
+  }
+});
+
+// 🔧 Admin / Supervisor: atualizar outro usuário
+app.post("/auth/admin-update-user", autenticar, async (req, res) => {
+  try {
+    const { targetUser, fullname, registernumb, username, role } = req.body || {};
+    const callerRole = req.user.role;
+
+    if (!["admin", "supervisor"].includes(callerRole)) {
+      return res.status(403).json({ ok: false, erro: "Acesso negado." });
+    }
+
+    if (!targetUser) {
+      return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
+    }
+
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (fullname) {
+      updates.push(`fullname = $${idx++}`);
+      values.push(fullname);
+    }
+
+    if (registernumb) {
+      updates.push(`registernumb = $${idx++}`);
+      values.push(registernumb);
+    }
+
+    if (role) {
+      updates.push(`rolename = $${idx++}`);
+      values.push(role);
+    }
+
+    if (callerRole === "admin" && username) {
+      updates.push(`username = $${idx++}`);
+      values.push(username);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
+    }
+
+    values.push(targetUser);
+
+    await pool.query(
+      `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
+      values
+    );
+
+    res.json({ ok: true, msg: "Usuário atualizado com sucesso!" });
+  } catch (err) {
+    console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message);
+    res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
   }
 });
 
@@ -475,4 +564,6 @@ app.get("*", (req, res, next) => {
 // 🔟 PORTA
 // -------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`[BOOT] Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`[BOOT] Servidor rodando na porta ${PORT}`)
+);
