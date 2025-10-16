@@ -32,40 +32,42 @@ export default function UserConfig() {
     }, []);
 
     return (
-        <div className="bg-white rounded-xl shadow p-6"> {/*className="max-w-5xl mx-auto"*/}
+        <div>
             <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
+            <div className="bg-white rounded-xl shadow p-6"> {/*className="max-w-5xl mx-auto"*/}
 
-            {/* Abas superiores */}
-            <div className="flex space-x-4 border-b mb-6">
-                <button
-                    className={`px-4 py-2 font-medium ${activeTab === "me"
-                        ? "border-b-2 border-blue-600 text-blue-600"
-                        : "text-gray-600 hover:text-blue-600"
-                        }`}
-                    onClick={() => setActiveTab("me")}
-                >
-                    Meu Perfil
-                </button>
-
-                {/* A aba de Gerenciar só aparece para admin e supervisor */}
-                {["admin", "supervisor"].includes(userRole) && (
+                {/* Abas superiores */}
+                <div className="flex space-x-4 border-b mb-6">
                     <button
-                        className={`px-4 py-2 font-medium ${activeTab === "manage"
+                        className={`px-4 py-2 font-medium ${activeTab === "me"
                             ? "border-b-2 border-blue-600 text-blue-600"
                             : "text-gray-600 hover:text-blue-600"
                             }`}
-                        onClick={() => setActiveTab("manage")}
+                        onClick={() => setActiveTab("me")}
                     >
-                        Gerenciar Usuários
+                        Meu Perfil
                     </button>
+
+                    {/* A aba de Gerenciar só aparece para admin e supervisor */}
+                    {["admin", "supervisor"].includes(userRole) && (
+                        <button
+                            className={`px-4 py-2 font-medium ${activeTab === "manage"
+                                ? "border-b-2 border-blue-600 text-blue-600"
+                                : "text-gray-600 hover:text-blue-600"
+                                }`}
+                            onClick={() => setActiveTab("manage")}
+                        >
+                            Gerenciar Usuários
+                        </button>
+                    )}
+                </div>
+
+                {/* Conteúdo da aba */}
+                {activeTab === "me" && <UpdateProfile />}
+                {activeTab === "manage" && ["admin", "supervisor"].includes(userRole) && (
+                    <ManageUsers role={userRole} />
                 )}
             </div>
-
-            {/* Conteúdo da aba */}
-            {activeTab === "me" && <UpdateProfile />}
-            {activeTab === "manage" && ["admin", "supervisor"].includes(userRole) && (
-                <ManageUsers role={userRole} />
-            )}
         </div>
     );
 }
