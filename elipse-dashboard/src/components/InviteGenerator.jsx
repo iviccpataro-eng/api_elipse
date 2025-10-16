@@ -58,32 +58,37 @@ export default function InviteGenerator() {
     return (
         <div>
             <h1 className="text-2xl font-bold mb-4">Gerar Convite</h1>
-            <div className="space-y-4 max-w-md">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Papel do Usuário *
-                    </label>
-                    <select
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                    >
-                        <option value="user">Usuário</option>
-                        <option value="admin">Administrador</option>
-                    </select>
-                </div>
-                <button
-                    onClick={handleInvite}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                    Gerar Convite
-                </button>
-                {msg && <p className="text-sm text-gray-700">{msg}</p>}
-                {invite && (
-                    <div className="mt-3 p-2 border rounded bg-gray-50 text-sm break-all">
-                        {invite}
+            <div className="bg-white rounded-xl shadow p-6">
+                <div className="space-y-4 max-w-md">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Papel do Usuário *
+                        </label>
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
+                        >
+                            <option value="admin">Administrador</option>
+                            <option value="user">Operador</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="client">Cliente</option>
+                            <option value="maintenance">Manutenção</option>
+                        </select>
                     </div>
-                )}
+                    <button
+                        onClick={handleInvite}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                        Gerar Convite
+                    </button>
+                    {msg && <p className="text-sm text-gray-700">{msg}</p>}
+                    {invite && (
+                        <div className="mt-3 p-2 border rounded bg-gray-50 text-sm break-all">
+                            {invite}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
