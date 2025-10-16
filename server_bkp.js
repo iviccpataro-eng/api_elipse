@@ -367,6 +367,34 @@ app.get("/auth/me", autenticar, async (req, res) => {
   }
 });
 
+// 🔍 Buscar dados de um usuário específico (para admin e supervisor)
+app.get("/auth/user/:username", autenticar, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    if (!["admin", "supervisor"].includes(req.user.role)) {
+      return res.status(403).json({ ok: false, erro: "Acesso negado." });
+    }
+
+    const result = await pool.query(
+      `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
+              COALESCE(registernumb,'') AS registernumb,
+              COALESCE(refreshtime,10) AS refreshtime,
+              COALESCE(usertheme,'light') AS usertheme
+       FROM users WHERE username = $1`,
+      [username]
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
+
+    res.json({ ok: true, usuario: result.rows[0] });
+  } catch (err) {
+    console.error("[AUTH USER/:USERNAME] Erro:", err.message);
+    res.status(500).json({ ok: false, erro: "Erro ao buscar usuário." });
+  }
+});
+
 // 🔧 Admin / Supervisor: atualizar outro usuário
 app.post("/auth/admin-update-user", autenticar, async (req, res) => {
   try {

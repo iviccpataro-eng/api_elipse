@@ -395,6 +395,29 @@ app.get("/auth/user/:username", autenticar, async (req, res) => {
   }
 });
 
+// 🔍 Listar todos os usuários (somente admin e supervisor)
+app.get("/auth/list-users", autenticar, async (req, res) => {
+  try {
+    const callerRole = req.user.role;
+
+    if (!["admin", "supervisor"].includes(callerRole)) {
+      return res.status(403).json({ ok: false, erro: "Acesso negado." });
+    }
+
+    const result = await pool.query(`
+      SELECT username, rolename, COALESCE(fullname, '') AS fullname,
+             COALESCE(registernumb, '') AS registernumb
+      FROM users
+      ORDER BY username ASC
+    `);
+
+    res.json({ ok: true, usuarios: result.rows });
+  } catch (err) {
+    console.error("[AUTH LIST-USERS] Erro:", err.message);
+    res.status(500).json({ ok: false, erro: "Erro ao listar usuários." });
+  }
+});
+
 // 🔧 Admin / Supervisor: atualizar outro usuário
 app.post("/auth/admin-update-user", autenticar, async (req, res) => {
   try {
