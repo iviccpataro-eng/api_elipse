@@ -39,8 +39,8 @@ export default function UserConfig() {
             <div className="flex space-x-4 border-b mb-6">
                 <button
                     className={`px-4 py-2 font-medium ${activeTab === "me"
-                        ? "border-b-2 border-blue-600 text-blue-600"
-                        : "text-gray-600 hover:text-blue-600"
+                            ? "border-b-2 border-blue-600 text-blue-600"
+                            : "text-gray-600 hover:text-blue-600"
                         }`}
                     onClick={() => setActiveTab("me")}
                 >
@@ -51,8 +51,8 @@ export default function UserConfig() {
                 {["admin", "supervisor"].includes(userRole) && (
                     <button
                         className={`px-4 py-2 font-medium ${activeTab === "manage"
-                            ? "border-b-2 border-blue-600 text-blue-600"
-                            : "text-gray-600 hover:text-blue-600"
+                                ? "border-b-2 border-blue-600 text-blue-600"
+                                : "text-gray-600 hover:text-blue-600"
                             }`}
                         onClick={() => setActiveTab("manage")}
                     >
