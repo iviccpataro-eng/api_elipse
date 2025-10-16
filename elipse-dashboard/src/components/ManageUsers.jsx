@@ -13,10 +13,10 @@ export default function ManageUsers({ role }) {
     const [roleName, setRoleName] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
+    const [currentUser, setCurrentUser] = useState("");
 
     const token = localStorage.getItem("authToken");
 
-    // 🗺️ Mapa para mostrar os nomes legíveis dos grupos
     const roleLabels = {
         admin: "Administrador",
         supervisor: "Supervisor",
@@ -25,6 +25,16 @@ export default function ManageUsers({ role }) {
         maintnance: "Manutenção",
     };
 
+    // 🔐 Obtém o nome do usuário logado
+    useEffect(() => {
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            setCurrentUser(payload.user || "");
+        } catch {
+            console.warn("Token inválido ao tentar identificar usuário atual.");
+        }
+    }, []);
+
     // 📥 Busca lista de usuários
     useEffect(() => {
         async function fetchUsers() {
@@ -32,9 +42,14 @@ export default function ManageUsers({ role }) {
                 const res = await fetch(`${API_BASE}/auth/list-users`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                const data = await res.json();
-                if (data.ok) {
-                    setUsers(data.usuarios);
+                const text = await res.text();
+
+                try {
+                    const data = JSON.parse(text);
+                    if (data.ok) setUsers(data.usuarios);
+                    else console.error("Erro ao listar usuários:", data.erro || text);
+                } catch {
+                    console.error("Resposta não JSON:", text);
                 }
             } catch (err) {
                 console.error("Erro ao buscar lista de usuários:", err);
@@ -53,15 +68,21 @@ export default function ManageUsers({ role }) {
             const res = await fetch(`${API_BASE}/auth/user/${username}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const data = await res.json();
+            const text = await res.text();
 
-            if (data.ok && data.usuario) {
-                setFullname(data.usuario.fullname || "");
-                setRegisterNumb(data.usuario.registernumb || "");
-                setUsername(data.usuario.username || "");
-                setRoleName(data.usuario.rolename || "");
-            } else {
-                setMessage(data.erro || "Erro ao carregar dados do usuário.");
+            try {
+                const data = JSON.parse(text);
+                if (data.ok && data.usuario) {
+                    setFullname(data.usuario.fullname || "");
+                    setRegisterNumb(data.usuario.registernumb || "");
+                    setUsername(data.usuario.username || "");
+                    setRoleName(data.usuario.rolename || "");
+                } else {
+                    setMessage(data.erro || "Erro ao carregar dados do usuário.");
+                }
+            } catch {
+                console.error("Resposta não JSON:", text);
+                setMessage("Erro inesperado ao buscar dados do usuário.");
             }
         } catch (err) {
             console.error("Erro ao carregar dados do usuário:", err);
@@ -106,6 +127,8 @@ export default function ManageUsers({ role }) {
         }
     }
 
+    const isSelf = selectedUser === currentUser;
+
     return (
         <div className="bg-white rounded-xl shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Gerenciar Usuários</h2>
@@ -142,19 +165,23 @@ export default function ManageUsers({ role }) {
                         type="text"
                         value={fullname}
                         onChange={(e) => setFullname(e.target.value)}
-                        className="w-full p-2 border rounded-lg"
-                        placeholder="Digite o nome completo"
+                        disabled={isSelf}
+                        className={`w-full p-2 border rounded-lg ${isSelf ? "bg-gray-100" : ""
+                            }`}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">Matrícula / Registro</label>
+                    <label className="block text-sm font-medium mb-1">
+                        Matrícula / Registro
+                    </label>
                     <input
                         type="text"
                         value={registerNumb}
                         onChange={(e) => setRegisterNumb(e.target.value)}
-                        className="w-full p-2 border rounded-lg"
-                        placeholder="Número de registro"
+                        disabled={isSelf}
+                        className={`w-full p-2 border rounded-lg ${isSelf ? "bg-gray-100" : ""
+                            }`}
                     />
                 </div>
 
