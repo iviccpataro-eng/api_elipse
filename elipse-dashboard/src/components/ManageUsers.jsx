@@ -131,7 +131,7 @@ export default function ManageUsers({ role }) {
 
     return (
         <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Gerenciar Usuários</h2>
+            {/*<h2 className="text-lg font-semibold mb-4">Gerenciar Usuários</h2>*/}
 
             {/* Selecionar usuário */}
             <div className="mb-6">
