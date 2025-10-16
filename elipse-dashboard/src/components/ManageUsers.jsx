@@ -156,8 +156,11 @@ export default function ManageUsers({ role }) {
                 </select>
             </div>
 
+            {/* Quebra de seção */}
+            <hr className="my-6" />
+
             {/* Campos de edição */}
-            <h3 className="text-md font-semibold mb-2">Editar Informações</h3>
+            <h2 className="text-md font-semibold mb-2">Editar Informações</h2>
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">Nome Completo</label>
