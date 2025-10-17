@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import pkg from "pg";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import { generateFrontendData } from "./modules/structureBuilder.js";
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -407,7 +408,7 @@ app.get("/auth/list-users", autenticar, async (req, res) => {
 
     const result = await pool.query(`
       SELECT username, rolename, COALESCE(fullname, '') AS fullname,
-             COALESCE(registernumb, '') AS registernumb
+             COALESCE(registernumb, '') AS reginternumb
       FROM users
       ORDER BY username ASC
     `);
@@ -480,8 +481,10 @@ app.post("/auth/admin-update-user", autenticar, async (req, res) => {
 // -------------------------
 app.get("/", (req, res) => res.send("API Elipse rodando no Render!"));
 
+// Retorna objeto `dados` em memória (dados brutos)
 app.get(["/dados", "/data"], autenticar, (req, res) => res.json(dados));
 
+// Retorna um caminho específico dentro de `dados`
 app.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
   const path = req.params[0] || "";
   const ref = getByPath(dados, path);
@@ -490,16 +493,68 @@ app.get(["/dados/*", "/data/*"], autenticar, (req, res) => {
   res.json(ref);
 });
 
+// Recebe envio do Elipse / outras fontes
 app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   try {
     const payload = normalizeBody(req);
     if (typeof payload === "undefined")
       return res.status(400).json({ erro: "Body inválido" });
+
     const path = req.params[0] || "";
     setByPath(dados, path, payload);
+
+    // ====== Integração automática com structureBuilder ======
+    // Se o payload for um array de strings (tags) ou o path terminar com 'tags',
+    // gera estrutura hierárquica para o frontend e salva em dados.structure e dados.structureDetails
+    try {
+      const isPayloadArrayOfStrings =
+        Array.isArray(payload) && payload.every((p) => typeof p === "string");
+
+      const pathEndsWithTags = path.toLowerCase().endsWith("tags");
+
+      if (isPayloadArrayOfStrings || pathEndsWithTags) {
+        const tagsArray = isPayloadArrayOfStrings ? payload : getByPath(dados, path);
+        if (Array.isArray(tagsArray)) {
+          const generated = generateFrontendData(tagsArray);
+          // grava em dois caminhos úteis dentro do objeto `dados`
+          setByPath(dados, "structure", generated.structure);
+          setByPath(dados, "structureDetails", generated.details);
+          console.log("[STRUCTURE] Estrutura atualizada a partir de tags (path:", path, ")");
+        }
+      }
+    } catch (gErr) {
+      console.error("[STRUCTURE] Erro ao gerar estrutura:", gErr);
+    }
+    // =======================================================
+
     res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
   } catch (e) {
     res.status(400).json({ erro: e.message });
+  }
+});
+
+// Rota auxiliar pública para recuperar a estrutura montada (útil para frontend)
+app.get("/structure", autenticar, (req, res) => {
+  try {
+    const structure = dados.structure || null;
+    const details = dados.structureDetails || null;
+
+    if (!structure || !details) {
+      // tenta reconstruir a partir de dados.tags se existente
+      const tags = getByPath(dados, "tags") || getByPath(dados, "Tags") || null;
+      if (Array.isArray(tags)) {
+        const generated = generateFrontendData(tags);
+        setByPath(dados, "structure", generated.structure);
+        setByPath(dados, "structureDetails", generated.details);
+        return res.json({ ok: true, structure: generated.structure, details: generated.details });
+      }
+      return res.json({ ok: false, erro: "Estrutura ainda não gerada." });
+    }
+
+    res.json({ ok: true, structure, details });
+  } catch (err) {
+    console.error("[GET /structure] Erro:", err);
+    res.status(500).json({ ok: false, erro: "Erro ao retornar estrutura." });
   }
 });
 
@@ -605,7 +660,8 @@ app.get("*", (req, res, next) => {
     req.originalUrl.startsWith("/auth") ||
     req.originalUrl.startsWith("/dados") ||
     req.originalUrl.startsWith("/data") ||
-    req.originalUrl.startsWith("/test")
+    req.originalUrl.startsWith("/test") ||
+    req.originalUrl.startsWith("/structure")
   ) {
     return next();
   }

@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import pkg from "pg";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import { generateFrontendData } from "./modules/structureBuilder.js";
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -212,7 +213,7 @@ app.get("/auth/validate-invite", (req, res) => {
 });
 
 app.post("/auth/register", async (req, res) => {
-  const { invite, senha, username } = req.body || {};
+  const { invite, senha, username, fullName, registerNumb } = req.body || {};
   if (!invite || !senha || !username) {
     return res
       .status(400)
@@ -232,8 +233,9 @@ app.post("/auth/register", async (req, res) => {
       return res.status(400).json({ erro: "Usuário já existe." });
 
     await pool.query(
-      "INSERT INTO users (username, passhash, rolename) VALUES ($1,$2,$3)",
-      [username, hash, role || "user"]
+      `INSERT INTO users (username, passhash, rolename, fullname, registernumb)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [username, hash, role || "user", fullName || "", registerNumb || ""]
     );
 
     res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
