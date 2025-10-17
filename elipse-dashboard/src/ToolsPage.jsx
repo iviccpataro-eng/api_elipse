@@ -20,7 +20,7 @@ export default function ToolsPage() {
     };
 
     return (
-        <div className="flex min-h-screen pt-8">
+        <div className="flex min-h-screen pt-10">
             {/* Sidebar */}
             <aside className="w-64 bg-gray-100 border-r p-4">
                 <h2 className="text-lg font-semibold mb-4">Ferramentas</h2>
