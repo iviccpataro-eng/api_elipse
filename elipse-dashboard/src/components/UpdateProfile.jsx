@@ -149,7 +149,7 @@ export default function UpdateProfile() {
                 </div>
                 {/* Quebra de seção */}
                 <hr className="my-6" />
-                <h2 className="text-xl font-semibold">Mudança de Senha</h2>
+                <h2 className="text-md font-semibold mb-2">Mudança de Senha</h2>
                 {/* Senhas */}
                 <div>
                     <div>
