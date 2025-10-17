@@ -130,7 +130,7 @@ export default function ManageUsers({ role }) {
     const isSelf = selectedUser === currentUser;
 
     return (
-        <div className="bg-white rounded-xl shadow p-6">
+        <div className="bg-white pt-8 rounded-xl shadow p-6">
             {/*<h2 className="text-lg font-semibold mb-4">Gerenciar Usuários</h2>*/}
 
             {/* Selecionar usuário */}

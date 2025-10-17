@@ -147,7 +147,7 @@ export default function SystemConfig() {
         (isEditable ? "bg-white" : "bg-gray-100 cursor-not-allowed text-gray-600");
 
     return (
-        <div className="space-y-10 max-w-4xl">
+        <div className="space-y-10 pt-8 max-w-4xl">
             <h1 className="text-2xl font-bold mb-6">Configurações do Sistema</h1>
 
             {/* === Características do Sistema === */}
@@ -287,8 +287,8 @@ export default function SystemConfig() {
                 <button
                     onClick={handleSave}
                     className={`px-4 py-2 rounded-lg text-white ${isEditable
-                            ? "bg-blue-600 hover:bg-blue-700"
-                            : "bg-green-600 hover:bg-green-700"
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : "bg-green-600 hover:bg-green-700"
                         }`}
                 >
                     {isEditable
