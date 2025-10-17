@@ -131,8 +131,6 @@ export default function ManageUsers({ role }) {
 
     return (
         <div className="bg-white pt-8 rounded-xl shadow p-6">
-            {/*<h2 className="text-lg font-semibold mb-4">Gerenciar Usuários</h2>*/}
-
             {/* Selecionar usuário */}
             <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">
@@ -155,10 +153,8 @@ export default function ManageUsers({ role }) {
                     ))}
                 </select>
             </div>
-
             {/* Quebra de seção */}
             <hr className="my-6" />
-
             {/* Campos de edição */}
             <h2 className="text-md font-semibold mb-2">Editar Informações</h2>
             <div className="space-y-4">
@@ -173,7 +169,6 @@ export default function ManageUsers({ role }) {
                             }`}
                     />
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium mb-1">
                         Matrícula / Registro
@@ -187,7 +182,6 @@ export default function ManageUsers({ role }) {
                             }`}
                     />
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium mb-1">Nome de Usuário</label>
                     <input
@@ -199,7 +193,6 @@ export default function ManageUsers({ role }) {
                             }`}
                     />
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium mb-1">Grupo de Usuário</label>
                     <select
@@ -217,9 +210,8 @@ export default function ManageUsers({ role }) {
                     </select>
                 </div>
             </div>
-
             {/* Botão de salvar */}
-            <div className="mt-6">
+            <div className="mt-6 text-right">
                 <button
                     onClick={handleSave}
                     disabled={!selectedUser || loading}
@@ -228,7 +220,6 @@ export default function ManageUsers({ role }) {
                     {loading ? "Salvando..." : "Salvar Alterações"}
                 </button>
             </div>
-
             {message && (
                 <p
                     className={`mt-4 text-sm ${message.includes("sucesso") ? "text-green-600" : "text-red-600"

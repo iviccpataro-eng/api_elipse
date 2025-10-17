@@ -76,12 +76,14 @@ export default function InviteGenerator() {
                             <option value="maintenance">Manutenção</option>
                         </select>
                     </div>
-                    <button
-                        onClick={handleInvite}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                        Gerar Convite
-                    </button>
+                    <div className="text-right">
+                        <button
+                            onClick={handleInvite}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            Gerar Convite
+                        </button>
+                    </div>
                     {msg && <p className="text-sm text-gray-700">{msg}</p>}
                     {invite && (
                         <div className="mt-3 p-2 border rounded bg-gray-50 text-sm break-all">

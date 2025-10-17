@@ -149,13 +149,11 @@ export default function SystemConfig() {
     return (
         <div className="space-y-10 pt-8 max-w-4xl">
             <h1 className="text-2xl font-bold mb-6">Configurações do Sistema</h1>
-
             {/* === Características do Sistema === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">
                 <h2 className="text-xl font-semibold mb-4">
                     Características do Sistema
                 </h2>
-
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
                         Nome do Empreendimento
@@ -170,7 +168,6 @@ export default function SystemConfig() {
                         disabled={!isEditable}
                     />
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium text-gray-700">
                         Endereço do Empreendimento
@@ -185,7 +182,6 @@ export default function SystemConfig() {
                         disabled={!isEditable}
                     />
                 </div>
-
                 {config.buildingaddress && (
                     <div className="mt-4">
                         <iframe
@@ -214,7 +210,6 @@ export default function SystemConfig() {
                         disabled={!isEditable}
                     />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
@@ -246,7 +241,6 @@ export default function SystemConfig() {
                     </div>
                 </div>
             </section>
-
             {/* === Ajustes do Sistema === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">
                 <h2 className="text-xl font-semibold mb-4">Ajustes do Sistema</h2>
@@ -263,7 +257,6 @@ export default function SystemConfig() {
                     />
                 </div>
             </section>
-
             {/* === Temas e Aparência === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">
                 <h2 className="text-xl font-semibold mb-4">Temas e Aparência</h2>
@@ -282,7 +275,6 @@ export default function SystemConfig() {
                     </select>
                 </div>
             </section>
-
             <div className="text-right">
                 <button
                     onClick={handleSave}
@@ -296,9 +288,7 @@ export default function SystemConfig() {
                         : "Salvar Preferências Pessoais"}
                 </button>
             </div>
-
             {msg && <p className="text-sm text-green-600">{msg}</p>}
-
             {!isEditable && (
                 <p className="text-sm text-gray-500 italic">
                     Somente leitura para configurações do sistema — você pode alterar
