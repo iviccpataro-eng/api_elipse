@@ -20,7 +20,7 @@ export default function ToolsPage() {
     };
 
     return (
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen pt-8">
             {/* Sidebar */}
             <aside className="w-64 bg-gray-100 border-r p-4">
                 <h2 className="text-lg font-semibold mb-4">Ferramentas</h2>
@@ -28,8 +28,8 @@ export default function ToolsPage() {
                     <button
                         onClick={() => setSelected("system")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "system"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200"
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-200"
                             }`}
                     >
                         Configurações do Sistema
@@ -37,8 +37,8 @@ export default function ToolsPage() {
                     <button
                         onClick={() => setSelected("user")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "user"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200"
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-200"
                             }`}
                     >
                         Configurações de Usuário
@@ -46,8 +46,8 @@ export default function ToolsPage() {
                     <button
                         onClick={() => setSelected("invite")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "invite"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200"
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-200"
                             }`}
                     >
                         Gerar Convite
