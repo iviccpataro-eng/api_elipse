@@ -506,25 +506,23 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
     // ====== Integração automática com structureBuilder ======
     // Se o payload for um array de strings (tags) ou o path terminar com 'tags',
     // gera estrutura hierárquica para o frontend e salva em dados.structure e dados.structureDetails
-    try {
-      const isPayloadArrayOfStrings =
-        Array.isArray(payload) && payload.every((p) => typeof p === "string");
+// ====== Integração com structureBuilder (disciplinas) ======
+try {
+  const isPayloadArrayOfStrings =
+    Array.isArray(payload) && payload.every((p) => typeof p === "string");
+  const pathEndsWithTags = path.toLowerCase().endsWith("tags");
 
-      const pathEndsWithTags = path.toLowerCase().endsWith("tags");
-
-      if (isPayloadArrayOfStrings || pathEndsWithTags) {
-        const tagsArray = isPayloadArrayOfStrings ? payload : getByPath(dados, path);
-        if (Array.isArray(tagsArray)) {
-          const generated = generateFrontendData(tagsArray);
-          // grava em dois caminhos úteis dentro do objeto `dados`
-          setByPath(dados, "structure", generated.structure);
-          setByPath(dados, "structureDetails", generated.details);
-          console.log("[STRUCTURE] Estrutura atualizada a partir de tags (path:", path, ")");
-        }
-      }
-    } catch (gErr) {
-      console.error("[STRUCTURE] Erro ao gerar estrutura:", gErr);
+  if (isPayloadArrayOfStrings || pathEndsWithTags) {
+    const tagsArray = isPayloadArrayOfStrings ? payload : getByPath(dados, path);
+    if (Array.isArray(tagsArray)) {
+      // Apenas armazenamos os tags crus
+      setByPath(dados, "tagsList", tagsArray);
+      console.log("[TAGS] Lista de tags recebida e armazenada (path:", path, ")");
     }
+  }
+} catch (gErr) {
+  console.error("[STRUCTURE] Erro ao armazenar tags:", gErr);
+}
     // =======================================================
 
     res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
