@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 import pkg from "pg";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import { generateFrontendData } from "./modules/structureBuilder.js";
+import { generateFrontendData, getDisciplineData } from "./modules/structureBuilder.js";
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -555,6 +555,18 @@ app.get("/structure", autenticar, (req, res) => {
   } catch (err) {
     console.error("[GET /structure] Erro:", err);
     res.status(500).json({ ok: false, erro: "Erro ao retornar estrutura." });
+  }
+});
+
+// 🧩 Nova rota para fornecer dados estruturados de disciplina
+app.get("/discipline/:code", autenticar, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const result = getDisciplineData(dados, code.toUpperCase());
+    res.json(result);
+  } catch (err) {
+    console.error("[DISCIPLINE DATA] Erro:", err);
+    res.status(500).json({ ok: false, erro: "Erro ao montar estrutura da disciplina." });
   }
 });
 
