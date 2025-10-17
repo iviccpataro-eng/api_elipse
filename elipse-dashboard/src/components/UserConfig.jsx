@@ -35,7 +35,6 @@ export default function UserConfig() {
         <div className="space-y-10 pt-8 max-w-4xl">
             <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
             <div className="bg-white rounded-xl shadow p-6">
-
                 {/* Abas superiores */}
                 <div className="flex space-x-4 border-b mb-6">
                     <button
@@ -61,7 +60,6 @@ export default function UserConfig() {
                         </button>
                     )}
                 </div>
-
                 {/* Conteúdo da aba */}
                 {activeTab === "me" && <UpdateProfile />}
                 {activeTab === "manage" && ["admin", "supervisor"].includes(userRole) && (
