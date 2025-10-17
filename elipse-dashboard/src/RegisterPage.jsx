@@ -10,8 +10,8 @@ export default function RegisterPage() {
     const invite = searchParams.get("invite");
 
     const [username, setUsername] = useState("");
-    const [fullname, setFullname] = useState("");
-    const [matricula, setMatricula] = useState("");
+    const [fullName, setFullName] = useState("");
+    const [registerNumb, setRegisterNumb] = useState("");
     const [role, setRole] = useState("");
     const [senha, setSenha] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -49,7 +49,7 @@ export default function RegisterPage() {
         setError("");
         setSuccess("");
 
-        if (!username || !fullname || !senha || !confirm) {
+        if (!username || !fullName || !senha || !confirm) {
             setError("Preencha todos os campos obrigatórios.");
             return;
         }
@@ -62,7 +62,13 @@ export default function RegisterPage() {
             const res = await fetch(`${API_BASE}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ invite, username, senha, fullname, matricula }),
+                body: JSON.stringify({
+                    invite,
+                    username,
+                    senha,
+                    fullName,      // ✅ corrigido
+                    registerNumb,  // ✅ corrigido
+                }),
             });
 
             const data = await res.json();
@@ -99,30 +105,33 @@ export default function RegisterPage() {
                                 placeholder="Digite seu usuário"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Nome completo <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
-                                value={fullname}
-                                onChange={(e) => setFullname(e.target.value)}
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
                                 className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
                                 placeholder="Digite seu nome completo"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Matrícula
                             </label>
                             <input
                                 type="text"
-                                value={matricula}
-                                onChange={(e) => setMatricula(e.target.value)}
+                                value={registerNumb}
+                                onChange={(e) => setRegisterNumb(e.target.value)}
                                 className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm"
                                 placeholder="Digite sua matrícula (opcional)"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Perfil
@@ -134,6 +143,7 @@ export default function RegisterPage() {
                                 className="mt-1 block w-full px-3 py-2 border rounded-xl shadow-sm text-sm bg-gray-100 cursor-not-allowed"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Senha <span className="text-red-500">*</span>
@@ -146,6 +156,7 @@ export default function RegisterPage() {
                                 placeholder="Digite sua senha"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Confirmar Senha <span className="text-red-500">*</span>
@@ -158,6 +169,7 @@ export default function RegisterPage() {
                                 placeholder="Confirme sua senha"
                             />
                         </div>
+
                         <button
                             type="submit"
                             disabled={!invite}
