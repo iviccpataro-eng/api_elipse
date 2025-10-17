@@ -32,8 +32,8 @@ export default function ToolsPage() {
                         <button
                             onClick={() => setSelected("system")}
                             className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "system"
-                                    ? "bg-blue-600 text-white"
-                                    : "hover:bg-gray-200"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200"
                                 }`}
                         >
                             Configurações do Sistema
@@ -42,8 +42,8 @@ export default function ToolsPage() {
                         <button
                             onClick={() => setSelected("user")}
                             className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "user"
-                                    ? "bg-blue-600 text-white"
-                                    : "hover:bg-gray-200"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200"
                                 }`}
                         >
                             Configurações de Usuário
@@ -52,8 +52,8 @@ export default function ToolsPage() {
                         <button
                             onClick={() => setSelected("invite")}
                             className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "invite"
-                                    ? "bg-blue-600 text-white"
-                                    : "hover:bg-gray-200"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200"
                                 }`}
                         >
                             Gerar Convite
@@ -65,9 +65,9 @@ export default function ToolsPage() {
                 <div className="border-t mt-6 pt-3">
                     <button
                         onClick={() => setSelected("about")}
-                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm ${selected === "about"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200 text-gray-700"
+                        className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "about"
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-200 text-gray-700"
                             }`}
                     >
                         Sobre o Sistema
