@@ -8,9 +8,10 @@ export default function InviteGenerator() {
     const [invite, setInvite] = useState("");
     const [msg, setMsg] = useState("");
     const [isAdmin, setIsAdmin] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem("authToken"); // corrigido
+        const token = localStorage.getItem("authToken");
         if (!token) return;
 
         try {
@@ -23,8 +24,9 @@ export default function InviteGenerator() {
 
     const handleInvite = async () => {
         setMsg("");
+        setInvite("");
         try {
-            const token = localStorage.getItem("authToken"); // corrigido
+            const token = localStorage.getItem("authToken");
             const res = await fetch(`${API_BASE}/auth/invite`, {
                 method: "POST",
                 headers: {
@@ -44,6 +46,17 @@ export default function InviteGenerator() {
         }
     };
 
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(invite);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error("Erro ao copiar:", err);
+            setCopied(false);
+        }
+    };
+
     if (!isAdmin) {
         return (
             <div>
@@ -58,11 +71,13 @@ export default function InviteGenerator() {
     return (
         <div className="space-y-10 pt-8 max-w-4xl">
             <h1 className="text-2xl font-bold mb-4">Gerar Convite</h1>
+
             <div className="bg-white rounded-xl shadow p-6">
-                <div className="space-y-4 max-w-md">
+                <div className="space-y-4">
+                    {/* Seleção de Role */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            Papel do Usuário *
+                            Grupo do Usuário *
                         </label>
                         <select
                             value={role}
@@ -76,6 +91,8 @@ export default function InviteGenerator() {
                             <option value="maintenance">Manutenção</option>
                         </select>
                     </div>
+
+                    {/* Botão para gerar convite */}
                     <div className="text-right">
                         <button
                             onClick={handleInvite}
@@ -84,10 +101,25 @@ export default function InviteGenerator() {
                             Gerar Convite
                         </button>
                     </div>
+
+                    {/* Mensagem de status */}
                     {msg && <p className="text-sm text-gray-700">{msg}</p>}
+
+                    {/* Exibição do link gerado */}
                     {invite && (
-                        <div className="mt-3 p-2 border rounded bg-gray-50 text-sm break-all">
-                            {invite}
+                        <div className="mt-4 flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={invite}
+                                readOnly
+                                className="flex-1 px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-50 text-gray-700"
+                            />
+                            <button
+                                onClick={handleCopy}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
+                                {copied ? "Copiado!" : "Copiar Link"}
+                            </button>
                         </div>
                     )}
                 </div>
