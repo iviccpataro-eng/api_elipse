@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 import pkg from "pg";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import { generateFrontendData, getDisciplineData } from "./modules/structureBuilder.js";
+import { getDisciplineData } from "./modules/structureBuilder.js"; // usamos só o necessário
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +65,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-let dados = {};
+let dados = {}; // memória temporária
 
 // -------------------------
 // 3️⃣ HELPERS
@@ -503,27 +503,21 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
     const path = req.params[0] || "";
     setByPath(dados, path, payload);
 
-    // ====== Integração automática com structureBuilder ======
-    // Se o payload for um array de strings (tags) ou o path terminar com 'tags',
-    // gera estrutura hierárquica para o frontend e salva em dados.structure e dados.structureDetails
-// ====== Integração com structureBuilder (disciplinas) ======
-try {
-  const isPayloadArrayOfStrings =
-    Array.isArray(payload) && payload.every((p) => typeof p === "string");
-  const pathEndsWithTags = path.toLowerCase().endsWith("tags");
+    // ====== Armazenamento das TAGs (não gera estrutura global) ======
+    try {
+      const isArray = Array.isArray(payload) && payload.every(p => typeof p === "string");
+      const endsWithTags = path.toLowerCase().endsWith("tags");
 
-  if (isPayloadArrayOfStrings || pathEndsWithTags) {
-    const tagsArray = isPayloadArrayOfStrings ? payload : getByPath(dados, path);
-    if (Array.isArray(tagsArray)) {
-      // Apenas armazenamos os tags crus
-      setByPath(dados, "tagsList", tagsArray);
-      console.log("[TAGS] Lista de tags recebida e armazenada (path:", path, ")");
+      if (isArray || endsWithTags) {
+        const tagsArray = isArray ? payload : getByPath(dados, path);
+        if (Array.isArray(tagsArray)) {
+          setByPath(dados, "tagsList", tagsArray);
+          console.log("[TAGS] Lista de tags atualizada (", tagsArray.length, "itens)");
+        }
+      }
+    } catch (gErr) {
+      console.error("[TAGS] Erro ao armazenar lista:", gErr);
     }
-  }
-} catch (gErr) {
-  console.error("[STRUCTURE] Erro ao armazenar tags:", gErr);
-}
-    // =======================================================
 
     res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
   } catch (e) {
@@ -531,37 +525,13 @@ try {
   }
 });
 
-// Rota auxiliar pública para recuperar a estrutura montada (útil para frontend)
-app.get("/structure", autenticar, (req, res) => {
-  try {
-    const structure = dados.structure || null;
-    const details = dados.structureDetails || null;
-
-    if (!structure || !details) {
-      // tenta reconstruir a partir de dados.tags se existente
-      const tags = getByPath(dados, "tags") || getByPath(dados, "Tags") || null;
-      if (Array.isArray(tags)) {
-        const generated = generateFrontendData(tags);
-        setByPath(dados, "structure", generated.structure);
-        setByPath(dados, "structureDetails", generated.details);
-        return res.json({ ok: true, structure: generated.structure, details: generated.details });
-      }
-      return res.json({ ok: false, erro: "Estrutura ainda não gerada." });
-    }
-
-    res.json({ ok: true, structure, details });
-  } catch (err) {
-    console.error("[GET /structure] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao retornar estrutura." });
-  }
-});
-
-// 🧩 Nova rota para fornecer dados estruturados de disciplina
+// 🧩 Nova rota: dados estruturados por disciplina
 app.get("/discipline/:code", autenticar, async (req, res) => {
   try {
     const { code } = req.params;
-    const result = getDisciplineData(dados, code.toUpperCase());
-    res.json(result);
+    const tags = dados.tagsList || [];
+    const result = getDisciplineData(tags, code.toUpperCase());
+    res.json({ ok: true, ...result });
   } catch (err) {
     console.error("[DISCIPLINE DATA] Erro:", err);
     res.status(500).json({ ok: false, erro: "Erro ao montar estrutura da disciplina." });
