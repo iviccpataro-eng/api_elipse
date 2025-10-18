@@ -1,12 +1,10 @@
 // modules/structureBuilder.js
-// ==================================================
-// 🔧 Geração automática de hierarquia e tradução
-// ==================================================
+// -----------------------------------------
+// Monta estrutura hierárquica para o frontend
+// Disciplina → Prédio → Pavimento → Equipamentos
+// -----------------------------------------
 
-/**
- * Dicionário de conversão de disciplinas
- */
-const DISCIPLINE_MAP = {
+const disciplineMap = {
   DB: "Dashboard",
   AC: "Ar Condicionado",
   IL: "Iluminação",
@@ -19,66 +17,95 @@ const DISCIPLINE_MAP = {
 };
 
 /**
- * Função auxiliar: traduz siglas e formata os nomes
+ * Extrai informações legíveis de um equipamento
  */
-function parseTagPath(tagPath) {
-  if (!tagPath || typeof tagPath !== "string") return null;
+function parseEquipment(tagPath, equipmentData = {}) {
+  const parts = tagPath.split("/").filter(Boolean);
+  const [discCode, building, floorCode, equipmentName] = parts;
 
-  const [disc, building, floor, equipment] = tagPath.split(">").map((s) => s.trim());
+  const discipline = disciplineMap[discCode] || discCode || "Desconhecida";
+  const buildingName =
+    equipmentData.info?.Building || building || "Indefinido";
+  const floorName =
+    equipmentData.info?.Floor ||
+    floorCode?.replace(/^PAV/, "Pavimento ") ||
+    "Indefinido";
+  const eqName =
+    equipmentData.info?.Name || equipmentName || "Equipamento";
 
-  const discipline = DISCIPLINE_MAP[disc] || disc;
-
-  const floorFormatted =
-    floor?.toUpperCase().startsWith("PAV") && /\d/.test(floor)
-      ? `${parseInt(floor.replace(/\D/g, ""), 10)}º Pavimento`
-      : floor || "Pavimento Desconhecido";
-
-  const equipmentFormatted = equipment ? equipment.replace(/_/g, "-") : "Equipamento";
-
-  return {
-    discipline,
-    building: building || "Prédio Desconhecido",
-    floor: floorFormatted,
-    equipment: equipmentFormatted,
-    info: {
-      Name: equipmentFormatted,
-      Floor: floorFormatted,
-      Building: building || "Prédio Desconhecido",
-    },
+  const info = {
+    Name: eqName,
+    Building: buildingName,
+    Floor: floorName,
+    Producer: equipmentData.info?.Producer || "—",
+    Model: equipmentData.info?.Model || "—",
+    Communication: equipmentData.info?.Communication || "—",
+    LastSend: equipmentData.info?.["Last-Send"] || null,
   };
+
+  return { discipline, building: buildingName, floor: floorName, name: eqName, path: tagPath, info };
 }
 
 /**
- * Função principal: monta a estrutura hierárquica completa
+ * Gera estrutura completa hierárquica
  */
-function buildStructure(tags) {
+export function generateFrontendData(dataFromBackend) {
+  if (!dataFromBackend || typeof dataFromBackend !== "object") {
+    return { structure: {}, details: [] };
+  }
+
+  const entries = Object.entries(dataFromBackend)
+    .filter(([key, val]) => key.includes("/") && typeof val === "object")
+    .map(([tag, data]) => parseEquipment(tag, data));
+
   const structure = {};
 
-  tags.forEach((tag) => {
-    const [disc, building, floor, equipment] = tag.split(">").map((s) => s.trim());
-    const floorFormatted =
-      floor?.toUpperCase().startsWith("PAV") && /\d/.test(floor)
-        ? `${parseInt(floor.replace(/\D/g, ""), 10)}º Pavimento`
-        : floor;
-    const eq = equipment?.replace(/_/g, "-");
+  for (const e of entries) {
+    if (!structure[e.discipline]) structure[e.discipline] = {};
+    const disc = structure[e.discipline];
 
-    if (!structure[disc]) structure[disc] = {};
-    if (!structure[disc][building]) structure[disc][building] = {};
-    if (!structure[disc][building][floorFormatted])
-      structure[disc][building][floorFormatted] = [];
-    structure[disc][building][floorFormatted].push(eq);
-  });
+    if (!disc[e.building]) disc[e.building] = {};
+    const building = disc[e.building];
 
-  return structure;
+    if (!building[e.floor]) building[e.floor] = [];
+    building[e.floor].push({
+      name: e.name,
+      path: e.path,
+      info: e.info,
+    });
+  }
+
+  return { structure, details: entries };
 }
 
 /**
- * Gera a resposta estruturada para o frontend
+ * Retorna estrutura apenas de uma disciplina específica
  */
-function generateFrontendData(tags) {
-  const structure = buildStructure(tags);
-  const details = tags.map((t) => parseTagPath(t));
-  return { structure, details };
-}
+export function getDisciplineData(dataFromBackend, discCode) {
+  const all = generateFrontendData(dataFromBackend);
+  const disciplineName = disciplineMap[discCode] || discCode;
 
-export { parseTagPath, buildStructure, generateFrontendData, DISCIPLINE_MAP };
+  const discData = all.structure[disciplineName];
+  if (!discData) {
+    return {
+      ok: false,
+      discipline: disciplineName,
+      buildings: [],
+      msg: "Nenhum equipamento encontrado para esta disciplina.",
+    };
+  }
+
+  const buildings = Object.entries(discData).map(([buildingName, floorsObj]) => ({
+    name: buildingName,
+    floors: Object.entries(floorsObj).map(([floorName, equipments]) => ({
+      name: floorName,
+      equipments,
+    })),
+  }));
+
+  return {
+    ok: true,
+    discipline: disciplineName,
+    buildings,
+  };
+}
