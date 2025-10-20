@@ -5,6 +5,8 @@ export default function Eletrica() {
     const [dados, setDados] = useState(null);
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
+    const [selectedBuilding, setSelectedBuilding] = useState(null);
+    const [selectedFloor, setSelectedFloor] = useState(null);
 
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -22,22 +24,149 @@ export default function Eletrica() {
         })
             .then((res) => res.json())
             .then((data) => {
-                if (data.ok) setDados(data.dados);
-                else setErro(data.erro || "Erro ao carregar dados.");
+                if (data.ok) {
+                    setDados(data.dados);
+                } else {
+                    setErro(data.erro || "Erro ao carregar dados.");
+                }
             })
             .catch(() => setErro("Falha na comunicação com a API."))
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div className="p-6">Carregando dados da Elétrica...</div>;
-    if (erro) return <div className="p-6 text-red-500">{erro}</div>;
+    if (loading)
+        return (
+            <div className="flex items-center justify-center h-screen text-gray-500">
+                Carregando dados da Elétrica...
+            </div>
+        );
+
+    if (erro)
+        return (
+            <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
+        );
+
+    const estrutura = dados?.estrutura || {};
+    const detalhes = dados?.detalhes || {};
+
+    const handleBuildingClick = (building) => {
+        if (selectedBuilding === building) {
+            setSelectedBuilding(null);
+            setSelectedFloor(null);
+        } else {
+            setSelectedBuilding(building);
+            setSelectedFloor(null);
+        }
+    };
+
+    const handleFloorClick = (floor) => {
+        if (selectedFloor === floor) setSelectedFloor(null);
+        else setSelectedFloor(floor);
+    };
+
+    const renderEquipamentos = () => {
+        if (!selectedBuilding) return <p>Selecione um prédio no menu lateral.</p>;
+        const pavimentos = estrutura[selectedBuilding] || {};
+
+        if (selectedFloor) {
+            const equipamentos = pavimentos[selectedFloor] || [];
+            return (
+                <div>
+                    <h2 className="text-xl font-semibold mb-4">
+                        {selectedBuilding} — {selectedFloor}
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {equipamentos.map((eq) => {
+                            const tag = `EL/${selectedBuilding}/${selectedFloor}/${eq}`;
+                            const info = detalhes[tag] || {};
+                            return (
+                                <div
+                                    key={eq}
+                                    className="border rounded-xl p-4 bg-white shadow hover:shadow-md transition"
+                                >
+                                    <div className="font-medium text-blue-700">{info.equipamento || eq}</div>
+                                    <div className="text-sm text-gray-500">{info.descricao || "Sem descrição"}</div>
+                                    <div className="mt-2 text-xs text-gray-400">
+                                        {info.tipo && <span>Tipo: {info.tipo}</span>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+
+        // Se só o prédio está selecionado
+        return (
+            <div>
+                <h2 className="text-xl font-semibold mb-4">{selectedBuilding}</h2>
+                {Object.entries(pavimentos)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([pav, equipamentos]) => (
+                        <div key={pav} className="mb-6">
+                            <h3 className="font-semibold text-gray-700 mb-2">{pav}</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {equipamentos.map((eq) => {
+                                    const tag = `EL/${selectedBuilding}/${pav}/${eq}`;
+                                    const info = detalhes[tag] || {};
+                                    return (
+                                        <div
+                                            key={eq}
+                                            className="border rounded-xl p-4 bg-white shadow hover:shadow-md transition"
+                                        >
+                                            <div className="font-medium text-blue-700">{info.equipamento || eq}</div>
+                                            <div className="text-sm text-gray-500">{info.descricao || "Sem descrição"}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+            </div>
+        );
+    };
 
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">📊 Elétrica</h1>
-            <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto">
-                {JSON.stringify(dados, null, 2)}
-            </pre>
+        <div className="flex min-h-screen bg-gray-50">
+            {/* Sidebar fixa */}
+            <aside className="w-64 bg-white border-r p-4 shadow-md overflow-y-auto">
+                <h2 className="text-lg font-semibold mb-4">Elétrica</h2>
+                <nav className="space-y-2">
+                    {Object.keys(estrutura).map((building) => (
+                        <div key={building}>
+                            <button
+                                className={`w-full text-left px-3 py-2 rounded-md font-medium transition ${selectedBuilding === building
+                                    ? "bg-blue-600 text-white"
+                                    : "hover:bg-gray-100"
+                                    }`}
+                                onClick={() => handleBuildingClick(building)}
+                            >
+                                {building}
+                            </button>
+                            {selectedBuilding === building && (
+                                <div className="ml-4 mt-1 space-y-1">
+                                    {Object.keys(estrutura[building] || {}).map((floor) => (
+                                        <button
+                                            key={floor}
+                                            className={`block w-full text-left px-3 py-1.5 rounded-md text-sm transition ${selectedFloor === floor
+                                                ? "bg-blue-100 text-blue-700"
+                                                : "hover:bg-gray-50"
+                                                }`}
+                                            onClick={() => handleFloorClick(floor)}
+                                        >
+                                            {floor}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </nav>
+            </aside>
+
+            {/* Conteúdo principal */}
+            <main className="flex-1 p-6 overflow-y-auto">{renderEquipamentos()}</main>
         </div>
     );
 }
