@@ -1,111 +1,120 @@
 // modules/structureBuilder.js
-// -----------------------------------------
-// Monta estrutura hierárquica para o frontend
-// Disciplina → Prédio → Pavimento → Equipamentos
-// -----------------------------------------
+// 🔧 Responsável por montar a hierarquia de Disciplinas > Prédios > Pavimentos > Equipamentos
+// a partir das tags enviadas pelo Elipse E3 e armazenadas no backend em `dados.tagsList`.
 
-const disciplineMap = {
-  DB: "Dashboard",
-  AC: "Ar Condicionado",
-  IL: "Iluminação",
-  EL: "Elétrica",
-  HI: "Hidráulica",
-  DT: "Detecção de Incêndio",
-  CM: "Comunicação",
-  SC: "Segurança",
-  FR: "Ferramentas",
-};
+export function getDisciplineData(tagsList = [], disciplineCode) {
+  if (!Array.isArray(tagsList) || tagsList.length === 0) {
+    return { ok: false, erro: "Nenhuma tag disponível para montar a estrutura." };
+  }
 
-/**
- * Extrai informações legíveis de um equipamento
- */
-function parseEquipment(tagPath, equipmentData = {}) {
-  const parts = tagPath.split("/").filter(Boolean);
-  const [discCode, building, floorCode, equipmentName] = parts;
-
-  const discipline = disciplineMap[discCode] || discCode || "Desconhecida";
-  const buildingName =
-    equipmentData.info?.Building || building || "Indefinido";
-  const floorName =
-    equipmentData.info?.Floor ||
-    floorCode?.replace(/^PAV/, "Pavimento ") ||
-    "Indefinido";
-  const eqName =
-    equipmentData.info?.Name || equipmentName || "Equipamento";
-
-  const info = {
-    Name: eqName,
-    Building: buildingName,
-    Floor: floorName,
-    Producer: equipmentData.info?.Producer || "—",
-    Model: equipmentData.info?.Model || "—",
-    Communication: equipmentData.info?.Communication || "—",
-    LastSend: equipmentData.info?.["Last-Send"] || null,
+  // Dicionário de disciplinas
+  const disciplineMap = {
+    DB: "Dashboard",
+    AC: "Ar Condicionado",
+    IL: "Iluminação",
+    EL: "Elétrica",
+    HI: "Hidráulica",
+    DT: "Detecção de Incêndio",
+    CM: "Comunicação",
+    SC: "Segurança",
+    FR: "Ferramentas",
   };
 
-  return { discipline, building: buildingName, floor: floorName, name: eqName, path: tagPath, info };
-}
+  const disciplineName = disciplineMap[disciplineCode] || disciplineCode;
+  const filteredTags = tagsList.filter((tag) => tag.startsWith(`${disciplineCode}/`));
 
-/**
- * Gera estrutura completa hierárquica
- */
-export function generateFrontendData(dataFromBackend) {
-  if (!dataFromBackend || typeof dataFromBackend !== "object") {
-    return { structure: {}, details: [] };
-  }
-
-  const entries = Object.entries(dataFromBackend)
-    .filter(([key, val]) => key.includes("/") && typeof val === "object")
-    .map(([tag, data]) => parseEquipment(tag, data));
-
-  const structure = {};
-
-  for (const e of entries) {
-    if (!structure[e.discipline]) structure[e.discipline] = {};
-    const disc = structure[e.discipline];
-
-    if (!disc[e.building]) disc[e.building] = {};
-    const building = disc[e.building];
-
-    if (!building[e.floor]) building[e.floor] = [];
-    building[e.floor].push({
-      name: e.name,
-      path: e.path,
-      info: e.info,
-    });
-  }
-
-  return { structure, details: entries };
-}
-
-/**
- * Retorna estrutura apenas de uma disciplina específica
- */
-export function getDisciplineData(dataFromBackend, discCode) {
-  const all = generateFrontendData(dataFromBackend);
-  const disciplineName = disciplineMap[discCode] || discCode;
-
-  const discData = all.structure[disciplineName];
-  if (!discData) {
+  if (filteredTags.length === 0) {
     return {
       ok: false,
-      discipline: disciplineName,
-      buildings: [],
-      msg: "Nenhum equipamento encontrado para esta disciplina.",
+      erro: `Nenhum equipamento encontrado para a disciplina ${disciplineName}.`,
+      disciplina: disciplineName,
+      estrutura: {},
     };
   }
 
-  const buildings = Object.entries(discData).map(([buildingName, floorsObj]) => ({
-    name: buildingName,
-    floors: Object.entries(floorsObj).map(([floorName, equipments]) => ({
-      name: floorName,
-      equipments,
-    })),
-  }));
+  const structure = {};
+  const details = {};
+
+  for (const tag of filteredTags) {
+    // Exemplo de tag: EL/Principal/TER/MM_01_01
+    const parts = tag.split("/").filter(Boolean);
+    if (parts.length < 4) continue;
+
+    const [discCode, buildingCode, floorCode, equipCode] = parts;
+
+    if (!structure[buildingCode]) structure[buildingCode] = {};
+    if (!structure[buildingCode][floorCode]) structure[buildingCode][floorCode] = [];
+    structure[buildingCode][floorCode].push(equipCode);
+
+    // Adiciona detalhes se houver info associada no objeto `dados`
+    const equipInfo = extractEquipmentInfo(tag);
+    details[tag] = equipInfo;
+  }
 
   return {
     ok: true,
-    discipline: disciplineName,
-    buildings,
+    disciplina: disciplineName,
+    estrutura: structure,
+    detalhes: details,
   };
+}
+
+/**
+ * 🔍 Busca informações do equipamento dentro do objeto global `dados`
+ * A função é isolada aqui para permitir leitura direta das informações “info”.
+ * Exemplo esperado de caminho:
+ *   dados["EL"]["Principal"]["TER"]["MM_01_01"]["info"]
+ */
+function extractEquipmentInfo(tag) {
+  try {
+    // Importa dinamicamente o objeto `dados` do escopo global do servidor
+    // (acessível via require cache)
+    const serverModule = require.main;
+    if (!serverModule || !serverModule.exports) return {};
+
+    const dados = serverModule.exports?.dados || globalThis?.dados || {};
+    const pathParts = tag.split("/").filter(Boolean);
+
+    let ref = dados;
+    for (const part of pathParts) {
+      if (ref && typeof ref === "object" && ref.hasOwnProperty(part)) {
+        ref = ref[part];
+      } else {
+        ref = null;
+        break;
+      }
+    }
+
+    const info = ref?.info || {};
+
+    // Monta dados legíveis
+    const disciplinaMap = {
+      DB: "Dashboard",
+      AC: "Ar Condicionado",
+      IL: "Iluminação",
+      EL: "Elétrica",
+      HI: "Hidráulica",
+      DT: "Detecção de Incêndio",
+      CM: "Comunicação",
+      SC: "Segurança",
+      FR: "Ferramentas",
+    };
+
+    const [disc, building, floor, equip] = pathParts;
+
+    return {
+      disciplina: disciplinaMap[disc] || disc,
+      edificio: info.building || building,
+      pavimento: info.floor || floor,
+      equipamento: info.name || equip,
+      descricao: info.description || "",
+      tipo: info.type || "",
+      fabricante: info.manufacturer || "",
+      modelo: info.model || "",
+      status: info.status || "",
+    };
+  } catch (err) {
+    console.error("[extractEquipmentInfo] Erro ao buscar info do equipamento:", err);
+    return {};
+  }
 }
