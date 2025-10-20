@@ -22,7 +22,7 @@ export default function ManageUsers({ role }) {
         supervisor: "Supervisor",
         user: "Operador",
         client: "Cliente",
-        maintnance: "Manutenção",
+        maintenance: "Manutenção",
     };
 
     // 🔐 Obtém o nome do usuário logado
