@@ -6,6 +6,7 @@ import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
+import Eletrica from "./pages/Eletrica"; // ✅ Nova página integrada
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -256,80 +257,6 @@ function LeafNode({ node, filter }) {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {data
-          .filter((d) => (d[0] || "").toLowerCase().includes(filter.toLowerCase()))
-          .map((d, idx) => {
-            const [name, value, unit, hasGraph, nominal] = d;
-            const valNum = toNumberMaybe(value);
-            const nomNum = toNumberMaybe(nominal);
-
-            if (hasGraph && valNum !== undefined && nomNum) {
-              const min = nomNum * 0.9;
-              const max = nomNum * 1.1;
-              const clamped = Math.max(min, Math.min(valNum, max));
-              const percent = ((clamped - min) / (max - min)) * 100;
-
-              let fill = "#22c55e";
-              if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05)
-                fill = "#f97316";
-              if (valNum < min || valNum > max) fill = "#ef4444";
-
-              const chartData = [{ name, value: percent, fill }];
-
-              return (
-                <div key={idx} className="rounded-xl border bg-white shadow p-4">
-                  <div className="font-medium mb-2">{name}</div>
-                  <div className="flex justify-center">
-                    <RadialBarChart
-                      width={180}
-                      height={120}
-                      innerRadius="70%"
-                      outerRadius="100%"
-                      startAngle={180}
-                      endAngle={0}
-                      data={chartData}
-                    >
-                      <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                      <RadialBar
-                        dataKey="value"
-                        cornerRadius={10}
-                        background
-                        clockWise
-                      />
-                    </RadialBarChart>
-                  </div>
-                  <div className="text-center mt-2">
-                    <div className="text-xl font-semibold">
-                      {value}
-                      {unit ? ` ${unit}` : ""}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Nominal: {nomNum}
-                      {unit}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <div key={idx} className="rounded-xl border bg-white shadow p-4">
-                <div className="font-medium">{name}</div>
-                <div className="text-2xl font-semibold">
-                  {value}
-                  {unit ? ` ${unit}` : ""}
-                </div>
-                {nomNum && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    Nominal: {nomNum}
-                    {unit}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-      </div>
     </div>
   );
 }
@@ -364,12 +291,16 @@ export default function App() {
       <Navbar onLogout={handleLogout} />
       <Routes>
         <Route index element={<Dashboard token={token} />} />
+
+        {/* 🔌 Disciplinas */}
+        <Route path="eletrica" element={<Eletrica />} />
+
         <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
         <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="eletrica" element={<div className="p-6">Elétrica</div>} />
         <Route path="hidraulica" element={<div className="p-6">Hidráulica</div>} />
         <Route path="incendio" element={<div className="p-6">Incêndio</div>} />
         <Route path="comunicacao" element={<div className="p-6">Comunicação</div>} />
+
         <Route path="tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>

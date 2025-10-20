@@ -479,6 +479,19 @@ app.post("/auth/admin-update-user", autenticar, async (req, res) => {
 // -------------------------
 // 6️⃣ ROTAS DO ELIPSE
 // -------------------------
+
+// Dicionário global de rotas e disciplinas
+const friendlyDisciplineRoutes = {
+  eletrica: "EL",
+  iluminacao: "IL",
+  arcondicionado: "AC",
+  hidraulica: "HI",
+  deteccaoincendio: "DT",
+  comunicacao: "CM",
+  seguranca: "SC",
+  ferramentas: "FR",
+};
+
 app.get("/", (req, res) => res.send("API Elipse rodando no Render!"));
 
 // Retorna objeto `dados` em memória (dados brutos)
@@ -526,49 +539,61 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
 });
 
 // 🧩 Nova rota para fornecer dados estruturados de disciplina
-app.get(["/discipline/:code", "/dashboard/:code"], autenticar, async (req, res) => {
-  try {
-    const { code } = req.params;
+app.get(
+  [
+    "/discipline/:code",
+    "/dashboard/:code",
+    "/:friendlyCode", // adiciona suporte a /eletrica, /hidraulica, etc.
+  ],
+  autenticar,
+  async (req, res) => {
+    try {
+      const { code, friendlyCode } = req.params;
 
-    // 🧠 Garante que a estrutura foi gerada antes de buscar a disciplina
-    let structure = dados.structure;
-    let details = dados.structureDetails;
+      // Determina o código real
+      const disciplineCode =
+        (code || friendlyDisciplineRoutes[friendlyCode?.toLowerCase()])?.toUpperCase();
 
-    if (!structure || !details) {
-      const tagsList =
-        dados.tagsList || getByPath(dados, "tags") || getByPath(dados, "Tags");
-      if (Array.isArray(tagsList)) {
-        console.log("[DISCIPLINE] Regenerando estrutura a partir de tagsList...");
-        const generated = generateFrontendData(tagsList);
-        dados.structure = generated.structure;
-        dados.structureDetails = generated.details;
-        structure = generated.structure;
-        details = generated.details;
-      } else {
-        return res.status(400).json({
+      if (!disciplineCode)
+        return res.status(400).json({ ok: false, erro: "Disciplina inválida." });
+
+      // Gera estrutura se não existir
+      let structure = dados.structure;
+      let details = dados.structureDetails;
+
+      if (!structure || !details) {
+        const tagsList =
+          dados.tagsList || getByPath(dados, "tags") || getByPath(dados, "Tags");
+        if (Array.isArray(tagsList)) {
+          console.log("[DISCIPLINE] Regenerando estrutura...");
+          const generated = generateFrontendData(tagsList);
+          dados.structure = generated.structure;
+          dados.structureDetails = generated.details;
+          structure = generated.structure;
+          details = generated.details;
+        } else {
+          return res.status(400).json({
+            ok: false,
+            erro: "Nenhuma lista de tags encontrada para gerar estrutura.",
+          });
+        }
+      }
+
+      const result = getDisciplineData(dados, disciplineCode);
+      if (!result || Object.keys(result).length === 0) {
+        return res.status(404).json({
           ok: false,
-          erro: "Nenhuma lista de tags encontrada para gerar a estrutura.",
+          erro: `Nenhum dado encontrado para a disciplina ${disciplineCode}.`,
         });
       }
+
+      res.json({ ok: true, disciplina: disciplineCode, dados: result });
+    } catch (err) {
+      console.error("[DISCIPLINE DATA] Erro:", err);
+      res.status(500).json({ ok: false, erro: "Erro ao montar estrutura da disciplina." });
     }
-
-    // 🔍 Agora que a estrutura está garantida, gera os dados da disciplina
-    const result = getDisciplineData(dados, code.toUpperCase());
-
-    if (!result || Object.keys(result).length === 0) {
-      return res.status(404).json({
-        ok: false,
-        erro: `Nenhum dado encontrado para a disciplina ${code.toUpperCase()}.`,
-      });
-    }
-
-    res.json({ ok: true, disciplina: code.toUpperCase(), dados: result });
-  } catch (err) {
-    console.error("[DISCIPLINE DATA] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao montar estrutura da disciplina." });
   }
-});
-
+);
 
 // -------------------------
 // 7️⃣ TESTES
