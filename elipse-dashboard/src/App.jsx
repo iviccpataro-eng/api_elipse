@@ -239,9 +239,8 @@ function FolderNode({ node, filter, onOpen }) {
   );
 }
 
-function LeafNode({ node, filter }) {
+function LeafNode({ node }) {
   const info = node.info || [];
-  const data = node.data || [];
   return (
     <div className="space-y-4">
       {info.length > 0 && (
@@ -290,10 +289,12 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
       <Routes>
+        {/* Página inicial (Dashboard geral) */}
         <Route index element={<Dashboard token={token} />} />
 
         {/* 🔌 Disciplinas */}
         <Route path="eletrica" element={<Eletrica />} />
+        <Route path="dashboard/el" element={<Eletrica />} />
 
         <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
         <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
