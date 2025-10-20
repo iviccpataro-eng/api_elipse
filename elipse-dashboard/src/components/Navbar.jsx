@@ -47,12 +47,12 @@ export default function Navbar({ onLogout }) {
 
     const navItems = [
         { to: "/dashboard", label: "Dashboard", icon: <Eye className="w-5 h-5" /> },
-        { to: "/dashboard/ar", label: "Ar Condicionado", icon: <Fan className="w-5 h-5" /> },
-        { to: "/dashboard/iluminacao", label: "Iluminação", icon: <Lightbulb className="w-5 h-5" /> },
-        { to: "/dashboard/el", label: "Elétrica", icon: <Zap className="w-5 h-5" /> },
-        { to: "/dashboard/hidraulica", label: "Hidráulica", icon: <Droplet className="w-5 h-5" /> },
-        { to: "/dashboard/incendio", label: "Incêndio", icon: <Flame className="w-5 h-5" /> },
-        { to: "/dashboard/comunicacao", label: "Comunicação", icon: <Signal className="w-5 h-5" /> },
+        { to: "/arcondicionado", label: "Ar Condicionado", icon: <Fan className="w-5 h-5" /> },
+        { to: "/iluminacao", label: "Iluminação", icon: <Lightbulb className="w-5 h-5" /> },
+        { to: "/eletrica", label: "Elétrica", icon: <Zap className="w-5 h-5" /> },
+        { to: "/hidraulica", label: "Hidráulica", icon: <Droplet className="w-5 h-5" /> },
+        { to: "/incendio", label: "Incêndio", icon: <Flame className="w-5 h-5" /> },
+        { to: "/comunicacao", label: "Comunicação", icon: <Signal className="w-5 h-5" /> },
         { to: "/dashboard/tools", label: "Ferramentas", icon: <Settings className="w-5 h-5" /> },
     ];
 

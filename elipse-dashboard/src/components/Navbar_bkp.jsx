@@ -14,7 +14,6 @@ import {
     Menu,
     X,
 } from "lucide-react";
-
 import logo from "../images/logo.png";
 
 const API_BASE =
@@ -27,13 +26,17 @@ export default function Navbar({ onLogout }) {
     useEffect(() => {
         const fetchBuildingName = async () => {
             try {
-                const res = await fetch(`${API_BASE}/config/building`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setBuildingName(data.name || "Edifício Padrão");
-                } else {
-                    setBuildingName("Edifício Padrão");
-                }
+                const token = localStorage.getItem("authToken");
+                const res = await fetch(`${API_BASE}/config/system`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                if (!res.ok) throw new Error("Falha ao buscar nome do edifício");
+                const data = await res.json();
+                const name =
+                    data?.config?.buildingname?.trim() || "Edifício Padrão";
+                setBuildingName(name);
             } catch (err) {
                 console.error("Erro ao buscar nome do edifício:", err);
                 setBuildingName("Edifício Padrão");
@@ -46,7 +49,7 @@ export default function Navbar({ onLogout }) {
         { to: "/dashboard", label: "Dashboard", icon: <Eye className="w-5 h-5" /> },
         { to: "/dashboard/ar", label: "Ar Condicionado", icon: <Fan className="w-5 h-5" /> },
         { to: "/dashboard/iluminacao", label: "Iluminação", icon: <Lightbulb className="w-5 h-5" /> },
-        { to: "/dashboard/eletrica", label: "Elétrica", icon: <Zap className="w-5 h-5" /> },
+        { to: "/dashboard/elav", label: "Elétrica", icon: <Zap className="w-5 h-5" /> },
         { to: "/dashboard/hidraulica", label: "Hidráulica", icon: <Droplet className="w-5 h-5" /> },
         { to: "/dashboard/incendio", label: "Incêndio", icon: <Flame className="w-5 h-5" /> },
         { to: "/dashboard/comunicacao", label: "Comunicação", icon: <Signal className="w-5 h-5" /> },
@@ -54,15 +57,17 @@ export default function Navbar({ onLogout }) {
     ];
 
     return (
-        <header className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between relative">
-            {/* Logo + Nome do prédio */}
-            <div className="flex items-center gap-3">
-                <img src={logo} alt="Logo" className="h-10 w-20" />
-                <div className="h-8 w-px bg-gray-500" />
-                <span className="text-lg font-semibold">{buildingName}</span>
+        <header className="fixed top-0 left-0 right-0 z-50 bg-gray-800 text-white px-6 py-4 flex items-center justify-between shadow-md">
+            {/* Logo + Nome do edifício */}
+            <div className="flex items-center gap-4">
+                <img src={logo} alt="Logo" className="h-10 w-20 object-contain" />
+                <div className="border-l border-gray-500 h-8" />
+                <span className="text-lg font-semibold whitespace-nowrap">
+                    {buildingName}
+                </span>
             </div>
 
-            {/* Menu Desktop (≥1280px) - Texto */}
+            {/* Menu Desktop (≥1280px) */}
             <nav className="hidden xl:flex gap-6 items-center">
                 {navItems.map((item) => (
                     <Link key={item.to} to={item.to} className="hover:text-blue-400">
@@ -77,7 +82,7 @@ export default function Navbar({ onLogout }) {
                 </button>
             </nav>
 
-            {/* Menu Tablet (1024px–1279px) - Ícones */}
+            {/* Menu Tablet (1024–1279px) */}
             <nav className="hidden lg:flex xl:hidden gap-6 items-center">
                 {navItems.map((item) => (
                     <Link key={item.to} to={item.to} className="hover:text-blue-400">
