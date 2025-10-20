@@ -49,7 +49,7 @@ export default function Navbar({ onLogout }) {
         { to: "/dashboard", label: "Dashboard", icon: <Eye className="w-5 h-5" /> },
         { to: "/dashboard/ar", label: "Ar Condicionado", icon: <Fan className="w-5 h-5" /> },
         { to: "/dashboard/iluminacao", label: "Iluminação", icon: <Lightbulb className="w-5 h-5" /> },
-        { to: "/dashboard/eletrica", label: "Elétrica", icon: <Zap className="w-5 h-5" /> },
+        { to: "/dashboard/el", label: "Elétrica", icon: <Zap className="w-5 h-5" /> },
         { to: "/dashboard/hidraulica", label: "Hidráulica", icon: <Droplet className="w-5 h-5" /> },
         { to: "/dashboard/incendio", label: "Incêndio", icon: <Flame className="w-5 h-5" /> },
         { to: "/dashboard/comunicacao", label: "Comunicação", icon: <Signal className="w-5 h-5" /> },
