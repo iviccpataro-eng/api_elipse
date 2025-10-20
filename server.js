@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 import pkg from "pg";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import { getDisciplineData } from "./modules/structureBuilder.js"; // usamos só o necessário
+import { generateFrontendData, getDisciplineData } from "./modules/structureBuilder.js";
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -526,7 +526,7 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
 });
 
 // 🧩 Nova rota para fornecer dados estruturados de disciplina
-app.get("/discipline/:code", autenticar, async (req, res) => {
+app.get(["/discipline/:code", "/dashboard/:code"], autenticar, async (req, res) => {
   try {
     const { code } = req.params;
 
@@ -684,6 +684,7 @@ app.get("*", (req, res, next) => {
 // 🔟 PORTA
 // -------------------------
 const PORT = process.env.PORT || 3000;
+console.log(`[BOOT] API Elipse iniciando ambiente: ${process.env.NODE_ENV || "local"}`);
 app.listen(PORT, () =>
   console.log(`[BOOT] Servidor rodando na porta ${PORT}`)
 );
