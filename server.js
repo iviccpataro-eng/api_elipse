@@ -538,6 +538,38 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   }
 });
 
+// 🧩 Função auxiliar para gerar lista de tags automaticamente
+function gerarTagsListAutomaticamente(base) {
+  const lista = [];
+
+  const percorrer = (obj, caminho = "") => {
+    for (const chave in obj) {
+      if (!Object.hasOwn(obj, chave)) continue;
+      const valor = obj[chave];
+      const novoCaminho = caminho ? `${caminho}/${chave}` : chave;
+
+      // Se for um objeto intermediário (sem info nem data), continua descendo
+      if (
+        valor &&
+        typeof valor === "object" &&
+        !Array.isArray(valor) &&
+        !valor.info &&
+        !valor.data
+      ) {
+        percorrer(valor, novoCaminho);
+      }
+
+      // Se tiver .info (como é padrão dos equipamentos), adiciona à lista
+      else if (valor?.info) {
+        lista.push(novoCaminho);
+      }
+    }
+  };
+
+  percorrer(base);
+  return lista;
+}
+
 // 🧩 Nova rota para fornecer dados estruturados de disciplina
 app.get(
   [
@@ -562,8 +594,14 @@ app.get(
       let details = dados.structureDetails;
 
       if (!structure || !details) {
-        const tagsList =
-          dados.tagsList || getByPath(dados, "tags") || getByPath(dados, "Tags");
+        let tagsList =
+        dados.tagsList || getByPath(dados, "tags") || getByPath(dados, "Tags");
+        if (!Array.isArray(tagsList) || tagsList.length === 0) {
+          console.log("⚙️ Nenhuma tagsList detectada — gerando automaticamente...");
+          tagsList = gerarTagsListAutomaticamente(dados);
+          dados.tagsList = tagsList;
+          console.log(`✅ ${tagsList.length} tags identificadas automaticamente.`);
+        }
         if (Array.isArray(tagsList)) {
           console.log("[DISCIPLINE] Regenerando estrutura...");
           const generated = generateFrontendData(tagsList);
