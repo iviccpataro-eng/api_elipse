@@ -105,23 +105,18 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
       <Routes>
-        {/* 🏠 Página inicial (Dashboard geral) */}
+        {/* Página inicial */}
         <Route index element={<Dashboard token={token} />} />
 
         {/* 🔌 Disciplinas */}
-        <Route path="eletrica" element={<Eletrica />} />
-        <Route path="dashboard/el" element={<Eletrica />} />
+        <Route path="/eletrica" element={<Eletrica />} />
+        <Route path="/arcondicionado" element={<div className="p-6">Ar Condicionado</div>} />
+        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
+        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
+        <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
 
-        <Route path="ar" element={<div className="p-6">Ar Condicionado</div>} />
-        <Route path="iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="hidraulica" element={<div className="p-6">Hidráulica</div>} />
-        <Route path="incendio" element={<div className="p-6">Incêndio</div>} />
-        <Route path="comunicacao" element={<div className="p-6">Comunicação</div>} />
-
-        {/* 🔧 Ferramentas */}
-        <Route path="tools" element={<ToolsPage token={token} user={user} />} />
-
-        {/* 🌐 Fallback */}
+        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </>
