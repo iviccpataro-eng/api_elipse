@@ -25,8 +25,11 @@ export default function Eletrica() {
         })
             .then((res) => res.json())
             .then((data) => {
-                if (data.ok) setDados(data.dados);
-                else setErro(data.erro || "Erro ao carregar dados.");
+                if (data.ok) {
+                    setDados(data.dados);
+                } else {
+                    setErro(data.erro || "Erro ao carregar dados.");
+                }
             })
             .catch(() => setErro("Falha na comunicação com a API."))
             .finally(() => setLoading(false));
@@ -48,27 +51,69 @@ export default function Eletrica() {
     const detalhes = dados?.detalhes || {};
 
     const handleBuildingClick = (building) => {
-        setSelectedBuilding(selectedBuilding === building ? null : building);
-        setSelectedFloor(null);
+        if (selectedBuilding === building) {
+            setSelectedBuilding(null);
+            setSelectedFloor(null);
+        } else {
+            setSelectedBuilding(building);
+            setSelectedFloor(null);
+        }
     };
 
     const handleFloorClick = (floor) => {
-        setSelectedFloor(selectedFloor === floor ? null : floor);
+        if (selectedFloor === floor) setSelectedFloor(null);
+        else setSelectedFloor(floor);
     };
 
     const renderEquipamentos = () => {
-        if (!selectedBuilding) {
+        // Nenhuma seleção ainda
+        if (!selectedBuilding && !selectedFloor) {
             return (
-                <div className="flex items-center justify-center h-full text-gray-300 select-none italic">
-                    Selecione o prédio ou pavimento ao lado
+                <div className="flex items-center justify-center h-full text-gray-300 select-none">
+                    <span className="text-lg italic">
+                        Selecione o prédio ou pavimento ao lado
+                    </span>
                 </div>
             );
         }
 
-        const pavimentos = estrutura[selectedBuilding] || {};
+        // Se apenas o prédio foi selecionado
+        if (selectedBuilding && !selectedFloor) {
+            const pavimentos = estrutura[selectedBuilding] || {};
+            return (
+                <div className="space-y-6">
+                    {Object.entries(pavimentos)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([pav, equipamentos]) => (
+                            <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
+                                <h2 className="text-xl font-semibold mb-4">{pav}</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {equipamentos.map((eq) => {
+                                        const tag = `EL/${selectedBuilding}/${pav}/${eq}`;
+                                        const info = detalhes[tag] || {};
+                                        return (
+                                            <div
+                                                key={eq}
+                                                className="border rounded-xl p-4 flex items-center gap-2 bg-gray-50 hover:bg-blue-50 transition"
+                                            >
+                                                <Gauge className="w-5 h-5 text-blue-600" />
+                                                <span className="font-medium text-gray-700">
+                                                    {info.name || eq}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                </div>
+            );
+        }
 
-        if (selectedFloor) {
-            const equipamentos = pavimentos[selectedFloor] || [];
+        // Se o pavimento foi selecionado
+        if (selectedBuilding && selectedFloor) {
+            const equipamentos =
+                estrutura[selectedBuilding]?.[selectedFloor] || [];
             return (
                 <div className="bg-white rounded-2xl shadow-md p-4">
                     <h2 className="text-xl font-semibold mb-4">
@@ -81,7 +126,7 @@ export default function Eletrica() {
                             return (
                                 <div
                                     key={eq}
-                                    className="flex items-center gap-3 p-3 border rounded-xl bg-gray-50 hover:bg-gray-100 transition"
+                                    className="border rounded-xl p-4 flex items-center gap-2 bg-gray-50 hover:bg-blue-50 transition"
                                 >
                                     <Gauge className="w-5 h-5 text-blue-600" />
                                     <span className="font-medium text-gray-700">
@@ -94,47 +139,20 @@ export default function Eletrica() {
                 </div>
             );
         }
-
-        return (
-            <div className="space-y-6">
-                {Object.entries(pavimentos).map(([pav, equipamentos]) => (
-                    <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
-                        <h2 className="text-xl font-semibold mb-4">{pav}</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {equipamentos.map((eq) => {
-                                const tag = `EL/${selectedBuilding}/${pav}/${eq}`;
-                                const info = detalhes[tag] || {};
-                                return (
-                                    <div
-                                        key={eq}
-                                        className="flex items-center gap-3 p-3 border rounded-xl bg-gray-50 hover:bg-gray-100 transition"
-                                    >
-                                        <Gauge className="w-5 h-5 text-blue-600" />
-                                        <span className="font-medium text-gray-700">
-                                            {info.name || eq}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
     };
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            {/* Sidebar */}
+            {/* Sidebar fixa */}
             <aside className="w-64 bg-white border-r p-4 shadow-md overflow-y-auto">
-                <h2 className="text-lg font-semibold mb-4">Elétrica</h2>
+                <h2 className="text-lg font-semibold mb-4 text-gray-800">Elétrica</h2>
                 <nav className="space-y-2">
                     {Object.keys(estrutura).map((building) => (
                         <div key={building}>
                             <button
                                 className={`w-full text-left px-3 py-2 rounded-md font-medium transition ${selectedBuilding === building
-                                    ? "bg-blue-600 text-white"
-                                    : "hover:bg-gray-100"
+                                        ? "bg-blue-600 text-white"
+                                        : "hover:bg-gray-100"
                                     }`}
                                 onClick={() => handleBuildingClick(building)}
                             >
@@ -146,8 +164,8 @@ export default function Eletrica() {
                                         <button
                                             key={floor}
                                             className={`block w-full text-left px-3 py-1.5 rounded-md text-sm transition ${selectedFloor === floor
-                                                ? "bg-blue-100 text-blue-700"
-                                                : "hover:bg-gray-50"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : "hover:bg-gray-50"
                                                 }`}
                                             onClick={() => handleFloorClick(floor)}
                                         >

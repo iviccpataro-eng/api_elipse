@@ -1,30 +1,32 @@
 // src/pages/Dashboard.jsx
 import React from "react";
-import { Zap, Droplet, Wind, Thermometer, Gauge } from "lucide-react";
 
 export default function Dashboard() {
     const cards = [
-        { title: "Energia", icon: <Zap className="w-6 h-6 text-yellow-500" />, value: "Em breve" },
-        { title: "Água", icon: <Droplet className="w-6 h-6 text-blue-500" />, value: "Em breve" },
-        { title: "Ar Condicionado", icon: <Wind className="w-6 h-6 text-cyan-500" />, value: "Em breve" },
-        { title: "Temperatura", icon: <Thermometer className="w-6 h-6 text-red-500" />, value: "Em breve" },
-        { title: "Pressão", icon: <Gauge className="w-6 h-6 text-green-500" />, value: "Em breve" },
+        { title: "Consumo de Energia", value: "—", unit: "kWh" },
+        { title: "Consumo de Água", value: "—", unit: "m³" },
+        { title: "Temperatura Média", value: "—", unit: "°C" },
+        { title: "Alarmes Ativos", value: "—", unit: "" },
+        { title: "Custo Total", value: "—", unit: "R$" },
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+        <div className="min-h-screen bg-gray-50 p-6">
+            <h1 className="text-2xl font-bold mb-6 text-gray-800">Dashboard Geral</h1>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {cards.map((card) => (
                     <div
                         key={card.title}
-                        className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition"
+                        className="bg-white rounded-2xl shadow-md p-6 flex flex-col justify-between border hover:shadow-lg transition"
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="font-semibold text-gray-700">{card.title}</h2>
-                            {card.icon}
-                        </div>
-                        <p className="text-gray-400 text-sm">{card.value}</p>
+                        <h2 className="text-lg font-semibold text-gray-700">
+                            {card.title}
+                        </h2>
+                        <p className="text-3xl font-bold text-blue-600 mt-2">
+                            {card.value}
+                            <span className="text-base text-gray-500 ml-1">{card.unit}</span>
+                        </p>
                     </div>
                 ))}
             </div>
