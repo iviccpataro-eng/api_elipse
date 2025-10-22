@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Gauge } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
-import EquipmentGrid from "../components/EquipmentGrid";
+import EquipmentGrid from "../components/EquipamentGrid";
 
 export default function Eletrica() {
     const [dados, setDados] = useState(null);
