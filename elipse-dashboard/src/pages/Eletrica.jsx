@@ -149,7 +149,7 @@ export default function Eletrica() {
     return (
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar fixa */}
-            <aside className="w-64 bg-white border-r pt-16 p-4 shadow-md overflow-y-auto">
+            <aside className="w-64 bg-white border-r pt-20 p-4 shadow-md overflow-y-auto">
                 <h2 className="text-lg font-semibold mb-4 text-gray-800">Elétrica</h2>
                 <DisciplineSidebar
                     estrutura={estrutura}

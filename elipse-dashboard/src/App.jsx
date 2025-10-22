@@ -118,6 +118,9 @@ export default function App() {
 
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
+
+        {/* Página de equipamento genérica */}
+        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
       </Routes>
     </>
   );

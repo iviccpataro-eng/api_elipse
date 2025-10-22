@@ -633,6 +633,31 @@ app.get(
   }
 );
 
+app.get("/equipamento/:tag", autenticar, async (req, res) => {
+  try {
+    const { tag } = req.params;
+    const decodedTag = decodeURIComponent(tag);
+
+    const equipamento = dados?.structureDetails?.[decodedTag];
+    if (!equipamento)
+      return res.status(404).json({ ok: false, erro: "Equipamento não encontrado." });
+
+    // As grandezas já devem estar em info.grandezas ou serem geradas aqui
+    const info = {
+      name: equipamento.name || decodedTag.split("/").pop(),
+      descricao: equipamento.descricao || "Equipamento sem descrição.",
+      tipo: equipamento.tipo || "Desconhecido",
+      unidades: equipamento.unidades || {},
+      grandezas: equipamento.grandezas || {},
+    };
+
+    res.json({ ok: true, dados: { info } });
+  } catch (err) {
+    console.error("[EQUIPAMENTO] Erro:", err);
+    res.status(500).json({ ok: false, erro: "Erro ao obter dados do equipamento." });
+  }
+});
+
 // -------------------------
 // 7️⃣ TESTES
 // -------------------------

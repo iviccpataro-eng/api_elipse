@@ -53,7 +53,7 @@ export default function Navbar({ onLogout }) {
         { to: "/hidraulica", label: "Hidráulica", icon: <Droplet className="w-5 h-5" /> },
         { to: "/incendio", label: "Incêndio", icon: <Flame className="w-5 h-5" /> },
         { to: "/comunicacao", label: "Comunicação", icon: <Signal className="w-5 h-5" /> },
-        { to: "/dashboard/tools", label: "Ferramentas", icon: <Settings className="w-5 h-5" /> },
+        { to: "/tools", label: "Ferramentas", icon: <Settings className="w-5 h-5" /> },
     ];
 
     return (
