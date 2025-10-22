@@ -1,5 +1,6 @@
 // src/pages/Eletrica.jsx
 import React, { useEffect, useState } from "react";
+import { Gauge } from "lucide-react";
 
 export default function Eletrica() {
     const [dados, setDados] = useState(null);
@@ -65,13 +66,56 @@ export default function Eletrica() {
     };
 
     const renderEquipamentos = () => {
-        if (!selectedBuilding) return <p>Selecione um prédio no menu lateral.</p>;
-        const pavimentos = estrutura[selectedBuilding] || {};
-
-        if (selectedFloor) {
-            const equipamentos = pavimentos[selectedFloor] || [];
+        // Nenhuma seleção ainda
+        if (!selectedBuilding && !selectedFloor) {
             return (
-                <div>
+                <div className="flex items-center justify-center h-full text-gray-300 select-none">
+                    <span className="text-lg italic">
+                        Selecione o prédio ou pavimento ao lado
+                    </span>
+                </div>
+            );
+        }
+
+        // Se apenas o prédio foi selecionado
+        if (selectedBuilding && !selectedFloor) {
+            const pavimentos = estrutura[selectedBuilding] || {};
+            return (
+                <div className="space-y-6">
+                    {Object.entries(pavimentos)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([pav, equipamentos]) => (
+                            <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
+                                <h2 className="text-xl font-semibold mb-4">{pav}</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {equipamentos.map((eq) => {
+                                        const tag = `EL/${selectedBuilding}/${pav}/${eq}`;
+                                        const info = detalhes[tag] || {};
+                                        return (
+                                            <div
+                                                key={eq}
+                                                className="border rounded-xl p-4 flex items-center gap-2 bg-gray-50 hover:bg-blue-50 transition"
+                                            >
+                                                <Gauge className="w-5 h-5 text-blue-600" />
+                                                <span className="font-medium text-gray-700">
+                                                    {info.name || eq}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                </div>
+            );
+        }
+
+        // Se o pavimento foi selecionado
+        if (selectedBuilding && selectedFloor) {
+            const equipamentos =
+                estrutura[selectedBuilding]?.[selectedFloor] || [];
+            return (
+                <div className="bg-white rounded-2xl shadow-md p-4">
                     <h2 className="text-xl font-semibold mb-4">
                         {selectedBuilding} — {selectedFloor}
                     </h2>
@@ -82,13 +126,12 @@ export default function Eletrica() {
                             return (
                                 <div
                                     key={eq}
-                                    className="border rounded-xl p-4 bg-white shadow hover:shadow-md transition"
+                                    className="border rounded-xl p-4 flex items-center gap-2 bg-gray-50 hover:bg-blue-50 transition"
                                 >
-                                    <div className="font-medium text-blue-700">{info.equipamento || eq}</div>
-                                    <div className="text-sm text-gray-500">{info.descricao || "Sem descrição"}</div>
-                                    <div className="mt-2 text-xs text-gray-400">
-                                        {info.tipo && <span>Tipo: {info.tipo}</span>}
-                                    </div>
+                                    <Gauge className="w-5 h-5 text-blue-600" />
+                                    <span className="font-medium text-gray-700">
+                                        {info.name || eq}
+                                    </span>
                                 </div>
                             );
                         })}
@@ -96,42 +139,13 @@ export default function Eletrica() {
                 </div>
             );
         }
-
-        // Se só o prédio está selecionado
-        return (
-            <div>
-                <h2 className="text-xl font-semibold mb-4">{selectedBuilding}</h2>
-                {Object.entries(pavimentos)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([pav, equipamentos]) => (
-                        <div key={pav} className="mb-6">
-                            <h3 className="font-semibold text-gray-700 mb-2">{pav}</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {equipamentos.map((eq) => {
-                                    const tag = `EL/${selectedBuilding}/${pav}/${eq}`;
-                                    const info = detalhes[tag] || {};
-                                    return (
-                                        <div
-                                            key={eq}
-                                            className="border rounded-xl p-4 bg-white shadow hover:shadow-md transition"
-                                        >
-                                            <div className="font-medium text-blue-700">{info.equipamento || eq}</div>
-                                            <div className="text-sm text-gray-500">{info.descricao || "Sem descrição"}</div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
-            </div>
-        );
     };
 
     return (
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar fixa */}
             <aside className="w-64 bg-white border-r p-4 shadow-md overflow-y-auto">
-                <h2 className="text-lg font-semibold mb-4">Elétrica</h2>
+                <h2 className="text-lg font-semibold mb-4 text-gray-800">Elétrica</h2>
                 <nav className="space-y-2">
                     {Object.keys(estrutura).map((building) => (
                         <div key={building}>
