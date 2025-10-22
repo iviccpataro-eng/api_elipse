@@ -636,25 +636,55 @@ app.get(
 app.get("/equipamento/:tag", autenticar, async (req, res) => {
   try {
     const { tag } = req.params;
-    const decodedTag = decodeURIComponent(tag);
 
-    const equipamento = dados?.structureDetails?.[decodedTag];
-    if (!equipamento)
-      return res.status(404).json({ ok: false, erro: "Equipamento não encontrado." });
+    if (!tag) {
+      return res.status(400).json({ ok: false, erro: "Tag do equipamento não especificada." });
+    }
 
-    // As grandezas já devem estar em info.grandezas ou serem geradas aqui
-    const info = {
-      name: equipamento.name || decodedTag.split("/").pop(),
-      descricao: equipamento.descricao || "Equipamento sem descrição.",
-      tipo: equipamento.tipo || "Desconhecido",
-      unidades: equipamento.unidades || {},
-      grandezas: equipamento.grandezas || {},
-    };
+    // Normaliza tag (caso venha codificada)
+    const tagDecoded = decodeURIComponent(tag);
 
-    res.json({ ok: true, dados: { info } });
+    // Busca nos dados carregados do Elipse
+    const equipamento = dados.structureDetails?.[tagDecoded];
+
+    if (!equipamento) {
+      return res.status(404).json({
+        ok: false,
+        erro: `Equipamento '${tagDecoded}' não encontrado.`,
+      });
+    }
+
+    // Monta resposta genérica e padronizada
+    const grandezas = {};
+    const unidades = {};
+
+    // Se houver dados de leitura
+    if (equipamento.data && typeof equipamento.data === "object") {
+      for (const [chave, valor] of Object.entries(equipamento.data)) {
+        grandezas[chave] = valor?.value ?? valor ?? "";
+        if (valor?.unit) unidades[chave] = valor.unit;
+      }
+    }
+
+    res.json({
+      ok: true,
+      dados: {
+        info: {
+          tag: tagDecoded,
+          name: equipamento.name || tagDecoded.split("/").pop(),
+          descricao: equipamento.descricao || "",
+          pavimento: equipamento.pavimento,
+        },
+        tags: grandezas,
+        units: unidades,
+      },
+    });
   } catch (err) {
     console.error("[EQUIPAMENTO] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao obter dados do equipamento." });
+    res.status(500).json({
+      ok: false,
+      erro: "Erro ao obter informações do equipamento.",
+    });
   }
 });
 

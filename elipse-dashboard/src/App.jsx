@@ -7,6 +7,7 @@ import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import Eletrica from "./pages/Eletrica";
 import Dashboard from "./pages/Dashboard"; // 🔹 Dashboard movido para arquivo separado
+import Equipamento from "./pages/Equipamento";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -116,11 +117,12 @@ export default function App() {
         <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
         <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
 
+        {/* Página de equipamento genérica */}
+        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
+
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
         <Route path="*" element={<Dashboard token={token} />} />
 
-        {/* Página de equipamento genérica */}
-        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
       </Routes>
     </>
   );
