@@ -1,4 +1,3 @@
-// modules/structureBuilder.js
 // 🔧 Responsável por montar a hierarquia de Disciplinas > Prédios > Pavimentos > Equipamentos
 // a partir das tags enviadas pelo Elipse E3 e armazenadas no backend em `dados.tagsList`.
 
@@ -27,7 +26,7 @@ export function generateFrontendData(tagsList = []) {
   const details = {};
 
   for (const tag of tagsList) {
-    // Exemplo: EL/Principal/TER/MM_01_01
+    // Exemplo: EL/Principal/PAV01/MM_01_01
     const parts = tag.split("/").filter(Boolean);
     if (parts.length < 4) continue;
 
@@ -36,8 +35,13 @@ export function generateFrontendData(tagsList = []) {
     // Cria árvore hierárquica
     if (!structure[discCode]) structure[discCode] = {};
     if (!structure[discCode][buildingCode]) structure[discCode][buildingCode] = {};
-    if (!structure[discCode][buildingCode][floorCode]) structure[discCode][buildingCode][floorCode] = [];
-    structure[discCode][buildingCode][floorCode].push(equipCode);
+    if (!structure[discCode][buildingCode][floorCode])
+      structure[discCode][buildingCode][floorCode] = [];
+
+    // Evita duplicidade
+    if (!structure[discCode][buildingCode][floorCode].includes(equipCode)) {
+      structure[discCode][buildingCode][floorCode].push(equipCode);
+    }
 
     // Adiciona info individual do equipamento
     const equipInfo = extractEquipmentInfo(tag);
@@ -78,7 +82,9 @@ export function getDisciplineData(dados, disciplineCode) {
   };
 
   const disciplineName = disciplineMap[disciplineCode] || disciplineCode;
-  const filteredTags = tagsList.filter((tag) => tag.startsWith(`${disciplineCode}/`));
+  const filteredTags = tagsList.filter((tag) =>
+    tag.startsWith(`${disciplineCode}/`)
+  );
 
   if (filteredTags.length === 0) {
     return {
@@ -99,8 +105,13 @@ export function getDisciplineData(dados, disciplineCode) {
     const [discCode, buildingCode, floorCode, equipCode] = parts;
 
     if (!structure[buildingCode]) structure[buildingCode] = {};
-    if (!structure[buildingCode][floorCode]) structure[buildingCode][floorCode] = [];
-    structure[buildingCode][floorCode].push(equipCode);
+    if (!structure[buildingCode][floorCode])
+      structure[buildingCode][floorCode] = [];
+
+    // Evita duplicidade
+    if (!structure[buildingCode][floorCode].includes(equipCode)) {
+      structure[buildingCode][floorCode].push(equipCode);
+    }
 
     const equipInfo = extractEquipmentInfo(tag);
     details[tag] = equipInfo;
@@ -137,7 +148,10 @@ function extractEquipmentInfo(tag) {
       }
     }
 
-    const info = ref?.info || {};
+    if (!ref) return {};
+
+    let info = ref?.info || {};
+    if (Array.isArray(info)) info = info[0]; // 🔧 Corrige o caso do Elipse enviar info como array
 
     const [disc, building, floor, equip] = pathParts;
 
@@ -147,9 +161,11 @@ function extractEquipmentInfo(tag) {
       equipamento: info.name || equip,
       descricao: info.description || "",
       tipo: info.type || "",
-      fabricante: info.manufacturer || "",
+      fabricante: info.manufacturer || info.producer || "",
       modelo: info.model || "",
-      status: info.status || "",
+      status: info.status || info.communication || "",
+      ordPav: parseInt(info.ordPav || 0, 10),
+      disciplina: disc,
     };
   } catch (err) {
     console.error("[extractEquipmentInfo] Erro ao buscar info do equipamento:", err);

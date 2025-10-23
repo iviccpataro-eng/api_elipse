@@ -516,9 +516,9 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
     const path = req.params[0] || "";
     setByPath(dados, path, payload);
 
-    // ======================================
+    // =======================================
     // 🧠 NOVA LÓGICA DE TAGSLIST + ESTRUTURA
-    // ======================================
+    // =======================================
     try {
       // Atualiza lista de tags automaticamente ao receber novos dados
       const disciplina = path.split("/")[0]?.toUpperCase();
