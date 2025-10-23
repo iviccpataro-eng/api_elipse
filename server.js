@@ -516,17 +516,25 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
     const path = req.params[0] || "";
     setByPath(dados, path, payload);
 
-    // ====== Armazenamento das TAGs (não gera estrutura global) ======
+    // ===============================
+    // 🧠 NOVA LÓGICA DE TAGSLIST + ESTRUTURA
+    // ===============================
     try {
-      const isArray = Array.isArray(payload) && payload.every(p => typeof p === "string");
-      const endsWithTags = path.toLowerCase().endsWith("tags");
+      // Atualiza lista de tags automaticamente ao receber novos dados
+      const disciplina = path.split("/")[0]?.toUpperCase();
+      if (["EL", "IL", "AC", "HI", "DT", "CM"].includes(disciplina)) {
+        console.log(`⚡ [${disciplina}] Atualizando estrutura com base em ${path}...`);
 
-      if (isArray || endsWithTags) {
-        const tagsArray = isArray ? payload : getByPath(dados, path);
-        if (Array.isArray(tagsArray)) {
-          setByPath(dados, "tagsList", tagsArray);
-          console.log("[TAGS] Lista de tags atualizada (", tagsArray.length, "itens)");
-        }
+        // Gera a lista de tags automaticamente
+        const tagsList = gerarTagsListAutomaticamente(dados);
+        dados.tagsList = tagsList;
+
+        // Atualiza estrutura e detalhes com base nas tags
+        const generated = generateFrontendData(tagsList);
+        dados.structure = generated.structure;
+        dados.structureDetails = generated.details;
+
+        console.log(`✅ Estrutura da disciplina ${disciplina} atualizada (${tagsList.length} tags).`);
       }
     } catch (gErr) {
       console.error("[TAGS] Erro ao armazenar lista:", gErr);
@@ -534,9 +542,11 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
 
     res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
   } catch (e) {
+    console.error("[POST /dados/*] Erro:", e);
     res.status(400).json({ erro: e.message });
   }
 });
+
 
 // 🧩 Função auxiliar para gerar lista de tags automaticamente
 function gerarTagsListAutomaticamente(base) {
