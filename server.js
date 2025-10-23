@@ -547,7 +547,6 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
   }
 });
 
-
 // 🧩 Função auxiliar para gerar lista de tags automaticamente
 function gerarTagsListAutomaticamente(base) {
   const lista = [];
