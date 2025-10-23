@@ -646,44 +646,93 @@ app.get(
 app.get("/equipamento/:tag", autenticar, async (req, res) => {
   try {
     const { tag } = req.params;
-
     if (!tag) {
-      return res.status(400).json({ ok: false, erro: "Tag do equipamento não especificada." });
+      return res.status(400).json({
+        ok: false,
+        erro: "Tag do equipamento não especificada.",
+      });
     }
 
-    // Normaliza tag (caso venha codificada)
     const tagDecoded = decodeURIComponent(tag);
 
-    // Busca nos dados carregados do Elipse
-    const equipamento = dados.structureDetails?.[tagDecoded];
+    // 1️⃣ Primeiro tenta buscar nos detalhes já gerados
+    const equipamento =
+      dados.structureDetails?.[tagDecoded] ||
+      dados.structureDetails?.[`EL/${tagDecoded}`] ||
+      null;
 
-    if (!equipamento) {
+    if (equipamento && Object.keys(equipamento).length > 0) {
+      console.log("[EQUIPAMENTO] Encontrado em structureDetails:", tagDecoded);
+
+      return res.json({
+        ok: true,
+        dados: {
+          info: {
+            tag: tagDecoded,
+            name: equipamento.name || tagDecoded.split("/").pop(),
+            descricao: equipamento.descricao || "",
+            pavimento: equipamento.pavimento,
+            fabricante: equipamento.fabricante,
+            modelo: equipamento.modelo,
+            statusComunicacao: equipamento.statusComunicacao,
+            ultimaAtualizacao: equipamento.ultimaAtualizacao,
+          },
+          tags: equipamento.grandezas || {},
+          units: equipamento.unidades || {},
+        },
+      });
+    }
+
+    // 2️⃣ Caso não tenha nos detalhes, tenta reconstruir com base em `dados`
+    const pathParts = tagDecoded.split("/").filter(Boolean);
+    let ref = dados;
+    for (const part of pathParts) {
+      if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
+        ref = ref[part];
+      } else {
+        ref = null;
+        break;
+      }
+    }
+
+    if (!ref) {
       return res.status(404).json({
         ok: false,
         erro: `Equipamento '${tagDecoded}' não encontrado.`,
       });
     }
 
-    // Monta resposta genérica e padronizada
+    // 3️⃣ Extrai dados de info e grandezas (formato direto do Elipse)
+    const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
+    const dataRaw = ref.data || {};
+
     const grandezas = {};
     const unidades = {};
 
-    // Se houver dados de leitura
-    if (equipamento.data && typeof equipamento.data === "object") {
-      for (const [chave, valor] of Object.entries(equipamento.data)) {
-        grandezas[chave] = valor?.value ?? valor ?? "";
-        if (valor?.unit) unidades[chave] = valor.unit;
+    if (Array.isArray(dataRaw)) {
+      for (const [nome, valor, unidade] of dataRaw) {
+        grandezas[nome] = valor;
+        unidades[nome] = unidade || "";
+      }
+    } else if (typeof dataRaw === "object") {
+      for (const [nome, valor] of Object.entries(dataRaw)) {
+        grandezas[nome] = valor?.value ?? valor;
+        unidades[nome] = valor?.unit ?? "";
       }
     }
 
-    res.json({
+    return res.json({
       ok: true,
       dados: {
         info: {
           tag: tagDecoded,
-          name: equipamento.name || tagDecoded.split("/").pop(),
-          descricao: equipamento.descricao || "",
-          pavimento: equipamento.pavimento,
+          name: infoRaw.name || pathParts.at(-1),
+          descricao: infoRaw.description || "",
+          pavimento: infoRaw.floor || pathParts[2],
+          fabricante: infoRaw.producer || infoRaw.manufacturer || "",
+          modelo: infoRaw.model || "",
+          statusComunicacao: infoRaw.communication || "",
+          ultimaAtualizacao: infoRaw["last-send"] || "",
         },
         tags: grandezas,
         units: unidades,
