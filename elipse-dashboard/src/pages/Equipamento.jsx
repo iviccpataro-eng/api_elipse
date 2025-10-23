@@ -2,6 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { ArcElement, Chart as ChartJS } from "chart.js";
+import { Doughnut } from "react-chartjs-2";
+
+ChartJS.register(ArcElement);
 
 export default function Equipamento() {
     const { tag } = useParams();
@@ -26,14 +30,10 @@ export default function Equipamento() {
         })
             .then((res) => res.json())
             .then((data) => {
-                console.log("📡 Retorno da API Equipamento:", data); // 👀 LOG COMPLETO
                 if (data.ok) setDados(data.dados);
                 else setErro(data.erro || "Erro ao carregar dados do equipamento.");
             })
-            .catch((err) => {
-                console.error("Erro de comunicação:", err);
-                setErro("Falha na comunicação com a API.");
-            })
+            .catch(() => setErro("Falha na comunicação com a API."))
             .finally(() => setLoading(false));
     }, [tag]);
 
@@ -49,68 +49,116 @@ export default function Equipamento() {
             <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
         );
 
-    if (!dados)
-        return (
-            <div className="p-6 text-center text-gray-400">
-                Nenhum dado disponível.
-            </div>
-        );
+    const info = dados?.info || {};
+    const grandezas = dados?.tags || {};
 
-    // 🔹 Ajustado conforme retorno atual do backend
-    const info = dados.info || {};
-    const grandezas = dados.tags || {}; // ⬅️ Corrigido
-    const unidades = dados.units || {}; // ⬅️ Corrigido
+    // 🔹 Caso tenha vindo no formato data[] (com gráfico, nominal etc)
+    const rawData = dados?.raw || dados?.data || [];
+    const temDataEstruturada = Array.isArray(rawData) && rawData.length > 0;
+
+    // 🔹 Helper para gerar gráfico semicircular com cor dinâmica
+    const ArcGraph = ({ valor, nominal }) => {
+        const min = nominal * 0.8;
+        const max = nominal * 1.2;
+        const percent = Math.min(Math.max((valor - min) / (max - min), 0), 1);
+        const dentroDoRange = valor >= min && valor <= max;
+
+        const data = {
+            datasets: [
+                {
+                    data: [percent, 1 - percent],
+                    backgroundColor: [dentroDoRange ? "#22c55e" : "#ef4444", "#e5e7eb"],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270,
+                },
+            ],
+        };
+
+        const options = {
+            cutout: "70%",
+            responsive: true,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        };
+
+        return <Doughnut data={data} options={options} />;
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
-            <div className="max-w-5xl mx-auto">
-                {/* 🔙 Botão de voltar */}
+            <div className="max-w-6xl mx-auto">
+                {/* 🔙 Botão voltar */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900 transition"
+                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 mb-4"
                 >
-                    <ArrowLeft className="w-4 h-4" />
-                    Voltar
+                    <ArrowLeft className="w-4 h-4" /> Voltar
                 </button>
 
-                {/* 🏷 Cabeçalho */}
-                <h1 className="text-2xl font-bold text-gray-800 mb-1">
-                    {info.name || tag}
-                </h1>
-                <p className="text-gray-500 mb-6">
-                    {info.descricao || "Equipamento sem descrição"}
-                </p>
-
-                {/* ✅ Status de comunicação */}
-                {info.statusComunicacao && (
-                    <p
-                        className={`mb-4 text-sm font-medium ${info.statusComunicacao === "OK"
-                                ? "text-green-600"
-                                : "text-red-500"
-                            }`}
-                    >
-                        Comunicação: {info.statusComunicacao}
+                {/* Cabeçalho do equipamento */}
+                <div className="bg-white rounded-2xl shadow p-6 mb-6">
+                    <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                        {info.name || tag}
+                    </h1>
+                    <p className="text-gray-500 mb-1">
+                        {info.descricao || "Equipamento sem descrição"}
                     </p>
-                )}
+                    <p className="text-sm text-gray-400">
+                        {info.fabricante && `${info.fabricante} `}
+                        {info.modelo && `• ${info.modelo}`}
+                        {info.statusComunicacao &&
+                            ` • Comunicação: ${info.statusComunicacao}`}
+                        {info.ultimaAtualizacao &&
+                            ` • Último envio: ${new Date(
+                                info.ultimaAtualizacao
+                            ).toLocaleString("pt-BR")}`}
+                    </p>
+                </div>
 
-                {/* 📊 Grade de grandezas */}
-                {Object.keys(grandezas).length === 0 ? (
-                    <div className="text-gray-400 text-center py-10">
-                        Nenhuma grandeza disponível para este equipamento.
+                {/* Cards das grandezas */}
+                {temDataEstruturada ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {rawData.map(([nome, valor, unidade, mostrarGrafico, nominal]) => (
+                            <div
+                                key={nome}
+                                className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                            >
+                                <div className="text-gray-600 text-sm mb-2">{nome}</div>
+
+                                {mostrarGrafico ? (
+                                    <div className="w-28 h-14 mb-2">
+                                        <ArcGraph valor={valor} nominal={nominal} />
+                                    </div>
+                                ) : null}
+
+                                <div
+                                    className={`text-2xl font-semibold ${valor >= nominal * 0.8 && valor <= nominal * 1.2
+                                            ? "text-green-600"
+                                            : "text-red-600"
+                                        }`}
+                                >
+                                    {valor} {unidade}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ) : (
+                ) : Object.keys(grandezas).length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {Object.entries(grandezas).map(([nome, valor]) => (
                             <div
                                 key={nome}
-                                className="bg-white rounded-xl shadow p-4 hover:shadow-md transition"
+                                className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition"
                             >
                                 <div className="text-gray-600 text-sm mb-1">{nome}</div>
                                 <div className="text-2xl font-semibold text-gray-800">
-                                    {valor} {unidades?.[nome] || ""}
+                                    {valor} {info.unidades?.[nome] || ""}
                                 </div>
                             </div>
                         ))}
+                    </div>
+                ) : (
+                    <div className="text-gray-400 text-center py-10">
+                        Nenhuma grandeza disponível para este equipamento.
                     </div>
                 )}
             </div>

@@ -1,6 +1,7 @@
 // src/pages/Equipamento.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 export default function Equipamento() {
   const { tag } = useParams();
@@ -25,10 +26,14 @@ export default function Equipamento() {
     })
       .then((res) => res.json())
       .then((data) => {
+        console.log("📡 Retorno da API Equipamento:", data); // 👀 LOG COMPLETO
         if (data.ok) setDados(data.dados);
         else setErro(data.erro || "Erro ao carregar dados do equipamento.");
       })
-      .catch(() => setErro("Falha na comunicação com a API."))
+      .catch((err) => {
+        console.error("Erro de comunicação:", err);
+        setErro("Falha na comunicação com a API.");
+      })
       .finally(() => setLoading(false));
   }, [tag]);
 
@@ -44,32 +49,51 @@ export default function Equipamento() {
       <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
     );
 
-  const info = dados?.info || {};
-  const grandezas = dados?.tags || {};
-  const unidades = dados?.units || {};
+  if (!dados)
+    return (
+      <div className="p-6 text-center text-gray-400">
+        Nenhum dado disponível.
+      </div>
+    );
+
+  // 🔹 Ajustado conforme retorno atual do backend
+  const info = dados.info || {};
+  const grandezas = dados.tags || {}; // ⬅️ Corrigido
+  const unidades = dados.units || {}; // ⬅️ Corrigido
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 p-6">
       <div className="max-w-5xl mx-auto">
-        {/* Cabeçalho */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">
-              {info.name || tag}
-            </h1>
-            <p className="text-gray-500">
-              {info.descricao || "Equipamento sem descrição"}
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-          >
-            ← Voltar
-          </button>
-        </div>
+        {/* 🔙 Botão de voltar */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
+        </button>
 
-        {/* Cards das grandezas */}
+        {/* 🏷 Cabeçalho */}
+        <h1 className="text-2xl font-bold text-gray-800 mb-1">
+          {info.name || tag}
+        </h1>
+        <p className="text-gray-500 mb-6">
+          {info.descricao || "Equipamento sem descrição"}
+        </p>
+
+        {/* ✅ Status de comunicação */}
+        {info.statusComunicacao && (
+          <p
+            className={`mb-4 text-sm font-medium ${info.statusComunicacao === "OK"
+              ? "text-green-600"
+              : "text-red-500"
+              }`}
+          >
+            Comunicação: {info.statusComunicacao}
+          </p>
+        )}
+
+        {/* 📊 Grade de grandezas */}
         {Object.keys(grandezas).length === 0 ? (
           <div className="text-gray-400 text-center py-10">
             Nenhuma grandeza disponível para este equipamento.
