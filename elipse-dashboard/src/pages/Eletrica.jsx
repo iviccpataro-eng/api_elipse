@@ -32,7 +32,8 @@ export default function Eletrica() {
             .then((data) => {
                 console.log("📡 Retorno da API Elétrica:", data);
                 if (data.ok && data.dados?.ok) {
-                    setDados(data.dados);
+                    setEstrutura(data.dados.estrutura || {});
+                    setDetalhes(data.dados.detalhes || {});
                 } else {
                     setErro(data.erro || "Erro ao carregar dados da disciplina.");
                 }
