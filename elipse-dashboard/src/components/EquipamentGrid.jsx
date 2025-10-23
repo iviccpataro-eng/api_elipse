@@ -1,41 +1,53 @@
-// src/components/EquipmentGrid.jsx
-export default function EquipmentGrid({ estrutura, building, floor }) {
-    if (!building) {
+// src/components/EquipamentGrid.jsx
+import React from "react";
+
+export default function EquipmentGrid({
+    equipamentos = [],
+    selectedBuilding,
+    selectedFloor,
+    detalhes = {},
+    onClick,
+}) {
+    if (!equipamentos || equipamentos.length === 0) {
         return (
-            <div className="text-gray-500">
-                Selecione um prédio na barra lateral para visualizar os equipamentos.
+            <div className="text-gray-400 text-center py-6">
+                Nenhum equipamento encontrado neste pavimento.
             </div>
         );
     }
 
-    const floors = estrutura[building];
-    const floorsToShow = floor ? [floor] : Object.keys(floors);
-
     return (
-        <div>
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">
-                {building}
-                {floor && ` - ${floor}`}
-            </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {equipamentos.map((eq) => {
+                const tag = `EL/${selectedBuilding}/${selectedFloor}/${eq}`;
+                const info = detalhes[tag] || {};
 
-            {floorsToShow.map((fl) => (
-                <div key={fl} className="mb-6">
-                    {!floor && (
-                        <h3 className="text-lg font-medium text-gray-600 mb-2">{fl}</h3>
-                    )}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {floors[fl].map((equip, idx) => (
-                            <div
-                                key={idx}
-                                className="rounded-xl border border-gray-200 bg-white p-3 shadow hover:shadow-md transition"
+                return (
+                    <button
+                        key={eq}
+                        onClick={() => onClick(tag)}
+                        className="flex flex-col items-start gap-2 border rounded-xl p-4 bg-gray-50 hover:bg-blue-50 transition text-left"
+                    >
+                        <span className="font-semibold text-gray-800">
+                            {info.name || eq}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                            {info.modelo || info.fabricante || ""}
+                        </span>
+
+                        {info.statusComunicacao && (
+                            <span
+                                className={`text-xs font-medium ${info.statusComunicacao === "OK"
+                                        ? "text-green-600"
+                                        : "text-red-500"
+                                    }`}
                             >
-                                <h4 className="font-semibold text-gray-800">{equip}</h4>
-                                <p className="text-sm text-gray-500">Equipamento</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ))}
+                                {info.statusComunicacao}
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
 }
