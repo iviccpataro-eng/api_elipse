@@ -131,16 +131,17 @@ export function getDisciplineData(dados, disciplineCode) {
  */
 function extractEquipmentInfo(tag) {
   try {
-    // Importa dinamicamente o objeto `dados` do escopo global do servidor
+    // Busca o objeto global 'dados'
     const serverModule = require.main;
-    if (!serverModule || !serverModule.exports) return {};
+    const globalData = serverModule?.exports?.dados || globalThis?.dados || {};
 
-    const dados = serverModule.exports?.dados || globalThis?.dados || {};
+    // Quebra a tag em partes
     const pathParts = tag.split("/").filter(Boolean);
+    let ref = globalData;
 
-    let ref = dados;
+    // Percorre a estrutura até o equipamento
     for (const part of pathParts) {
-      if (ref && typeof ref === "object" && ref.hasOwnProperty(part)) {
+      if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
         ref = ref[part];
       } else {
         ref = null;
@@ -150,25 +151,40 @@ function extractEquipmentInfo(tag) {
 
     if (!ref) return {};
 
-    let info = ref?.info || {};
-    if (Array.isArray(info)) info = info[0]; // 🔧 Corrige o caso do Elipse enviar info como array
+    // Extração de dados do equipamento (vêm do Elipse)
+    const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
+    const dataRaw = ref.data || {};
 
-    const [disc, building, floor, equip] = pathParts;
+    // Monta o dicionário de grandezas
+    const grandezas = {};
+    const unidades = {};
+
+    if (Array.isArray(dataRaw)) {
+      for (const [nome, valor, unidade] of dataRaw) {
+        grandezas[nome] = valor;
+        unidades[nome] = unidade || "";
+      }
+    } else if (typeof dataRaw === "object") {
+      for (const [nome, valor] of Object.entries(dataRaw)) {
+        grandezas[nome] = valor?.value ?? valor;
+        unidades[nome] = valor?.unit ?? "";
+      }
+    }
 
     return {
-      edificio: info.building || building,
-      pavimento: info.floor || floor,
-      equipamento: info.name || equip,
-      descricao: info.description || "",
-      tipo: info.type || "",
-      fabricante: info.manufacturer || info.producer || "",
-      modelo: info.model || "",
-      status: info.status || info.communication || "",
-      ordPav: parseInt(info.ordPav || 0, 10),
-      disciplina: disc,
+      name: infoRaw.name || pathParts.at(-1),
+      edificio: infoRaw.building || pathParts[1],
+      pavimento: infoRaw.floor || pathParts[2],
+      ordPav: parseInt(infoRaw.ordPav) || 0,
+      fabricante: infoRaw.producer || infoRaw.manufacturer || "",
+      modelo: infoRaw.model || "",
+      statusComunicacao: infoRaw.communication || "",
+      ultimaAtualizacao: infoRaw["last-send"] || "",
+      grandezas,
+      unidades,
     };
   } catch (err) {
-    console.error("[extractEquipmentInfo] Erro ao buscar info do equipamento:", err);
+    console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);
     return {};
   }
 }
