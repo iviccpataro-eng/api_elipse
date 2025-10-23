@@ -1,9 +1,10 @@
 // src/pages/Equipamento.jsx
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 export default function Equipamento() {
   const { tag } = useParams();
+  const navigate = useNavigate();
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
@@ -44,16 +45,31 @@ export default function Equipamento() {
     );
 
   const info = dados?.info || {};
-  const grandezas = info.grandezas || {};
+  const grandezas = dados?.tags || {};
+  const unidades = dados?.units || {};
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 p-6">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          {info.name || tag}
-        </h1>
-        <p className="text-gray-500 mb-6">{info.descricao || "Sem descrição"}</p>
+        {/* Cabeçalho */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">
+              {info.name || tag}
+            </h1>
+            <p className="text-gray-500">
+              {info.descricao || "Equipamento sem descrição"}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+          >
+            ← Voltar
+          </button>
+        </div>
 
+        {/* Cards das grandezas */}
         {Object.keys(grandezas).length === 0 ? (
           <div className="text-gray-400 text-center py-10">
             Nenhuma grandeza disponível para este equipamento.
@@ -67,7 +83,7 @@ export default function Equipamento() {
               >
                 <div className="text-gray-600 text-sm mb-1">{nome}</div>
                 <div className="text-2xl font-semibold text-gray-800">
-                  {valor} {info.unidades?.[nome] || ""}
+                  {valor} {unidades?.[nome] || ""}
                 </div>
               </div>
             ))}
