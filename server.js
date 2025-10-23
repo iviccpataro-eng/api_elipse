@@ -65,7 +65,8 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-let dados = {}; // memória temporária
+global.dados = {};
+const dados = global.dados;
 
 // -------------------------
 // 3️⃣ HELPERS

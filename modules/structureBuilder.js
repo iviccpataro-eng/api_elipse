@@ -1,3 +1,4 @@
+// modules/structureBuilder.js
 // 🔧 Responsável por montar a hierarquia de Disciplinas > Prédios > Pavimentos > Equipamentos
 // a partir das tags enviadas pelo Elipse E3 e armazenadas no backend em `dados.tagsList`.
 
@@ -131,15 +132,13 @@ export function getDisciplineData(dados, disciplineCode) {
  */
 function extractEquipmentInfo(tag) {
   try {
-    // Busca o objeto global 'dados'
-    const serverModule = require.main;
-    const globalData = serverModule?.exports?.dados || globalThis?.dados || {};
+    // ✅ Garante que estamos acessando o mesmo objeto de memória do servidor
+    const dados = global.dados || {};
 
-    // Quebra a tag em partes
     const pathParts = tag.split("/").filter(Boolean);
-    let ref = globalData;
+    let ref = dados;
 
-    // Percorre a estrutura até o equipamento
+    // Percorre o objeto até chegar no equipamento
     for (const part of pathParts) {
       if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
         ref = ref[part];
@@ -149,20 +148,26 @@ function extractEquipmentInfo(tag) {
       }
     }
 
-    if (!ref) return {};
+    if (!ref) {
+      console.warn(`[extractEquipmentInfo] Caminho não encontrado para: ${tag}`);
+      return {};
+    }
 
-    // Extração de dados do equipamento (vêm do Elipse)
+    console.log(`🔎 [extractEquipmentInfo] Processando: ${tag}`);
+
     const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
-    const dataRaw = ref.data || {};
+    const dataRaw = ref.data || [];
 
-    // Monta o dicionário de grandezas
     const grandezas = {};
     const unidades = {};
 
     if (Array.isArray(dataRaw)) {
-      for (const [nome, valor, unidade] of dataRaw) {
-        grandezas[nome] = valor;
-        unidades[nome] = unidade || "";
+      for (const item of dataRaw) {
+        if (Array.isArray(item) && item.length >= 2) {
+          const [nome, valor, unidade] = item;
+          grandezas[nome] = valor;
+          unidades[nome] = unidade || "";
+        }
       }
     } else if (typeof dataRaw === "object") {
       for (const [nome, valor] of Object.entries(dataRaw)) {
@@ -171,8 +176,11 @@ function extractEquipmentInfo(tag) {
       }
     }
 
+    console.log(`✅ [extractEquipmentInfo] ${tag} => ${Object.keys(grandezas).length} grandezas extraídas`);
+
     return {
       name: infoRaw.name || pathParts.at(-1),
+      disciplina: infoRaw.discipline || pathParts[0],
       edificio: infoRaw.building || pathParts[1],
       pavimento: infoRaw.floor || pathParts[2],
       ordPav: parseInt(infoRaw.ordPav) || 0,
