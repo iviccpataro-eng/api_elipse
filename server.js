@@ -697,6 +697,109 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
   }
 });
 
+let lastAutoUpdate = null;
+let autoUpdateInterval = null;
+
+// 🔹 Função que atualiza dados.structure e dados.structureDetails
+async function regenerateStructure() {
+  try {
+    const tagsList =
+      dados.tagsList ||
+      getByPath(dados, "tags") ||
+      getByPath(dados, "Tags");
+
+    if (!Array.isArray(tagsList) || tagsList.length === 0) {
+      console.log("⚠️ Nenhuma tagsList disponível — ignorando atualização automática.");
+      return;
+    }
+
+    console.log("♻️ Atualizando estrutura global das disciplinas...");
+
+    const generated = generateFrontendData(tagsList);
+    dados.structure = generated.structure;
+    dados.structureDetails = generated.details;
+    lastAutoUpdate = new Date();
+
+    console.log(
+      `✅ Estrutura atualizada em ${lastAutoUpdate.toLocaleTimeString()} (${tagsList.length} tags)`
+    );
+  } catch (err) {
+    console.error("❌ Erro ao regenerar estrutura automática:", err);
+  }
+}
+
+// 🔹 Recupera o refreshTime do banco
+async function getUserRefreshTime() {
+  try {
+    const [rows] = await pool.query(
+      "SELECT refreshTime FROM users WHERE active = 1 LIMIT 1"
+    );
+    const refresh = rows?.[0]?.refreshTime || 10;
+    return Math.max(5, parseInt(refresh)); // mínimo 5 segundos
+  } catch (err) {
+    console.error("⚠️ Falha ao obter refreshTime, usando padrão (10s)", err);
+    return 30;
+  }
+}
+
+// 🔹 Inicia o auto-refresh periódico
+async function startAutoUpdater() {
+  const refreshTime = await getUserRefreshTime();
+  console.log(`⏱️ Atualização automática a cada ${refreshTime}s`);
+  if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+
+  autoUpdateInterval = setInterval(regenerateStructure, refreshTime * 1000);
+}
+
+// 🔹 Atualiza quando um novo POST é recebido do Elipse
+app.post(["/dados/*", "/data/*"], autenticar, async (req, res) => {
+  try {
+    const payload = normalizeBody(req);
+    if (typeof payload === "undefined")
+      return res.status(400).json({ erro: "Body inválido" });
+
+    const path = req.params[0] || "";
+    setByPath(dados, path, payload);
+
+    // ====== Armazenamento das TAGs ======
+    try {
+      const isArray = Array.isArray(payload) && payload.every((p) => typeof p === "string");
+      const endsWithTags = path.toLowerCase().endsWith("tags");
+
+      if (isArray || endsWithTags) {
+        const tagsArray = isArray ? payload : getByPath(dados, path);
+        if (Array.isArray(tagsArray)) {
+          setByPath(dados, "tagsList", tagsArray);
+          console.log("[TAGS] Lista de tags atualizada (", tagsArray.length, "itens)");
+          await regenerateStructure();
+        }
+      } else {
+        // 🔹 Se o Elipse mandou dados de um equipamento, atualiza os detalhes
+        if (path.startsWith("EL/") || path.startsWith("IL/") || path.startsWith("AC/")) {
+          const tagPath = path.split("/").slice(0, 4).join("/");
+          if (!dados.structureDetails) dados.structureDetails = {};
+          dados.structureDetails[tagPath] = {
+            ...dados.structureDetails[tagPath],
+            info: payload.info?.[0] || payload.info || {},
+            data: payload.data || {},
+          };
+          console.log("🔧 Atualizado detalhe:", tagPath);
+        }
+      }
+    } catch (gErr) {
+      console.error("[TAGS] Erro ao armazenar lista:", gErr);
+    }
+
+    res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
+  } catch (e) {
+    console.error("[POST /dados] Erro:", e);
+    res.status(400).json({ erro: e.message });
+  }
+});
+
+// 🔹 Inicia o ciclo de atualização automática
+await startAutoUpdater();
+
 // -------------------------
 // 7️⃣ TESTES
 // -------------------------
