@@ -141,7 +141,7 @@ export default function Eletrica() {
             </aside>
 
             {/* Conteúdo principal */}
-            <main className="flex-1 p-6 overflow-y-auto">{renderEquipamentos()}</main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto">{renderEquipamentos()}</main>
         </div>
     );
 }
