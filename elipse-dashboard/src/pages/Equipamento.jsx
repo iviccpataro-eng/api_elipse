@@ -26,10 +26,14 @@ export default function Equipamento() {
         })
             .then((res) => res.json())
             .then((data) => {
+                console.log("📡 Retorno da API Equipamento:", data); // 👀 LOG COMPLETO
                 if (data.ok) setDados(data.dados);
                 else setErro(data.erro || "Erro ao carregar dados do equipamento.");
             })
-            .catch(() => setErro("Falha na comunicação com a API."))
+            .catch((err) => {
+                console.error("Erro de comunicação:", err);
+                setErro("Falha na comunicação com a API.");
+            })
             .finally(() => setLoading(false));
     }, [tag]);
 
@@ -52,15 +56,15 @@ export default function Equipamento() {
             </div>
         );
 
-    // 🔹 Agora os campos vêm corretamente do backend:
+    // 🔹 Ajustado conforme retorno atual do backend
     const info = dados.info || {};
-    const grandezas = dados.grandezas || {};
-    const unidades = dados.unidades || {};
+    const grandezas = dados.tags || {}; // ⬅️ Corrigido
+    const unidades = dados.units || {}; // ⬅️ Corrigido
 
     return (
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
             <div className="max-w-5xl mx-auto">
-                {/* Botão de voltar */}
+                {/* 🔙 Botão de voltar */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900 transition"
@@ -69,7 +73,7 @@ export default function Equipamento() {
                     Voltar
                 </button>
 
-                {/* Cabeçalho */}
+                {/* 🏷 Cabeçalho */}
                 <h1 className="text-2xl font-bold text-gray-800 mb-1">
                     {info.name || tag}
                 </h1>
@@ -77,7 +81,7 @@ export default function Equipamento() {
                     {info.descricao || "Equipamento sem descrição"}
                 </p>
 
-                {/* Status de comunicação */}
+                {/* ✅ Status de comunicação */}
                 {info.statusComunicacao && (
                     <p
                         className={`mb-4 text-sm font-medium ${info.statusComunicacao === "OK"
@@ -89,7 +93,7 @@ export default function Equipamento() {
                     </p>
                 )}
 
-                {/* Grade de grandezas */}
+                {/* 📊 Grade de grandezas */}
                 {Object.keys(grandezas).length === 0 ? (
                     <div className="text-gray-400 text-center py-10">
                         Nenhuma grandeza disponível para este equipamento.
