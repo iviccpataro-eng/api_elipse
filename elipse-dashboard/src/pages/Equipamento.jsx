@@ -1,11 +1,11 @@
 // src/pages/Equipamento.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { ArcElement, Chart as ChartJS } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
-ChartJS.register(ArcElement);
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function Equipamento() {
     const { tag } = useParams();
@@ -17,7 +17,8 @@ export default function Equipamento() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    useEffect(() => {
+    // 🔄 Função que busca os dados
+    const carregarDados = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
@@ -35,7 +36,15 @@ export default function Equipamento() {
             })
             .catch(() => setErro("Falha na comunicação com a API."))
             .finally(() => setLoading(false));
-    }, [tag]);
+    }, [tag, API_BASE]);
+
+    // 🔁 Atualiza com base no refreshTime do usuário
+    useEffect(() => {
+        carregarDados();
+        const refreshTime = localStorage.getItem("refreshTime") || 15000; // default 15s
+        const interval = setInterval(carregarDados, parseInt(refreshTime, 10));
+        return () => clearInterval(interval);
+    }, [carregarDados]);
 
     if (loading)
         return (
@@ -50,38 +59,42 @@ export default function Equipamento() {
         );
 
     const info = dados?.info || {};
-    const grandezas = dados?.tags || {};
+    const grandezas = info.grandezas || {};
+    const unidades = info.unidades || {};
+    const dataArray = info.data || dados?.data || [];
 
-    // 🔹 Caso tenha vindo no formato data[] (com gráfico, nominal etc)
-    const rawData = dados?.raw || dados?.data || [];
-    const temDataEstruturada = Array.isArray(rawData) && rawData.length > 0;
-
-    // 🔹 Helper para gerar gráfico semicircular com cor dinâmica
+    // 🧮 Componente do gráfico semi-circular
     const ArcGraph = ({ valor, nominal }) => {
         const min = nominal * 0.8;
         const max = nominal * 1.2;
-        const percent = Math.min(Math.max((valor - min) / (max - min), 0), 1);
         const dentroDoRange = valor >= min && valor <= max;
 
         const data = {
             datasets: [
                 {
-                    data: [percent, 1 - percent],
-                    backgroundColor: [dentroDoRange ? "#22c55e" : "#ef4444", "#e5e7eb"],
+                    data: [valor, max - valor],
+                    backgroundColor: [
+                        dentroDoRange ? "rgba(34,197,94,0.8)" : "rgba(239,68,68,0.8)",
+                        "rgba(229,231,235,0.5)",
+                    ],
                     borderWidth: 0,
+                    cutout: "75%",
                     circumference: 180,
-                    rotation: 270,
+                    rotation: -90,
                 },
             ],
         };
 
         const options = {
-            cutout: "70%",
-            responsive: true,
             plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            responsive: true,
         };
 
-        return <Doughnut data={data} options={options} />;
+        return (
+            <div className="w-20 h-10 mx-auto">
+                <Doughnut data={data} options={options} />
+            </div>
+        );
     };
 
     return (
@@ -95,19 +108,18 @@ export default function Equipamento() {
                     <ArrowLeft className="w-4 h-4" /> Voltar
                 </button>
 
-                {/* Cabeçalho do equipamento */}
+                {/* 🧾 Cabeçalho */}
                 <div className="bg-white rounded-2xl shadow p-6 mb-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-2">
                         {info.name || tag}
                     </h1>
                     <p className="text-gray-500 mb-1">
-                        {info.descricao || "Equipamento sem descrição"}
+                        {info.description || info.descricao || "Equipamento sem descrição"}
                     </p>
                     <p className="text-sm text-gray-400">
-                        {info.fabricante && `${info.fabricante} `}
-                        {info.modelo && `• ${info.modelo}`}
-                        {info.statusComunicacao &&
-                            ` • Comunicação: ${info.statusComunicacao}`}
+                        {info.fabricante && `${info.fabricante}`}
+                        {info.modelo && ` • ${info.modelo}`}
+                        {info.statusComunicacao && ` • Comunicação: ${info.statusComunicacao}`}
                         {info.ultimaAtualizacao &&
                             ` • Último envio: ${new Date(
                                 info.ultimaAtualizacao
@@ -115,82 +127,35 @@ export default function Equipamento() {
                     </p>
                 </div>
 
-                {/* Cards das grandezas */}
-                {temDataEstruturada ? (
+                {/* 📊 Cards */}
+                {Object.keys(grandezas).length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {rawData.map(([nome, valor, unidade, mostrarGrafico, nominal]) => (
-                            <div
-                                key={nome}
-                                className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
-                            >
-                                <div className="text-gray-600 text-sm mb-2">{nome}</div>
-
-                                {mostrarGrafico ? (
-                                    <div className="w-28 h-14 mb-2">
-                                        <ArcGraph valor={valor} nominal={nominal} />
-                                    </div>
-                                ) : null}
-
-                                <div
-                                    className={`text-2xl font-semibold ${valor >= nominal * 0.8 && valor <= nominal * 1.2
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                        }`}
-                                >
-                                    {valor} {unidade}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : Object.keys(grandezas).length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(info.grandezas).map(([nome, valor]) => {
-                            const unidade = info.unidades?.[nome] || "";
-                            const dadosVar = info.data?.find((d) => d[0] === nome);
-
+                        {Object.entries(grandezas).map(([nome, valor]) => {
+                            const unidade = unidades?.[nome] || "";
+                            const dadosVar = dataArray.find((d) => d[0] === nome);
                             const mostrarGrafico = dadosVar?.[3] === true;
                             const nominal = dadosVar?.[4] ?? 0;
-                            const min = nominal * 0.8;
-                            const max = nominal * 1.2;
-
-                            const cor =
-                                valor < min || valor > max
-                                    ? "rgba(255, 99, 132, 0.8)" // Vermelho
-                                    : "rgba(75, 192, 192, 0.8)"; // Verde
-
-                            const data = {
-                                datasets: [
-                                    {
-                                        data: [valor, max - valor],
-                                        backgroundColor: [cor, "rgba(240,240,240,0.4)"],
-                                        borderWidth: 0,
-                                        cutout: "75%",
-                                    },
-                                ],
-                            };
-
-                            const options = {
-                                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                                rotation: -90,
-                                circumference: 180,
-                            };
 
                             return (
                                 <div
                                     key={nome}
-                                    className="bg-white rounded-2xl shadow-md p-4 flex flex-col items-center justify-center transition hover:shadow-lg"
-                                    style={{ height: "180px" }}
+                                    className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
                                 >
-                                    <div className="text-gray-600 text-sm mb-2 text-center">{nome}</div>
-                                    {mostrarGrafico ? (
-                                        <div className="w-24 h-24">
-                                            <Doughnut data={data} options={options} />
-                                        </div>
-                                    ) : (
-                                        <div className="text-2xl font-semibold text-gray-800">
-                                            {valor} <span className="text-sm text-gray-500">{unidade}</span>
-                                        </div>
+                                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
+
+                                    {mostrarGrafico && nominal > 0 && (
+                                        <ArcGraph valor={valor} nominal={nominal} />
                                     )}
+
+                                    <div
+                                        className={`text-2xl font-semibold ${nominal > 0 && (valor < nominal * 0.8 || valor > nominal * 1.2)
+                                                ? "text-red-600"
+                                                : "text-green-600"
+                                            }`}
+                                    >
+                                        {valor}{" "}
+                                        <span className="text-sm text-gray-500">{unidade}</span>
+                                    </div>
                                 </div>
                             );
                         })}
