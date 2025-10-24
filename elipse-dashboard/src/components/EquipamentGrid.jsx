@@ -1,8 +1,5 @@
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-
-ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function EquipmentGrid({
     equipamentos = [],
@@ -20,6 +17,7 @@ export default function EquipmentGrid({
     }
 
     const renderArcGraph = (valor, nominal) => {
+        if (valor == null || nominal == null) return null;
         const min = nominal * 0.8;
         const max = nominal * 1.2;
         const dentroDoRange = valor >= min && valor <= max;
@@ -42,7 +40,9 @@ export default function EquipmentGrid({
                 <Doughnut
                     data={data}
                     options={{
-                        plugins: { tooltip: { enabled: false }, legend: { display: false } },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
                     }}
                 />
             </div>
@@ -54,7 +54,7 @@ export default function EquipmentGrid({
             {equipamentos.map((eq) => {
                 const tag = `EL/${selectedBuilding}/${selectedFloor}/${eq}`;
                 const info = detalhes[tag] || {};
-                const dataVars = info.data || []; // variáveis do Elipse
+                const dataVars = info.data || [];
 
                 return (
                     <button
@@ -83,7 +83,7 @@ export default function EquipmentGrid({
                             </span>
                         )}
 
-                        {/* Gráficos */}
+                        {/* 🔹 Renderiza no máximo 2 grandezas com gráfico */}
                         {Array.isArray(dataVars) &&
                             dataVars
                                 .filter((d) => d[3] === true)
@@ -91,7 +91,9 @@ export default function EquipmentGrid({
                                 .map(([nome, valor, unidade, , nominal], i) => (
                                     <div key={i} className="mt-3 border-t pt-2 text-center">
                                         <div className="font-medium text-sm text-gray-700">{nome}</div>
-                                        <div className="text-xs text-gray-500">{valor} {unidade}</div>
+                                        <div className="text-xs text-gray-500">
+                                            {valor} {unidade}
+                                        </div>
                                         {renderArcGraph(valor, nominal)}
                                     </div>
                                 ))}
