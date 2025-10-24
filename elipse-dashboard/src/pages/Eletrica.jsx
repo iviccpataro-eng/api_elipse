@@ -4,10 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
+import { jwtDecode } from "jwt-decode";
 
 export default function Eletrica() {
-    const [estrutura, setEstrutura] = useState({});
-    const [detalhes, setDetalhes] = useState({});
+    const [dados, setDados] = useState(null);
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
@@ -17,31 +17,47 @@ export default function Eletrica() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔹 Buscar dados da disciplina "Elétrica"
+    const token = localStorage.getItem("authToken");
+    const user = token ? jwtDecode(token) : null;
+    const refreshTime = (user?.refreshTime || 10) * 1000; // segundos → ms
+
+    // 🔹 Função isolada para buscar dados
+    const fetchEletrica = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/eletrica`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            console.log("📡 Retorno da API Elétrica:", data);
+
+            if (data.ok && data.dados?.ok) {
+                setDados({
+                    estrutura: data.dados.estrutura,
+                    detalhes: data.dados.detalhes,
+                });
+            } else {
+                setErro(data.erro || "Erro ao carregar dados da disciplina.");
+            }
+        } catch {
+            setErro("Falha na comunicação com a API.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 🔹 Efeito inicial + atualização automática
     useEffect(() => {
-        const token = localStorage.getItem("authToken");
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
             setLoading(false);
             return;
         }
 
-        fetch(`${API_BASE}/eletrica`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                console.log("📡 Retorno da API Elétrica:", data);
-                if (data.ok && data.dados?.ok) {
-                    setEstrutura(data.dados.estrutura || {});
-                    setDetalhes(data.dados.detalhes || {});
-                } else {
-                    setErro(data.erro || "Erro ao carregar dados da disciplina.");
-                }
-            })
-            .catch(() => setErro("Falha na comunicação com a API."))
-            .finally(() => setLoading(false));
-    }, []);
+        fetchEletrica(); // primeira carga
+        const interval = setInterval(fetchEletrica, refreshTime); // atualização periódica
+
+        return () => clearInterval(interval); // limpeza do timer
+    }, [refreshTime]);
 
     if (loading)
         return (
@@ -51,16 +67,15 @@ export default function Eletrica() {
         );
 
     if (erro)
-        return (
-            <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
-        );
+        return <div className="p-6 text-center text-red-500 font-medium">{erro}</div>;
 
-    // 🔹 Clique em um equipamento → abre a tela de detalhes
+    const estrutura = dados?.estrutura || {};
+    const detalhes = dados?.detalhes || {};
+
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
 
-    // 🔹 Renderização principal
     const renderEquipamentos = () => {
         if (!selectedBuilding && !selectedFloor) {
             return (
@@ -72,24 +87,15 @@ export default function Eletrica() {
             );
         }
 
-        // 🔸 Se apenas prédio foi selecionado → mostra todos os andares
         if (selectedBuilding && !selectedFloor) {
             const pavimentos = estrutura[selectedBuilding] || {};
-
-            // Ordenar pavimentos de acordo com "ordPav"
-            const pavimentosOrdenados = Object.entries(pavimentos).sort(
-                ([pavA], [pavB]) => {
-                    const ordA =
-                        Object.values(detalhes).find(
-                            (d) => d?.pavimento === pavA && d?.edificio === selectedBuilding
-                        )?.ordPav ?? 0;
-                    const ordB =
-                        Object.values(detalhes).find(
-                            (d) => d?.pavimento === pavB && d?.edificio === selectedBuilding
-                        )?.ordPav ?? 0;
-                    return ordA - ordB; // agora do menor (térreo) para o maior (último andar)
-                }
-            );
+            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
+                const ordA =
+                    Object.values(detalhes).find((d) => d?.pavimento === a)?.ordPav ?? 0;
+                const ordB =
+                    Object.values(detalhes).find((d) => d?.pavimento === b)?.ordPav ?? 0;
+                return ordB - ordA;
+            });
 
             return (
                 <div className="space-y-6">
@@ -109,7 +115,6 @@ export default function Eletrica() {
             );
         }
 
-        // 🔸 Se prédio + pavimento foram selecionados → mostra apenas aquele
         if (selectedBuilding && selectedFloor) {
             const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
             return (
@@ -131,7 +136,6 @@ export default function Eletrica() {
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            {/* Sidebar fixa */}
             <aside className="w-64 bg-white border-r pt-20 p-4 shadow-md overflow-y-auto">
                 <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
                     <Zap className="w-5 h-5 text-yellow-500" />
@@ -147,10 +151,7 @@ export default function Eletrica() {
                 />
             </aside>
 
-            {/* Conteúdo principal */}
-            <main className="flex-1 pt-20 p-6 overflow-y-auto">
-                {renderEquipamentos()}
-            </main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto">{renderEquipamentos()}</main>
         </div>
     );
 }

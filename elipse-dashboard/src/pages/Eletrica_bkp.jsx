@@ -1,12 +1,13 @@
 // src/pages/Eletrica.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap } from "lucide-react"; // ícone de elétrica
+import { Zap } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 
 export default function Eletrica() {
-    const [dados, setDados] = useState(null);
+    const [estrutura, setEstrutura] = useState({});
+    const [detalhes, setDetalhes] = useState({});
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
@@ -32,7 +33,8 @@ export default function Eletrica() {
             .then((data) => {
                 console.log("📡 Retorno da API Elétrica:", data);
                 if (data.ok && data.dados?.ok) {
-                    setDados(data.dados);
+                    setEstrutura(data.dados.estrutura || {});
+                    setDetalhes(data.dados.detalhes || {});
                 } else {
                     setErro(data.erro || "Erro ao carregar dados da disciplina.");
                 }
@@ -53,14 +55,12 @@ export default function Eletrica() {
             <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
         );
 
-    // 🔹 Corrigido: os dados reais estão dentro de dados.dados
-    const estrutura = dados?.estrutura || {};
-    const detalhes = dados?.detalhes || {};
-
+    // 🔹 Clique em um equipamento → abre a tela de detalhes
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
 
+    // 🔹 Renderização principal
     const renderEquipamentos = () => {
         if (!selectedBuilding && !selectedFloor) {
             return (
@@ -72,46 +72,44 @@ export default function Eletrica() {
             );
         }
 
-        // 🔸 Apenas prédio selecionado → mostra todos os pavimentos
+        // 🔸 Se apenas prédio foi selecionado → mostra todos os andares
         if (selectedBuilding && !selectedFloor) {
             const pavimentos = estrutura[selectedBuilding] || {};
-            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-                const ordA =
-                    Object.values(detalhes).find((d) => d?.pavimento === a)?.ordPav ?? 0;
-                const ordB =
-                    Object.values(detalhes).find((d) => d?.pavimento === b)?.ordPav ?? 0;
-                return ordB - ordA;
-            });
+
+            // Ordenar pavimentos de acordo com "ordPav"
+            const pavimentosOrdenados = Object.entries(pavimentos).sort(
+                ([pavA], [pavB]) => {
+                    const ordA =
+                        Object.values(detalhes).find(
+                            (d) => d?.pavimento === pavA && d?.edificio === selectedBuilding
+                        )?.ordPav ?? 0;
+                    const ordB =
+                        Object.values(detalhes).find(
+                            (d) => d?.pavimento === pavB && d?.edificio === selectedBuilding
+                        )?.ordPav ?? 0;
+                    return ordA - ordB; // agora do menor (térreo) para o maior (último andar)
+                }
+            );
 
             return (
                 <div className="space-y-6">
                     {pavimentosOrdenados.map(([pav, equipamentos]) => (
                         <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
                             <h2 className="text-xl font-semibold mb-4">{pav}</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {equipamentos.map((eq) => {
-                                    const tag = `EL/${selectedBuilding}/${pav}/${eq}`;
-                                    const info = detalhes[tag] || {};
-                                    return (
-                                        <button
-                                            key={eq}
-                                            onClick={() => handleEquipamentoClick(tag)}
-                                            className="w-full flex items-center gap-3 border rounded-xl p-4 bg-gray-50 hover:bg-blue-50 transition text-left"
-                                        >
-                                            <span className="font-medium text-gray-700">
-                                                {info.name || eq}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <EquipmentGrid
+                                equipamentos={equipamentos}
+                                selectedBuilding={selectedBuilding}
+                                selectedFloor={pav}
+                                detalhes={detalhes}
+                                onClick={handleEquipamentoClick}
+                            />
                         </div>
                     ))}
                 </div>
             );
         }
 
-        // 🔸 Pavimento selecionado → mostra apenas os equipamentos dele
+        // 🔸 Se prédio + pavimento foram selecionados → mostra apenas aquele
         if (selectedBuilding && selectedFloor) {
             const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
             return (
@@ -119,23 +117,13 @@ export default function Eletrica() {
                     <h2 className="text-xl font-semibold mb-4">
                         {selectedBuilding} — {selectedFloor}
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {equipamentos.map((eq) => {
-                            const tag = `EL/${selectedBuilding}/${selectedFloor}/${eq}`;
-                            const info = detalhes[tag] || {};
-                            return (
-                                <button
-                                    key={eq}
-                                    onClick={() => handleEquipamentoClick(tag)}
-                                    className="w-full flex items-center gap-3 border rounded-xl p-4 bg-gray-50 hover:bg-blue-50 transition text-left"
-                                >
-                                    <span className="font-medium text-gray-700">
-                                        {info.name || eq}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <EquipmentGrid
+                        equipamentos={equipamentos}
+                        selectedBuilding={selectedBuilding}
+                        selectedFloor={selectedFloor}
+                        detalhes={detalhes}
+                        onClick={handleEquipamentoClick}
+                    />
                 </div>
             );
         }
@@ -160,7 +148,9 @@ export default function Eletrica() {
             </aside>
 
             {/* Conteúdo principal */}
-            <main className="flex-1 p-6 overflow-y-auto">{renderEquipamentos()}</main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto">
+                {renderEquipamentos()}
+            </main>
         </div>
     );
 }
