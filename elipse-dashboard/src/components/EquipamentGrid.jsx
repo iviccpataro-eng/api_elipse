@@ -79,8 +79,8 @@ export default function EquipmentGrid({
                         {info.statusComunicacao && (
                             <span
                                 className={`text-xs font-medium mt-1 ${info.statusComunicacao === "OK"
-                                        ? "text-green-600"
-                                        : "text-red-500"
+                                    ? "text-green-600"
+                                    : "text-red-500"
                                     }`}
                             >
                                 {info.statusComunicacao}

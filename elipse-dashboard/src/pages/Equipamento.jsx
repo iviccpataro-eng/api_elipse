@@ -133,8 +133,8 @@ export default function Equipamento() {
 
                                 <div
                                     className={`text-2xl font-semibold ${valor >= nominal * 0.8 && valor <= nominal * 1.2
-                                            ? "text-green-600"
-                                            : "text-red-600"
+                                        ? "text-green-600"
+                                        : "text-red-600"
                                         }`}
                                 >
                                     {valor} {unidade}
@@ -144,17 +144,56 @@ export default function Equipamento() {
                     </div>
                 ) : Object.keys(grandezas).length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(grandezas).map(([nome, valor]) => (
-                            <div
-                                key={nome}
-                                className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition"
-                            >
-                                <div className="text-gray-600 text-sm mb-1">{nome}</div>
-                                <div className="text-2xl font-semibold text-gray-800">
-                                    {valor} {info.unidades?.[nome] || ""}
+                        {Object.entries(info.grandezas).map(([nome, valor]) => {
+                            const unidade = info.unidades?.[nome] || "";
+                            const dadosVar = info.data?.find((d) => d[0] === nome);
+
+                            const mostrarGrafico = dadosVar?.[3] === true;
+                            const nominal = dadosVar?.[4] ?? 0;
+                            const min = nominal * 0.8;
+                            const max = nominal * 1.2;
+
+                            const cor =
+                                valor < min || valor > max
+                                    ? "rgba(255, 99, 132, 0.8)" // Vermelho
+                                    : "rgba(75, 192, 192, 0.8)"; // Verde
+
+                            const data = {
+                                datasets: [
+                                    {
+                                        data: [valor, max - valor],
+                                        backgroundColor: [cor, "rgba(240,240,240,0.4)"],
+                                        borderWidth: 0,
+                                        cutout: "75%",
+                                    },
+                                ],
+                            };
+
+                            const options = {
+                                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                                rotation: -90,
+                                circumference: 180,
+                            };
+
+                            return (
+                                <div
+                                    key={nome}
+                                    className="bg-white rounded-2xl shadow-md p-4 flex flex-col items-center justify-center transition hover:shadow-lg"
+                                    style={{ height: "180px" }}
+                                >
+                                    <div className="text-gray-600 text-sm mb-2 text-center">{nome}</div>
+                                    {mostrarGrafico ? (
+                                        <div className="w-24 h-24">
+                                            <Doughnut data={data} options={options} />
+                                        </div>
+                                    ) : (
+                                        <div className="text-2xl font-semibold text-gray-800">
+                                            {valor} <span className="text-sm text-gray-500">{unidade}</span>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="text-gray-400 text-center py-10">
