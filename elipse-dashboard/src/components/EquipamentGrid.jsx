@@ -1,7 +1,7 @@
-// src/components/EquipamentGrid.jsx
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function EquipmentGrid({
@@ -28,10 +28,7 @@ export default function EquipmentGrid({
             datasets: [
                 {
                     data: [valor, max - valor],
-                    backgroundColor: [
-                        dentroDoRange ? "#16a34a" : "#dc2626",
-                        "#e5e7eb",
-                    ],
+                    backgroundColor: [dentroDoRange ? "#16a34a" : "#dc2626", "#e5e7eb"],
                     borderWidth: 0,
                     circumference: 180,
                     rotation: 270,
@@ -57,6 +54,7 @@ export default function EquipmentGrid({
             {equipamentos.map((eq) => {
                 const tag = `EL/${selectedBuilding}/${selectedFloor}/${eq}`;
                 const info = detalhes[tag] || {};
+                const dataVars = info.data || []; // variáveis do Elipse
 
                 return (
                     <button
@@ -86,15 +84,14 @@ export default function EquipmentGrid({
                         )}
 
                         {/* Gráficos */}
-                        {info.data &&
-                            Array.isArray(info.data) &&
-                            info.data
+                        {Array.isArray(dataVars) &&
+                            dataVars
                                 .filter((d) => d[3] === true)
                                 .slice(0, 2)
                                 .map(([nome, valor, unidade, , nominal], i) => (
                                     <div key={i} className="mt-3 border-t pt-2 text-center">
                                         <div className="font-medium text-sm text-gray-700">{nome}</div>
-                                        <div className="text-xs text-gray-500">{unidade}</div>
+                                        <div className="text-xs text-gray-500">{valor} {unidade}</div>
                                         {renderArcGraph(valor, nominal)}
                                     </div>
                                 ))}

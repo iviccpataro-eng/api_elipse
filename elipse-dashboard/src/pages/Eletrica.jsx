@@ -1,4 +1,3 @@
-// src/pages/Eletrica.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
@@ -19,9 +18,9 @@ export default function Eletrica() {
 
     const token = localStorage.getItem("authToken");
     const user = token ? jwtDecode(token) : null;
-    const refreshTime = ((user?.refreshTime || 10) * 1000);
+    const refreshTime = (user?.refreshTime || 10) * 1000;
 
-    // 🔹 Função isolada para buscar dados
+    // 🔹 Buscar dados da disciplina Elétrica
     const fetchEletrica = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/eletrica`, {
@@ -35,6 +34,7 @@ export default function Eletrica() {
                     estrutura: data.dados.estrutura,
                     detalhes: data.dados.detalhes,
                 });
+                setErro("");
             } else {
                 setErro(data.erro || "Erro ao carregar dados da disciplina.");
             }
@@ -46,7 +46,6 @@ export default function Eletrica() {
         }
     }, [API_BASE, token]);
 
-    // 🔹 Efeito inicial + atualização automática
     useEffect(() => {
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
@@ -55,7 +54,7 @@ export default function Eletrica() {
         }
 
         fetchEletrica(); // primeira carga
-        const interval = setInterval(fetchEletrica, refreshTime); // atualização periódica
+        const interval = setInterval(fetchEletrica, refreshTime); // auto refresh
         return () => clearInterval(interval);
     }, [fetchEletrica, refreshTime, token]);
 
@@ -150,21 +149,7 @@ export default function Eletrica() {
                 />
             </aside>
 
-            <main className="flex-1 pt-20 p-6 overflow-y-auto space-y-6">
-                {renderEquipamentos()}
-
-                {/* 🟢🔴 Legenda abaixo dos cards */}
-                <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                        Dentro do range nominal
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                        Fora do range nominal
-                    </div>
-                </div>
-            </main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto">{renderEquipamentos()}</main>
         </div>
     );
 }
