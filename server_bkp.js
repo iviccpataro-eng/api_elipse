@@ -65,7 +65,8 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-let dados = {};
+global.dados = {};
+const dados = global.dados;
 
 // -------------------------
 // 3️⃣ HELPERS
@@ -479,6 +480,19 @@ app.post("/auth/admin-update-user", autenticar, async (req, res) => {
 // -------------------------
 // 6️⃣ ROTAS DO ELIPSE
 // -------------------------
+
+// Dicionário global de rotas e disciplinas
+const friendlyDisciplineRoutes = {
+  eletrica: "EL",
+  iluminacao: "IL",
+  arcondicionado: "AC",
+  hidraulica: "HI",
+  deteccaoincendio: "DT",
+  comunicacao: "CM",
+  seguranca: "SC",
+  ferramentas: "FR",
+};
+
 app.get("/", (req, res) => res.send("API Elipse rodando no Render!"));
 
 // Retorna objeto `dados` em memória (dados brutos)
@@ -503,70 +517,338 @@ app.post(["/dados/*", "/data/*"], autenticar, (req, res) => {
     const path = req.params[0] || "";
     setByPath(dados, path, payload);
 
-    // ====== Integração automática com structureBuilder ======
-    // Se o payload for um array de strings (tags) ou o path terminar com 'tags',
-    // gera estrutura hierárquica para o frontend e salva em dados.structure e dados.structureDetails
-// ====== Integração com structureBuilder (disciplinas) ======
-try {
-  const isPayloadArrayOfStrings =
-    Array.isArray(payload) && payload.every((p) => typeof p === "string");
-  const pathEndsWithTags = path.toLowerCase().endsWith("tags");
+    // =======================================
+    // 🧠 NOVA LÓGICA DE TAGSLIST + ESTRUTURA
+    // =======================================
+    try {
+      // Atualiza lista de tags automaticamente ao receber novos dados
+      const disciplina = path.split("/")[0]?.toUpperCase();
+      if (["EL", "IL", "AC", "HI", "DT", "CM"].includes(disciplina)) {
+        console.log(`⚡ [${disciplina}] Atualizando estrutura com base em ${path}...`);
 
-  if (isPayloadArrayOfStrings || pathEndsWithTags) {
-    const tagsArray = isPayloadArrayOfStrings ? payload : getByPath(dados, path);
-    if (Array.isArray(tagsArray)) {
-      // Apenas armazenamos os tags crus
-      setByPath(dados, "tagsList", tagsArray);
-      console.log("[TAGS] Lista de tags recebida e armazenada (path:", path, ")");
+        // Gera a lista de tags automaticamente
+        const tagsList = gerarTagsListAutomaticamente(dados);
+        dados.tagsList = tagsList;
+
+        // Atualiza estrutura e detalhes com base nas tags
+        const generated = generateFrontendData(tagsList);
+        dados.structure = generated.structure;
+        dados.structureDetails = generated.details;
+
+        console.log(`✅ Estrutura da disciplina ${disciplina} atualizada (${tagsList.length} tags).`);
+      }
+    } catch (gErr) {
+      console.error("[TAGS] Erro ao armazenar lista:", gErr);
     }
-  }
-} catch (gErr) {
-  console.error("[STRUCTURE] Erro ao armazenar tags:", gErr);
-}
-    // =======================================================
 
     res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
   } catch (e) {
+    console.error("[POST /dados/*] Erro:", e);
     res.status(400).json({ erro: e.message });
   }
 });
 
-// Rota auxiliar pública para recuperar a estrutura montada (útil para frontend)
-app.get("/structure", autenticar, (req, res) => {
-  try {
-    const structure = dados.structure || null;
-    const details = dados.structureDetails || null;
+// 🧩 Função auxiliar para gerar lista de tags automaticamente
+function gerarTagsListAutomaticamente(base) {
+  const lista = [];
 
-    if (!structure || !details) {
-      // tenta reconstruir a partir de dados.tags se existente
-      const tags = getByPath(dados, "tags") || getByPath(dados, "Tags") || null;
-      if (Array.isArray(tags)) {
-        const generated = generateFrontendData(tags);
-        setByPath(dados, "structure", generated.structure);
-        setByPath(dados, "structureDetails", generated.details);
-        return res.json({ ok: true, structure: generated.structure, details: generated.details });
+  const percorrer = (obj, caminho = "") => {
+    for (const chave in obj) {
+      if (!Object.hasOwn(obj, chave)) continue;
+      const valor = obj[chave];
+      const novoCaminho = caminho ? `${caminho}/${chave}` : chave;
+
+      // Se for um objeto intermediário (sem info nem data), continua descendo
+      if (
+        valor &&
+        typeof valor === "object" &&
+        !Array.isArray(valor) &&
+        !valor.info &&
+        !valor.data
+      ) {
+        percorrer(valor, novoCaminho);
       }
-      return res.json({ ok: false, erro: "Estrutura ainda não gerada." });
-    }
 
-    res.json({ ok: true, structure, details });
-  } catch (err) {
-    console.error("[GET /structure] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao retornar estrutura." });
-  }
-});
+      // Se tiver .info (como é padrão dos equipamentos), adiciona à lista
+      else if (valor?.info) {
+        lista.push(novoCaminho);
+      }
+    }
+  };
+
+  percorrer(base);
+  return lista;
+}
 
 // 🧩 Nova rota para fornecer dados estruturados de disciplina
-app.get("/discipline/:code", autenticar, async (req, res) => {
+app.get(
+  [
+    "/discipline/:code",
+    "/dashboard/:code",
+    "/:friendlyCode", // adiciona suporte a /eletrica, /hidraulica, etc.
+  ],
+  autenticar,
+  async (req, res) => {
+    try {
+      const { code, friendlyCode } = req.params;
+
+      // Determina o código real
+      const disciplineCode =
+        (code || friendlyDisciplineRoutes[friendlyCode?.toLowerCase()])?.toUpperCase();
+
+      if (!disciplineCode)
+        return res.status(400).json({ ok: false, erro: "Disciplina inválida." });
+
+      // Gera estrutura se não existir
+      let structure = dados.structure;
+      let details = dados.structureDetails;
+
+      if (!structure || !details) {
+        let tagsList =
+        dados.tagsList || getByPath(dados, "tags") || getByPath(dados, "Tags");
+        if (!Array.isArray(tagsList) || tagsList.length === 0) {
+          console.log("⚙️ Nenhuma tagsList detectada — gerando automaticamente...");
+          tagsList = gerarTagsListAutomaticamente(dados);
+          dados.tagsList = tagsList;
+          console.log(`✅ ${tagsList.length} tags identificadas automaticamente.`);
+        }
+        if (Array.isArray(tagsList)) {
+          console.log("[DISCIPLINE] Regenerando estrutura...");
+          const generated = generateFrontendData(tagsList);
+          dados.structure = generated.structure;
+          dados.structureDetails = generated.details;
+          structure = generated.structure;
+          details = generated.details;
+        } else {
+          return res.status(400).json({
+            ok: false,
+            erro: "Nenhuma lista de tags encontrada para gerar estrutura.",
+          });
+        }
+      }
+
+      const result = getDisciplineData(dados, disciplineCode);
+      if (!result || Object.keys(result).length === 0) {
+        return res.status(404).json({
+          ok: false,
+          erro: `Nenhum dado encontrado para a disciplina ${disciplineCode}.`,
+        });
+      }
+
+      res.json({ ok: true, disciplina: disciplineCode, dados: result });
+    } catch (err) {
+      console.error("[DISCIPLINE DATA] Erro:", err);
+      res.status(500).json({ ok: false, erro: "Erro ao montar estrutura da disciplina." });
+    }
+  }
+);
+
+app.get("/equipamento/:tag", autenticar, async (req, res) => {
   try {
-    const { code } = req.params;
-    const result = getDisciplineData(dados, code.toUpperCase());
-    res.json(result);
+    const { tag } = req.params;
+    if (!tag) {
+      return res.status(400).json({
+        ok: false,
+        erro: "Tag do equipamento não especificada.",
+      });
+    }
+
+    const tagDecoded = decodeURIComponent(tag);
+
+    // 1️⃣ Primeiro tenta buscar nos detalhes já gerados
+    const equipamento =
+      dados.structureDetails?.[tagDecoded] ||
+      dados.structureDetails?.[`EL/${tagDecoded}`] ||
+      null;
+
+    if (equipamento && Object.keys(equipamento).length > 0) {
+      console.log("[EQUIPAMENTO] Encontrado em structureDetails:", tagDecoded);
+
+      return res.json({
+        ok: true,
+        dados: {
+          info: {
+            tag: tagDecoded,
+            name: equipamento.name || tagDecoded.split("/").pop(),
+            descricao: equipamento.descricao || "",
+            pavimento: equipamento.pavimento,
+            fabricante: equipamento.fabricante,
+            modelo: equipamento.modelo,
+            statusComunicacao: equipamento.statusComunicacao,
+            ultimaAtualizacao: equipamento.ultimaAtualizacao,
+          },
+          tags: equipamento.grandezas || {},
+          units: equipamento.unidades || {},
+        },
+      });
+    }
+
+    // 2️⃣ Caso não tenha nos detalhes, tenta reconstruir com base em `dados`
+    const pathParts = tagDecoded.split("/").filter(Boolean);
+    let ref = dados;
+    for (const part of pathParts) {
+      if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
+        ref = ref[part];
+      } else {
+        ref = null;
+        break;
+      }
+    }
+
+    if (!ref) {
+      return res.status(404).json({
+        ok: false,
+        erro: `Equipamento '${tagDecoded}' não encontrado.`,
+      });
+    }
+
+    // 3️⃣ Extrai dados de info e grandezas (formato direto do Elipse)
+    const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
+    const dataRaw = ref.data || {};
+
+    const grandezas = {};
+    const unidades = {};
+
+    if (Array.isArray(dataRaw)) {
+      for (const [nome, valor, unidade] of dataRaw) {
+        grandezas[nome] = valor;
+        unidades[nome] = unidade || "";
+      }
+    } else if (typeof dataRaw === "object") {
+      for (const [nome, valor] of Object.entries(dataRaw)) {
+        grandezas[nome] = valor?.value ?? valor;
+        unidades[nome] = valor?.unit ?? "";
+      }
+    }
+
+    return res.json({
+      ok: true,
+      dados: {
+        info: {
+          tag: tagDecoded,
+          name: infoRaw.name || pathParts.at(-1),
+          descricao: infoRaw.description || "",
+          pavimento: infoRaw.floor || pathParts[2],
+          fabricante: infoRaw.producer || infoRaw.manufacturer || "",
+          modelo: infoRaw.model || "",
+          statusComunicacao: infoRaw.communication || "",
+          ultimaAtualizacao: infoRaw["last-send"] || "",
+        },
+        tags: grandezas,
+        units: unidades,
+      },
+    });
   } catch (err) {
-    console.error("[DISCIPLINE DATA] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao montar estrutura da disciplina." });
+    console.error("[EQUIPAMENTO] Erro:", err);
+    res.status(500).json({
+      ok: false,
+      erro: "Erro ao obter informações do equipamento.",
+    });
   }
 });
+
+let lastAutoUpdate = null;
+let autoUpdateInterval = null;
+
+// 🔹 Função que atualiza dados.structure e dados.structureDetails
+async function regenerateStructure() {
+  try {
+    const tagsList =
+      dados.tagsList ||
+      getByPath(dados, "tags") ||
+      getByPath(dados, "Tags");
+
+    if (!Array.isArray(tagsList) || tagsList.length === 0) {
+      console.log("⚠️ Nenhuma tagsList disponível — ignorando atualização automática.");
+      return;
+    }
+
+    console.log("♻️ Atualizando estrutura global das disciplinas...");
+
+    const generated = generateFrontendData(tagsList);
+    dados.structure = generated.structure;
+    dados.structureDetails = generated.details;
+    lastAutoUpdate = new Date();
+
+    console.log(
+      `✅ Estrutura atualizada em ${lastAutoUpdate.toLocaleTimeString()} (${tagsList.length} tags)`
+    );
+  } catch (err) {
+    console.error("❌ Erro ao regenerar estrutura automática:", err);
+  }
+}
+
+// 🔹 Recupera o refreshTime do banco
+async function getUserRefreshTime() {
+  try {
+    const [rows] = await pool.query(
+      "SELECT refreshTime FROM users WHERE active = 1 LIMIT 1"
+    );
+    const refresh = rows?.[0]?.refreshTime || 10;
+    return Math.max(5, parseInt(refresh)); // mínimo 5 segundos
+  } catch (err) {
+    console.error("⚠️ Falha ao obter refreshTime, usando padrão (10s)", err);
+    return 30;
+  }
+}
+
+// 🔹 Inicia o auto-refresh periódico
+async function startAutoUpdater() {
+  const refreshTime = await getUserRefreshTime();
+  console.log(`⏱️ Atualização automática a cada ${refreshTime}s`);
+  if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+
+  autoUpdateInterval = setInterval(regenerateStructure, refreshTime * 1000);
+}
+
+// 🔹 Atualiza quando um novo POST é recebido do Elipse
+app.post(["/dados/*", "/data/*"], autenticar, async (req, res) => {
+  try {
+    const payload = normalizeBody(req);
+    if (typeof payload === "undefined")
+      return res.status(400).json({ erro: "Body inválido" });
+
+    const path = req.params[0] || "";
+    setByPath(dados, path, payload);
+
+    // ====== Armazenamento das TAGs ======
+    try {
+      const isArray = Array.isArray(payload) && payload.every((p) => typeof p === "string");
+      const endsWithTags = path.toLowerCase().endsWith("tags");
+
+      if (isArray || endsWithTags) {
+        const tagsArray = isArray ? payload : getByPath(dados, path);
+        if (Array.isArray(tagsArray)) {
+          setByPath(dados, "tagsList", tagsArray);
+          console.log("[TAGS] Lista de tags atualizada (", tagsArray.length, "itens)");
+          await regenerateStructure();
+        }
+      } else {
+        // 🔹 Se o Elipse mandou dados de um equipamento, atualiza os detalhes
+        if (path.startsWith("EL/") || path.startsWith("IL/") || path.startsWith("AC/")) {
+          const tagPath = path.split("/").slice(0, 4).join("/");
+          if (!dados.structureDetails) dados.structureDetails = {};
+          dados.structureDetails[tagPath] = {
+            ...dados.structureDetails[tagPath],
+            info: payload.info?.[0] || payload.info || {},
+            data: payload.data || {},
+          };
+          console.log("🔧 Atualizado detalhe:", tagPath);
+        }
+      }
+    } catch (gErr) {
+      console.error("[TAGS] Erro ao armazenar lista:", gErr);
+    }
+
+    res.json({ status: "OK", caminho: `/dados/${path}`, salvo: payload });
+  } catch (e) {
+    console.error("[POST /dados] Erro:", e);
+    res.status(400).json({ erro: e.message });
+  }
+});
+
+// 🔹 Inicia o ciclo de atualização automática
+await startAutoUpdater();
 
 // -------------------------
 // 7️⃣ TESTES
@@ -682,6 +964,7 @@ app.get("*", (req, res, next) => {
 // 🔟 PORTA
 // -------------------------
 const PORT = process.env.PORT || 3000;
+console.log(`[BOOT] API Elipse iniciando ambiente: ${process.env.NODE_ENV || "local"}`);
 app.listen(PORT, () =>
   console.log(`[BOOT] Servidor rodando na porta ${PORT}`)
 );

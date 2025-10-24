@@ -664,6 +664,18 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     if (equipamento && Object.keys(equipamento).length > 0) {
       console.log("[EQUIPAMENTO] Encontrado em structureDetails:", tagDecoded);
 
+      // 🔹 Gera também o campo `data` para o front renderizar os gráficos
+      const grandezas = equipamento.grandezas || {};
+      const unidades = equipamento.unidades || {};
+
+      const dataArray = Object.entries(grandezas).map(([nome, valor]) => [
+        nome,
+        valor,
+        unidades?.[nome] || "",
+        true, // indica que deve mostrar gráfico
+        220,  // valor nominal temporário (ajustável)
+      ]);
+
       return res.json({
         ok: true,
         dados: {
@@ -677,8 +689,9 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
             statusComunicacao: equipamento.statusComunicacao,
             ultimaAtualizacao: equipamento.ultimaAtualizacao,
           },
-          tags: equipamento.grandezas || {},
-          units: equipamento.unidades || {},
+          tags: grandezas,
+          units: unidades,
+          data: dataArray,
         },
       });
     }
@@ -721,6 +734,15 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
       }
     }
 
+    // 🔹 Gera o campo `data` para o front
+    const dataArray = Object.entries(grandezas).map(([nome, valor]) => [
+      nome,
+      valor,
+      unidades?.[nome] || "",
+      true,
+      220, // nominal padrão
+    ]);
+
     return res.json({
       ok: true,
       dados: {
@@ -736,6 +758,7 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
         },
         tags: grandezas,
         units: unidades,
+        data: dataArray,
       },
     });
   } catch (err) {
