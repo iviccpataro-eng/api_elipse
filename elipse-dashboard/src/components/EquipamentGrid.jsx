@@ -42,7 +42,12 @@ export default function EquipmentGrid({
 
         return (
             <div className="relative w-24 h-12 mx-auto mt-2">
-                <Doughnut data={data} options={{ plugins: { tooltip: { enabled: false } } }} />
+                <Doughnut
+                    data={data}
+                    options={{
+                        plugins: { tooltip: { enabled: false }, legend: { display: false } },
+                    }}
+                />
             </div>
         );
     };
@@ -59,9 +64,7 @@ export default function EquipmentGrid({
                         onClick={() => onClick(tag)}
                         className="flex flex-col border rounded-xl p-4 bg-gray-50 hover:bg-blue-50 transition text-left shadow-sm"
                     >
-                        <span className="font-semibold text-gray-800">
-                            {info.name || eq}
-                        </span>
+                        <span className="font-semibold text-gray-800">{info.name || eq}</span>
 
                         {info.descricao && (
                             <span className="text-xs text-gray-500">{info.descricao}</span>

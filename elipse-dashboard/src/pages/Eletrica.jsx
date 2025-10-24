@@ -1,5 +1,5 @@
 // src/pages/Eletrica.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
@@ -7,7 +7,7 @@ import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 
 export default function Eletrica() {
-    const [dados, setDados] = useState(null);
+    const [dados, setDados] = useState({ estrutura: {}, detalhes: {} });
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
@@ -19,10 +19,10 @@ export default function Eletrica() {
 
     const token = localStorage.getItem("authToken");
     const user = token ? jwtDecode(token) : null;
-    const refreshTime = (user?.refreshTime || 10) * 1000; // segundos → ms
+    const refreshTime = ((user?.refreshTime || 10) * 1000);
 
     // 🔹 Função isolada para buscar dados
-    const fetchEletrica = async () => {
+    const fetchEletrica = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/eletrica`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -38,12 +38,13 @@ export default function Eletrica() {
             } else {
                 setErro(data.erro || "Erro ao carregar dados da disciplina.");
             }
-        } catch {
+        } catch (err) {
+            console.error("Erro no fetch:", err);
             setErro("Falha na comunicação com a API.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_BASE, token]);
 
     // 🔹 Efeito inicial + atualização automática
     useEffect(() => {
@@ -55,9 +56,8 @@ export default function Eletrica() {
 
         fetchEletrica(); // primeira carga
         const interval = setInterval(fetchEletrica, refreshTime); // atualização periódica
-
-        return () => clearInterval(interval); // limpeza do timer
-    }, [refreshTime]);
+        return () => clearInterval(interval);
+    }, [fetchEletrica, refreshTime, token]);
 
     if (loading)
         return (
@@ -69,8 +69,7 @@ export default function Eletrica() {
     if (erro)
         return <div className="p-6 text-center text-red-500 font-medium">{erro}</div>;
 
-    const estrutura = dados?.estrutura || {};
-    const detalhes = dados?.detalhes || {};
+    const { estrutura, detalhes } = dados;
 
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
@@ -151,7 +150,21 @@ export default function Eletrica() {
                 />
             </aside>
 
-            <main className="flex-1 pt-20 p-6 overflow-y-auto">{renderEquipamentos()}</main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto space-y-6">
+                {renderEquipamentos()}
+
+                {/* 🟢🔴 Legenda abaixo dos cards */}
+                <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                        Dentro do range nominal
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                        Fora do range nominal
+                    </div>
+                </div>
+            </main>
         </div>
     );
 }
