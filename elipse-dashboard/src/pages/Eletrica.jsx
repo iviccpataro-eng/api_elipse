@@ -46,17 +46,41 @@ export default function Eletrica() {
         }
     }, [API_BASE, token]);
 
+    // 🔹 Buscar dados da disciplina "Elétrica" com refresh automático
     useEffect(() => {
+        const token = localStorage.getItem("authToken");
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
             setLoading(false);
             return;
         }
 
-        fetchEletrica(); // primeira carga
-        const interval = setInterval(fetchEletrica, refreshTime); // auto refresh
-        return () => clearInterval(interval);
-    }, [fetchEletrica, refreshTime, token]);
+        const fetchData = () => {
+            fetch(`${API_BASE}/eletrica`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    console.log("📡 Retorno da API Elétrica:", data);
+                    if (data.ok && data.dados?.ok) {
+                        setDados({
+                            estrutura: data.dados.estrutura || {},
+                            detalhes: data.dados.detalhes || {},
+                        });
+                    } else {
+                        setErro(data.erro || "Erro ao carregar dados da disciplina.");
+                    }
+                })
+                .catch(() => setErro("Falha na comunicação com a API."))
+                .finally(() => setLoading(false));
+        };
+
+        fetchData();
+        const refreshInterval = setInterval(fetchData, 5000); // 🔁 Atualiza a cada 5 segundos
+
+        return () => clearInterval(refreshInterval);
+    }, []);
+
 
     if (loading)
         return (

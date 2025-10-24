@@ -1,3 +1,4 @@
+// src/components/EquipmentGrid.jsx
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
 
@@ -17,7 +18,8 @@ export default function EquipmentGrid({
     }
 
     const renderArcGraph = (valor, nominal) => {
-        if (valor == null || nominal == null) return null;
+        if (valor == null || nominal == null || isNaN(valor)) return null;
+
         const min = nominal * 0.8;
         const max = nominal * 1.2;
         const dentroDoRange = valor >= min && valor <= max;
@@ -39,9 +41,11 @@ export default function EquipmentGrid({
             <div className="relative w-24 h-12 mx-auto mt-2">
                 <Doughnut
                     data={data}
+                    redraw
                     options={{
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: false,
                         plugins: { legend: { display: false }, tooltip: { enabled: false } },
                     }}
                 />
@@ -64,8 +68,8 @@ export default function EquipmentGrid({
                     >
                         <span className="font-semibold text-gray-800">{info.name || eq}</span>
 
-                        {info.descricao && (
-                            <span className="text-xs text-gray-500">{info.descricao}</span>
+                        {info.description && (
+                            <span className="text-xs text-gray-500">{info.description}</span>
                         )}
 
                         <span className="text-sm text-gray-500">
@@ -83,7 +87,7 @@ export default function EquipmentGrid({
                             </span>
                         )}
 
-                        {/* 🔹 Renderiza no máximo 2 grandezas com gráfico */}
+                        {/* 🔹 Renderiza até 2 grandezas com gráfico */}
                         {Array.isArray(dataVars) &&
                             dataVars
                                 .filter((d) => d[3] === true)
