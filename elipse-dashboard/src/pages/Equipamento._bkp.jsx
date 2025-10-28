@@ -1,7 +1,8 @@
 // src/pages/Equipamento.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import VariableCard from "../components/VariableCard.jsx";
 
 export default function Equipamento() {
   const { tag } = useParams();
@@ -13,7 +14,8 @@ export default function Equipamento() {
   const API_BASE =
     import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-  useEffect(() => {
+  // 🔄 Função para buscar os dados do equipamento
+  const carregarDados = useCallback(() => {
     const token = localStorage.getItem("authToken");
     if (!token) {
       setErro("Token não encontrado. Faça login novamente.");
@@ -26,16 +28,21 @@ export default function Equipamento() {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("📡 Retorno da API Equipamento:", data); // 👀 LOG COMPLETO
+        console.log("📡 Retorno da API Equipamento:", data);
         if (data.ok) setDados(data.dados);
         else setErro(data.erro || "Erro ao carregar dados do equipamento.");
       })
-      .catch((err) => {
-        console.error("Erro de comunicação:", err);
-        setErro("Falha na comunicação com a API.");
-      })
+      .catch(() => setErro("Falha na comunicação com a API."))
       .finally(() => setLoading(false));
-  }, [tag]);
+  }, [tag, API_BASE]);
+
+  // 🔁 Atualiza conforme o refreshTime
+  useEffect(() => {
+    carregarDados();
+    const refreshTime = localStorage.getItem("refreshTime") || 15000; // default 15s
+    const interval = setInterval(carregarDados, parseInt(refreshTime, 10));
+    return () => clearInterval(interval);
+  }, [carregarDados]);
 
   if (loading)
     return (
@@ -45,72 +52,51 @@ export default function Equipamento() {
     );
 
   if (erro)
-    return (
-      <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
-    );
+    return <div className="p-6 text-center text-red-500 font-medium">{erro}</div>;
 
-  if (!dados)
-    return (
-      <div className="p-6 text-center text-gray-400">
-        Nenhum dado disponível.
-      </div>
-    );
-
-  // 🔹 Ajustado conforme retorno atual do backend
-  const info = dados.info || {};
-  const grandezas = dados.tags || {}; // ⬅️ Corrigido
-  const unidades = dados.units || {}; // ⬅️ Corrigido
+  const info = dados?.info || {};
+  const variaveis = Array.isArray(dados?.data) ? dados.data : [];
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 p-6">
-      <div className="max-w-5xl mx-auto">
-        {/* 🔙 Botão de voltar */}
+      <div className="max-w-6xl mx-auto">
+        {/* 🔙 Botão voltar */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900 transition"
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 mb-4"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
+          <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
 
-        {/* 🏷 Cabeçalho */}
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">
-          {info.name || tag}
-        </h1>
-        <p className="text-gray-500 mb-6">
-          {info.descricao || "Equipamento sem descrição"}
-        </p>
-
-        {/* ✅ Status de comunicação */}
-        {info.statusComunicacao && (
-          <p
-            className={`mb-4 text-sm font-medium ${info.statusComunicacao === "OK"
-              ? "text-green-600"
-              : "text-red-500"
-              }`}
-          >
-            Comunicação: {info.statusComunicacao}
+        {/* Cabeçalho */}
+        <div className="bg-white rounded-2xl shadow p-6 mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            {info.name || tag}
+          </h1>
+          <p className="text-gray-500 mb-1">
+            {info.descricao || info.description || "Equipamento sem descrição"}
           </p>
-        )}
+          <p className="text-sm text-gray-400">
+            {info.fabricante && `${info.fabricante}`}
+            {info.modelo && ` • ${info.modelo}`}
+            {info.statusComunicacao && ` • Comunicação: ${info.statusComunicacao}`}
+            {info.ultimaAtualizacao &&
+              ` • Último envio: ${new Date(
+                info.ultimaAtualizacao
+              ).toLocaleString("pt-BR")}`}
+          </p>
+        </div>
 
-        {/* 📊 Grade de grandezas */}
-        {Object.keys(grandezas).length === 0 ? (
-          <div className="text-gray-400 text-center py-10">
-            Nenhuma grandeza disponível para este equipamento.
+        {/* Variáveis */}
+        {variaveis.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {variaveis.map((variavel, index) => (
+              <VariableCard key={index} variavel={variavel} />
+            ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(grandezas).map(([nome, valor]) => (
-              <div
-                key={nome}
-                className="bg-white rounded-xl shadow p-4 hover:shadow-md transition"
-              >
-                <div className="text-gray-600 text-sm mb-1">{nome}</div>
-                <div className="text-2xl font-semibold text-gray-800">
-                  {valor} {unidades?.[nome] || ""}
-                </div>
-              </div>
-            ))}
+          <div className="text-gray-400 text-center py-10">
+            Nenhuma grandeza disponível para este equipamento.
           </div>
         )}
       </div>

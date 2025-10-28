@@ -1,16 +1,46 @@
 // src/components/VariableCard.jsx
-import React from "react";
+import React, { useState } from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-export default function VariableCard({ variavel }) {
+export default function VariableCard({ variavel, equipamentoTag }) {
     if (!Array.isArray(variavel) || variavel.length < 2) return null;
 
-    const [tipo, nome, valor, unidade, mostrar, nominal] = variavel;
+    const [tipo, nome, valorInicial, unidade, mostrar, nominal] = variavel;
+    const [valor, setValor] = useState(valorInicial);
 
-    // 🔹 Gráfico semicircular para AI/AO
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+
+    // 🔹 Função para enviar comandos ao backend
+    const enviarComando = async (novoValor) => {
+        const token = localStorage.getItem("authToken");
+        try {
+            const res = await fetch(`${API_BASE}/write`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    tag: equipamentoTag,
+                    variavel: nome,
+                    valor: novoValor,
+                }),
+            });
+
+            const data = await res.json();
+            console.log("📤 Retorno write:", data);
+            if (data.ok) setValor(novoValor);
+            else alert("Erro ao enviar comando: " + (data.erro || "Desconhecido"));
+        } catch (err) {
+            alert("Falha na comunicação com o servidor.");
+        }
+    };
+
+    // 🔹 Gráfico semicircular
     const ArcGraph = ({ valor, nominal }) => {
         const min = nominal * 0.8;
         const max = nominal * 1.2;
@@ -44,11 +74,11 @@ export default function VariableCard({ variavel }) {
         );
     };
 
+    // 🔸 Renderização de acordo com o tipo
     switch (tipo) {
-        // ----- ANALOG INPUT -----
         case "AI":
             return (
-                <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
                     {mostrar && nominal ? <ArcGraph valor={valor} nominal={nominal} /> : null}
                     <div
@@ -63,7 +93,6 @@ export default function VariableCard({ variavel }) {
                 </div>
             );
 
-        // ----- ANALOG OUTPUT -----
         case "AO":
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center flex flex-col items-center hover:shadow-md transition">
@@ -72,12 +101,12 @@ export default function VariableCard({ variavel }) {
                         type="number"
                         className="border rounded-md text-center p-1 w-20"
                         defaultValue={valor}
+                        onBlur={(e) => enviarComando(parseFloat(e.target.value))}
                     />
                     <span className="text-xs text-gray-400 mt-1">{unidade}</span>
                 </div>
             );
 
-        // ----- DIGITAL INPUT -----
         case "DI": {
             const [onLabel, offLabel] = (unidade || "LIGADO/DESLIGADO").split("/");
             return (
@@ -93,7 +122,6 @@ export default function VariableCard({ variavel }) {
             );
         }
 
-        // ----- DIGITAL OUTPUT -----
         case "DO": {
             const [onDO, offDO] = (unidade || "LIGAR/DESLIGAR").split("/");
             return (
@@ -101,12 +129,14 @@ export default function VariableCard({ variavel }) {
                     <div className="text-gray-600 text-sm mb-3">{nome}</div>
                     <div className="flex gap-2 justify-center">
                         <button
+                            onClick={() => enviarComando(true)}
                             className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
                                 }`}
                         >
                             {onDO}
                         </button>
                         <button
+                            onClick={() => enviarComando(false)}
                             className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
                                 }`}
                         >
@@ -117,7 +147,6 @@ export default function VariableCard({ variavel }) {
             );
         }
 
-        // ----- MULTIVARIABLE INPUT -----
         case "MI": {
             const estadosMI = (unidade || "").split("/");
             return (
@@ -130,7 +159,6 @@ export default function VariableCard({ variavel }) {
             );
         }
 
-        // ----- MULTIVARIABLE OUTPUT -----
         case "MO": {
             const estadosMO = (unidade || "").split("/");
             return (
@@ -138,6 +166,7 @@ export default function VariableCard({ variavel }) {
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
                     <select
                         defaultValue={valor}
+                        onChange={(e) => enviarComando(parseInt(e.target.value))}
                         className="border rounded-md p-1 text-gray-700"
                     >
                         {estadosMO.map((op, i) => (

@@ -14,7 +14,6 @@ export default function Equipamento() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔄 Função para buscar os dados do equipamento
     const carregarDados = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
@@ -36,10 +35,9 @@ export default function Equipamento() {
             .finally(() => setLoading(false));
     }, [tag, API_BASE]);
 
-    // 🔁 Atualiza conforme o refreshTime
     useEffect(() => {
         carregarDados();
-        const refreshTime = localStorage.getItem("refreshTime") || 15000; // default 15s
+        const refreshTime = localStorage.getItem("refreshTime") || 15000;
         const interval = setInterval(carregarDados, parseInt(refreshTime, 10));
         return () => clearInterval(interval);
     }, [carregarDados]);
@@ -60,7 +58,6 @@ export default function Equipamento() {
     return (
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
             <div className="max-w-6xl mx-auto">
-                {/* 🔙 Botão voltar */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 mb-4"
@@ -68,7 +65,6 @@ export default function Equipamento() {
                     <ArrowLeft className="w-4 h-4" /> Voltar
                 </button>
 
-                {/* Cabeçalho */}
                 <div className="bg-white rounded-2xl shadow p-6 mb-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-2">
                         {info.name || tag}
@@ -87,11 +83,10 @@ export default function Equipamento() {
                     </p>
                 </div>
 
-                {/* Variáveis */}
                 {variaveis.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {variaveis.map((variavel, index) => (
-                            <VariableCard key={index} variavel={variavel} />
+                        {variaveis.map((variavel, i) => (
+                            <VariableCard key={i} variavel={variavel} equipamentoTag={tag} />
                         ))}
                     </div>
                 ) : (
