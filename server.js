@@ -643,6 +643,7 @@ app.get(
   }
 );
 
+// ✅ Endpoint universal de leitura de equipamento
 app.get("/equipamento/:tag", autenticar, async (req, res) => {
   try {
     const { tag } = req.params;
@@ -654,111 +655,89 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     }
 
     const tagDecoded = decodeURIComponent(tag);
+    console.log("[EQUIPAMENTO] Buscando:", tagDecoded);
 
-    // 1️⃣ Primeiro tenta buscar nos detalhes já gerados
+    // 1️⃣ Verifica se o equipamento existe no cache/estrutura
     const equipamento =
       dados.structureDetails?.[tagDecoded] ||
       dados.structureDetails?.[`EL/${tagDecoded}`] ||
       null;
 
-    if (equipamento && Object.keys(equipamento).length > 0) {
-      console.log("[EQUIPAMENTO] Encontrado em structureDetails:", tagDecoded);
-
-      // 🔹 Gera também o campo `data` para o front renderizar os gráficos
-      const grandezas = equipamento.grandezas || {};
-      const unidades = equipamento.unidades || {};
-
-      const dataArray = Object.entries(grandezas).map(([nome, valor]) => [
-        nome,
-        valor,
-        unidades?.[nome] || "",
-        true, // indica que deve mostrar gráfico
-        220,  // valor nominal temporário (ajustável)
-      ]);
-
-      return res.json({
-        ok: true,
-        dados: {
-          info: {
-            tag: tagDecoded,
-            name: equipamento.name || tagDecoded.split("/").pop(),
-            descricao: equipamento.descricao || "",
-            pavimento: equipamento.pavimento,
-            fabricante: equipamento.fabricante,
-            modelo: equipamento.modelo,
-            statusComunicacao: equipamento.statusComunicacao,
-            ultimaAtualizacao: equipamento.ultimaAtualizacao,
-          },
-          tags: grandezas,
-          units: unidades,
-          data: dataArray,
-        },
-      });
-    }
-
-    // 2️⃣ Caso não tenha nos detalhes, tenta reconstruir com base em `dados`
-    const pathParts = tagDecoded.split("/").filter(Boolean);
-    let ref = dados;
-    for (const part of pathParts) {
-      if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
-        ref = ref[part];
-      } else {
-        ref = null;
-        break;
-      }
-    }
-
-    if (!ref) {
+    if (!equipamento || Object.keys(equipamento).length === 0) {
       return res.status(404).json({
         ok: false,
         erro: `Equipamento '${tagDecoded}' não encontrado.`,
       });
     }
 
-    // 3️⃣ Extrai dados de info e grandezas (formato direto do Elipse)
-    const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
-    const dataRaw = ref.data || {};
+    // 2️⃣ Informações gerais do equipamento
+    const info = {
+      tag: tagDecoded,
+      name: equipamento.name || tagDecoded.split("/").pop(),
+      descricao: equipamento.descricao || "",
+      pavimento: equipamento.pavimento,
+      fabricante: equipamento.fabricante,
+      modelo: equipamento.modelo,
+      statusComunicacao: equipamento.statusComunicacao || "OK",
+      ultimaAtualizacao: equipamento.ultimaAtualizacao || new Date().toISOString(),
+    };
 
-    const grandezas = {};
-    const unidades = {};
+    // 3️⃣ Normalização das grandezas
+    const grandezas = equipamento.grandezas || {};
+    const unidades = equipamento.unidades || {};
 
-    if (Array.isArray(dataRaw)) {
-      for (const [nome, valor, unidade] of dataRaw) {
-        grandezas[nome] = valor;
-        unidades[nome] = unidade || "";
+    const data = [];
+
+    for (const [nome, valor] of Object.entries(grandezas)) {
+      const unidade = unidades?.[nome] || "";
+      let tipo = "AI"; // padrão (analógica de entrada)
+      let mostrarGrafico = false;
+      let referencia = null;
+
+      // Detecta o tipo pelo prefixo ou metadado
+      // Exemplo: nome pode vir com [AI], [DI], etc.
+      const matchTipo = nome.match(/^(AI|AO|DI|DO|MI|MO)\s*[:\-]/i);
+      if (matchTipo) {
+        tipo = matchTipo[1].toUpperCase();
       }
-    } else if (typeof dataRaw === "object") {
-      for (const [nome, valor] of Object.entries(dataRaw)) {
-        grandezas[nome] = valor?.value ?? valor;
-        unidades[nome] = valor?.unit ?? "";
+
+      // Simulação de dados padrão (poderá ser sobrescrito pelo Elipse)
+      switch (tipo) {
+        case "AI":
+        case "AO":
+          mostrarGrafico = true;
+          referencia = equipamento?.nominais?.[nome] || 220;
+          data.push([tipo, nome.replace(/^(AI|AO)\s*[:\-]/i, "").trim(), valor, unidade, mostrarGrafico, referencia]);
+          break;
+
+        case "DI":
+        case "DO":
+          // Estrutura: [tipo, nome, valor, "LIGADO/DESLIGADO", showIcon, ref]
+          referencia = true;
+          data.push([tipo, nome.replace(/^(DI|DO)\s*[:\-]/i, "").trim(), !!valor, "LIGADO/DESLIGADO", true, referencia]);
+          break;
+
+        case "MI":
+        case "MO":
+          // Estrutura: [tipo, nome, valor, "ESTADO1/ESTADO2/...", showIcon, ref]
+          const estados =
+            equipamento?.estados?.[nome] ||
+            "DESLIGADO/OPERANDO/LIGADO COM ALARME/DESLIGADO POR ALARME/FALHA CRÍTICA";
+          referencia = 1;
+          data.push([tipo, nome.replace(/^(MI|MO)\s*[:\-]/i, "").trim(), valor ?? 0, estados, true, referencia]);
+          break;
+
+        default:
+          data.push(["AI", nome, valor, unidade, false, 0]);
+          break;
       }
     }
-
-    // 🔹 Gera o campo `data` para o front
-    const dataArray = Object.entries(grandezas).map(([nome, valor]) => [
-      nome,
-      valor,
-      unidades?.[nome] || "",
-      true,
-      220, // nominal padrão
-    ]);
 
     return res.json({
       ok: true,
       dados: {
-        info: {
-          tag: tagDecoded,
-          name: infoRaw.name || pathParts.at(-1),
-          descricao: infoRaw.description || "",
-          pavimento: infoRaw.floor || pathParts[2],
-          fabricante: infoRaw.producer || infoRaw.manufacturer || "",
-          modelo: infoRaw.model || "",
-          statusComunicacao: infoRaw.communication || "",
-          ultimaAtualizacao: infoRaw["last-send"] || "",
-        },
-        tags: grandezas,
-        units: unidades,
-        data: dataArray,
+        info,
+        data,
       },
     });
   } catch (err) {
@@ -769,6 +748,7 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     });
   }
 });
+
 
 let lastAutoUpdate = null;
 let autoUpdateInterval = null;
