@@ -14,8 +14,7 @@ export default function Equipamento() {
     const [erro, setErro] = useState("");
     const [loading, setLoading] = useState(true);
 
-    const API_BASE =
-        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+    const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
     // 🔄 Função que busca os dados
     const carregarDados = useCallback(() => {
@@ -59,11 +58,9 @@ export default function Equipamento() {
         );
 
     const info = dados?.info || {};
-    const grandezas = info.grandezas || {};
-    const unidades = info.unidades || {};
-    const dataArray = info.data || dados?.data || [];
+    const variaveis = dados?.data || [];
 
-    // 🧮 Componente do gráfico semi-circular
+    // 🧮 Gráfico semicircular
     const ArcGraph = ({ valor, nominal }) => {
         const min = nominal * 0.8;
         const max = nominal * 1.2;
@@ -97,6 +94,101 @@ export default function Equipamento() {
         );
     };
 
+    // 🧩 Renderização de cada variável conforme o tipo
+    const renderCard = ([tipo, nome, valor, unidade, mostrar, ref]) => {
+        switch (tipo) {
+            case "AI":
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                        <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                        {mostrar && ref > 0 && <ArcGraph valor={valor} nominal={ref} />}
+                        <div
+                            className={`text-2xl font-semibold ${valor < ref * 0.8 || valor > ref * 1.2
+                                ? "text-red-600"
+                                : "text-green-600"
+                                }`}
+                        >
+                            {valor} <span className="text-sm text-gray-500">{unidade}</span>
+                        </div>
+                    </div>
+                );
+
+            case "AO":
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                        <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                        <input
+                            type="number"
+                            className="border rounded-md text-center p-1 w-20"
+                            defaultValue={valor}
+                        />
+                        <span className="text-xs text-gray-500 mt-1">{unidade}</span>
+                    </div>
+                );
+
+            case "DI":
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                        <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                        <div
+                            className={`text-lg font-semibold ${valor ? "text-green-600" : "text-red-600"
+                                }`}
+                        >
+                            {valor ? unidade.split("/")[0] : unidade.split("/")[1]}
+                        </div>
+                    </div>
+                );
+
+            case "DO":
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                        <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                        <div className="flex gap-2">
+                            <button className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"}`}>
+                                ON
+                            </button>
+                            <button className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"}`}>
+                                OFF
+                            </button>
+                        </div>
+                    </div>
+                );
+
+            case "MI":
+                const estados = unidade.split("/");
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                        <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                        <div className="text-lg font-semibold text-gray-700">
+                            {estados[valor] || "—"}
+                        </div>
+                    </div>
+                );
+
+            case "MO":
+                const opcoes = unidade.split("/");
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                        <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                        <select defaultValue={valor} className="border rounded-md p-1 text-gray-700">
+                            {opcoes.map((op, i) => (
+                                <option key={i} value={i}>
+                                    {op}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                );
+
+            default:
+                return (
+                    <div key={nome} className="bg-white rounded-2xl shadow p-4 text-center text-gray-600">
+                        {nome}: {valor} {unidade}
+                    </div>
+                );
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
             <div className="max-w-6xl mx-auto">
@@ -121,44 +213,14 @@ export default function Equipamento() {
                         {info.modelo && ` • ${info.modelo}`}
                         {info.statusComunicacao && ` • Comunicação: ${info.statusComunicacao}`}
                         {info.ultimaAtualizacao &&
-                            ` • Último envio: ${new Date(
-                                info.ultimaAtualizacao
-                            ).toLocaleString("pt-BR")}`}
+                            ` • Último envio: ${new Date(info.ultimaAtualizacao).toLocaleString("pt-BR")}`}
                     </p>
                 </div>
 
-                {/* 📊 Cards */}
-                {Object.keys(grandezas).length > 0 ? (
+                {/* 📊 Cards das variáveis */}
+                {variaveis.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(grandezas).map(([nome, valor]) => {
-                            const unidade = unidades?.[nome] || "";
-                            const dadosVar = dataArray.find((d) => d[0] === nome);
-                            const mostrarGrafico = dadosVar?.[3] === true;
-                            const nominal = dadosVar?.[4] ?? 0;
-
-                            return (
-                                <div
-                                    key={nome}
-                                    className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
-                                >
-                                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
-
-                                    {mostrarGrafico && nominal > 0 && (
-                                        <ArcGraph valor={valor} nominal={nominal} />
-                                    )}
-
-                                    <div
-                                        className={`text-2xl font-semibold ${nominal > 0 && (valor < nominal * 0.8 || valor > nominal * 1.2)
-                                                ? "text-red-600"
-                                                : "text-green-600"
-                                            }`}
-                                    >
-                                        {valor}{" "}
-                                        <span className="text-sm text-gray-500">{unidade}</span>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        {variaveis.map(renderCard)}
                     </div>
                 ) : (
                     <div className="text-gray-400 text-center py-10">
