@@ -158,21 +158,30 @@ function extractEquipmentInfo(tag) {
     const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
     const dataRaw = ref.data || [];
 
-    const grandezas = {};
+   const grandezas = {};
     const unidades = {};
+    const dataArray = [];
 
     if (Array.isArray(dataRaw)) {
       for (const item of dataRaw) {
-        if (Array.isArray(item) && item.length >= 2) {
-          const [nome, valor, unidade] = item;
-          grandezas[nome] = valor;
-          unidades[nome] = unidade || "";
-        }
+        if (!Array.isArray(item) || item.length < 3) continue;
+
+        const [tipo, nome, valor, unidade, mostrarGrafico, nominal] = item;
+
+        if (!tipo || !nome) continue;
+
+        // Monta as grandezas e unidades
+        grandezas[nome] = valor;
+        unidades[nome] = unidade || "";
+
+        // Guarda tudo para o frontend
+        dataArray.push([tipo, nome, valor, unidade, mostrarGrafico, nominal]);
       }
     } else if (typeof dataRaw === "object") {
       for (const [nome, valor] of Object.entries(dataRaw)) {
         grandezas[nome] = valor?.value ?? valor;
         unidades[nome] = valor?.unit ?? "";
+        dataArray.push(["AI", nome, valor?.value ?? valor, valor?.unit ?? ""]);
       }
     }
 
@@ -190,6 +199,7 @@ function extractEquipmentInfo(tag) {
       ultimaAtualizacao: infoRaw["last-send"] || "",
       grandezas,
       unidades,
+      data: dataArray,
     };
   } catch (err) {
     console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);

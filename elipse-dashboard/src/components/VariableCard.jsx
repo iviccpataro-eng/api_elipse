@@ -1,97 +1,160 @@
+// src/components/VariableCard.jsx
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
-import { Power, AlertTriangle } from "lucide-react";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
-export default function VariableCard({ variable }) {
-    const [tipo, nome, valor, unidade, show, referencia] = variable;
+ChartJS.register(ArcElement, Tooltip, Legend);
 
-    // 🔹 AI e AO → valor analógico
-    if (tipo === "AI" || tipo === "AO") {
-        const min = referencia * 0.8;
-        const max = referencia * 1.2;
+export default function VariableCard({ variavel }) {
+    if (!Array.isArray(variavel) || variavel.length < 2) return null;
+
+    const [tipo, nome, valor, unidade, mostrar, nominal] = variavel;
+
+    // 🔹 Gráfico semicircular para AI/AO
+    const ArcGraph = ({ valor, nominal }) => {
+        const min = nominal * 0.8;
+        const max = nominal * 1.2;
         const dentroDoRange = valor >= min && valor <= max;
 
         const data = {
             datasets: [
                 {
-                    data: [valor - min, max - valor],
-                    backgroundColor: [dentroDoRange ? "#22c55e" : "#ef4444", "#e5e7eb"],
+                    data: [valor, max - valor],
+                    backgroundColor: [
+                        dentroDoRange ? "#22c55e" : "#ef4444",
+                        "rgba(229,231,235,0.5)",
+                    ],
                     borderWidth: 0,
+                    cutout: "75%",
                     circumference: 180,
-                    rotation: 270,
+                    rotation: -90,
                 },
             ],
         };
 
+        const options = {
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            responsive: true,
+        };
+
         return (
-            <div className="bg-white rounded-2xl shadow p-4 text-center">
-                <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                {show && (
-                    <div className="w-28 h-14 mx-auto">
-                        <Doughnut data={data} options={{ cutout: "70%", plugins: { legend: { display: false } } }} />
+            <div className="w-20 h-10 mx-auto mb-2">
+                <Doughnut data={data} options={options} />
+            </div>
+        );
+    };
+
+    switch (tipo) {
+        // ----- ANALOG INPUT -----
+        case "AI":
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                    {mostrar && nominal ? <ArcGraph valor={valor} nominal={nominal} /> : null}
+                    <div
+                        className={`text-2xl font-semibold ${nominal && (valor < nominal * 0.8 || valor > nominal * 1.2)
+                                ? "text-red-600"
+                                : "text-green-600"
+                            }`}
+                    >
+                        {valor}{" "}
+                        <span className="text-sm text-gray-500">{unidade}</span>
                     </div>
-                )}
-                <div className={`text-xl font-semibold ${dentroDoRange ? "text-green-600" : "text-red-600"}`}>
-                    {valor} <span className="text-sm text-gray-500">{unidade}</span>
                 </div>
-                {tipo === "AO" && (
+            );
+
+        // ----- ANALOG OUTPUT -----
+        case "AO":
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 text-center flex flex-col items-center hover:shadow-md transition">
+                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
                     <input
                         type="number"
+                        className="border rounded-md text-center p-1 w-20"
                         defaultValue={valor}
-                        className="mt-2 w-20 border rounded text-center text-sm"
                     />
-                )}
-            </div>
-        );
-    }
-
-    // 🔹 DI e DO → variáveis digitais
-    if (tipo === "DI" || tipo === "DO") {
-        const estados = unidade?.split("/") || ["OFF", "ON"];
-        const estadoAtual = valor ? estados[0] : estados[1];
-        const emAlarme = show && valor !== referencia;
-
-        return (
-            <div className="bg-white rounded-2xl shadow p-4 text-center">
-                <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                <div className={`text-lg font-semibold ${valor ? "text-green-600" : "text-red-600"}`}>
-                    {estadoAtual}
+                    <span className="text-xs text-gray-400 mt-1">{unidade}</span>
                 </div>
-                {emAlarme && <AlertTriangle className="w-5 h-5 text-red-500 mx-auto mt-2" />}
-                {tipo === "DO" && (
-                    <div className="flex justify-center gap-2 mt-2">
-                        <button className="px-2 py-1 bg-green-500 text-white rounded text-xs">Ligar</button>
-                        <button className="px-2 py-1 bg-red-500 text-white rounded text-xs">Desligar</button>
+            );
+
+        // ----- DIGITAL INPUT -----
+        case "DI": {
+            const [onLabel, offLabel] = (unidade || "LIGADO/DESLIGADO").split("/");
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
+                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                    <div
+                        className={`text-lg font-semibold ${valor ? "text-green-600" : "text-red-600"
+                            }`}
+                    >
+                        {valor ? onLabel : offLabel}
                     </div>
-                )}
-            </div>
-        );
-    }
+                </div>
+            );
+        }
 
-    // 🔹 MI e MO → multivariáveis
-    if (tipo === "MI" || tipo === "MO") {
-        const estados = unidade?.split("/") || [];
-        const valorAtual = estados[valor] || "—";
-        const emAlarme = show && valor !== referencia;
+        // ----- DIGITAL OUTPUT -----
+        case "DO": {
+            const [onDO, offDO] = (unidade || "LIGAR/DESLIGAR").split("/");
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
+                    <div className="text-gray-600 text-sm mb-3">{nome}</div>
+                    <div className="flex gap-2 justify-center">
+                        <button
+                            className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
+                                }`}
+                        >
+                            {onDO}
+                        </button>
+                        <button
+                            className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                                }`}
+                        >
+                            {offDO}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
 
-        return (
-            <div className="bg-white rounded-2xl shadow p-4 text-center">
-                <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                {tipo === "MI" ? (
-                    <div className="text-lg font-semibold text-gray-700">{valorAtual}</div>
-                ) : (
-                    <select defaultValue={valor} className="border rounded text-sm p-1 w-full">
-                        {estados.map((e, i) => (
+        // ----- MULTIVARIABLE INPUT -----
+        case "MI": {
+            const estadosMI = (unidade || "").split("/");
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
+                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                    <div className="text-lg font-semibold text-gray-700">
+                        {estadosMI[valor] || "—"}
+                    </div>
+                </div>
+            );
+        }
+
+        // ----- MULTIVARIABLE OUTPUT -----
+        case "MO": {
+            const estadosMO = (unidade || "").split("/");
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
+                    <div className="text-gray-600 text-sm mb-2">{nome}</div>
+                    <select
+                        defaultValue={valor}
+                        className="border rounded-md p-1 text-gray-700"
+                    >
+                        {estadosMO.map((op, i) => (
                             <option key={i} value={i}>
-                                {e}
+                                {op}
                             </option>
                         ))}
                     </select>
-                )}
-                {emAlarme && <AlertTriangle className="w-5 h-5 text-red-500 mx-auto mt-2" />}
-            </div>
-        );
-    }
+                </div>
+            );
+        }
 
-    return null;
+        default:
+            return (
+                <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
+                    {nome}: {valor} {unidade}
+                </div>
+            );
+    }
 }
