@@ -40,19 +40,25 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         }
     };
 
-    // 🔹 Gráfico semicircular
+    // 🧮 Gráfico semicircular com validação de faixa nominal
     const ArcGraph = ({ valor, nominal }) => {
+        if (isNaN(valor) || !nominal || nominal <= 0) return null;
+
         const min = nominal * 0.8;
         const max = nominal * 1.2;
+
+        // Garante que a proporção visual nunca passe do máximo
+        const proporcao = Math.min(valor / max, 1);
+
         const dentroDoRange = valor >= min && valor <= max;
 
         const data = {
             datasets: [
                 {
-                    data: [valor, max - valor],
+                    data: [proporcao, 1 - proporcao],
                     backgroundColor: [
-                        dentroDoRange ? "#22c55e" : "#ef4444",
-                        "rgba(229,231,235,0.5)",
+                        dentroDoRange ? "#22c55e" : "#ef4444", // Verde dentro, vermelho fora
+                        "rgba(229,231,235,0.4)", // Cinza claro de fundo
                     ],
                     borderWidth: 0,
                     cutout: "75%",
@@ -65,6 +71,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         const options = {
             plugins: { legend: { display: false }, tooltip: { enabled: false } },
             responsive: true,
+            maintainAspectRatio: false,
         };
 
         return (
@@ -74,25 +81,40 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         );
     };
 
-    // 🔸 Renderização de acordo com o tipo
+    // 🔸 Renderização conforme tipo
     switch (tipo) {
-        case "AI":
+        // ----- ANALOG INPUT -----
+        case "AI": {
+            const temNominal = nominal && !isNaN(nominal) && nominal > 0;
+            const min = temNominal ? nominal * 0.8 : null;
+            const max = temNominal ? nominal * 1.2 : null;
+            const dentroDoRange =
+                temNominal && valor >= min && valor <= max ? true : false;
+
             return (
                 <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                    {mostrar && nominal ? <ArcGraph valor={valor} nominal={nominal} /> : null}
+                    {/* Só exibe gráfico se o nominal for válido */}
+                    {temNominal && mostrar ? (
+                        <ArcGraph valor={valor} nominal={nominal} />
+                    ) : (
+                        <div className="h-10 mb-2" /> // espaçamento consistente
+                    )}
                     <div
-                        className={`text-2xl font-semibold ${nominal && (valor < nominal * 0.8 || valor > nominal * 1.2)
-                                ? "text-red-600"
+                        className={`text-2xl font-semibold ${temNominal
+                                ? dentroDoRange
+                                    ? "text-green-600"
+                                    : "text-red-600"
                                 : "text-green-600"
                             }`}
                     >
-                        {valor}{" "}
-                        <span className="text-sm text-gray-500">{unidade}</span>
+                        {valor} <span className="text-sm text-gray-500">{unidade}</span>
                     </div>
                 </div>
             );
+        }
 
+        // ----- ANALOG OUTPUT -----
         case "AO":
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center flex flex-col items-center hover:shadow-md transition">
@@ -107,6 +129,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                 </div>
             );
 
+        // ----- DIGITAL INPUT -----
         case "DI": {
             const [onLabel, offLabel] = (unidade || "LIGADO/DESLIGADO").split("/");
             return (
@@ -122,6 +145,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
+        // ----- DIGITAL OUTPUT -----
         case "DO": {
             const [onDO, offDO] = (unidade || "LIGAR/DESLIGAR").split("/");
             return (
@@ -147,6 +171,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
+        // ----- MULTIVARIABLE INPUT -----
         case "MI": {
             const estadosMI = (unidade || "").split("/");
             return (
@@ -159,6 +184,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
+        // ----- MULTIVARIABLE OUTPUT -----
         case "MO": {
             const estadosMO = (unidade || "").split("/");
             return (
