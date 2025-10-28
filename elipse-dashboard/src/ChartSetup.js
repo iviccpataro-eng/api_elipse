@@ -1,4 +1,4 @@
-// src/chartSetup.js
+// src/components/chartSetup.js
 import {
   Chart as ChartJS,
   ArcElement,
@@ -9,8 +9,7 @@ import {
   LinearScale,
 } from "chart.js";
 
-if (!ChartJS.getChart) {
-  ChartJS.register(ArcElement, Tooltip, Legend, Title, CategoryScale, LinearScale);
-}
+// 🔹 Registra todos os componentes que usamos (sem isso o chart não aparece)
+ChartJS.register(ArcElement, Tooltip, Legend, Title, CategoryScale, LinearScale);
 
 export default ChartJS;

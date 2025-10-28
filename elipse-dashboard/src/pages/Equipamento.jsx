@@ -16,7 +16,7 @@ export default function Equipamento() {
 
     const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔄 Função que busca os dados
+    // 🔄 Busca dados do equipamento
     const carregarDados = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
@@ -37,7 +37,7 @@ export default function Equipamento() {
             .finally(() => setLoading(false));
     }, [tag, API_BASE]);
 
-    // 🔁 Atualiza com base no refreshTime do usuário
+    // 🔁 Atualiza conforme refreshTime
     useEffect(() => {
         carregarDados();
         const refreshTime = localStorage.getItem("refreshTime") || 15000; // default 15s
@@ -53,14 +53,12 @@ export default function Equipamento() {
         );
 
     if (erro)
-        return (
-            <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
-        );
+        return <div className="p-6 text-center text-red-500 font-medium">{erro}</div>;
 
     const info = dados?.info || {};
     const variaveis = dados?.data || [];
 
-    // 🧮 Gráfico semicircular
+    // 🧮 Gráfico semicircular (AI)
     const ArcGraph = ({ valor, nominal }) => {
         const min = nominal * 0.8;
         const max = nominal * 1.2;
@@ -94,18 +92,24 @@ export default function Equipamento() {
         );
     };
 
-    // 🧩 Renderização de cada variável conforme o tipo
-    const renderCard = ([tipo, nome, valor, unidade, mostrar, ref]) => {
+    // 🧩 Renderização conforme tipo
+    const renderCard = (variavel, index) => {
+        // Agora desestruturamos corretamente
+        const [tipo, nome, valor, unidade, mostrar, nominal] = variavel;
+
         switch (tipo) {
-            case "AI":
+            case "AI": // Analog Input
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                    >
                         <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                        {mostrar && ref > 0 && <ArcGraph valor={valor} nominal={ref} />}
+                        {mostrar && nominal > 0 && <ArcGraph valor={valor} nominal={nominal} />}
                         <div
-                            className={`text-2xl font-semibold ${valor < ref * 0.8 || valor > ref * 1.2
-                                ? "text-red-600"
-                                : "text-green-600"
+                            className={`text-2xl font-semibold ${nominal > 0 && (valor < nominal * 0.8 || valor > nominal * 1.2)
+                                    ? "text-red-600"
+                                    : "text-green-600"
                                 }`}
                         >
                             {valor} <span className="text-sm text-gray-500">{unidade}</span>
@@ -113,9 +117,12 @@ export default function Equipamento() {
                     </div>
                 );
 
-            case "AO":
+            case "AO": // Analog Output
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                    >
                         <div className="text-gray-600 text-sm mb-2">{nome}</div>
                         <input
                             type="number"
@@ -126,9 +133,12 @@ export default function Equipamento() {
                     </div>
                 );
 
-            case "DI":
+            case "DI": // Digital Input
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                    >
                         <div className="text-gray-600 text-sm mb-2">{nome}</div>
                         <div
                             className={`text-lg font-semibold ${valor ? "text-green-600" : "text-red-600"
@@ -139,39 +149,57 @@ export default function Equipamento() {
                     </div>
                 );
 
-            case "DO":
+            case "DO": // Digital Output
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                    >
                         <div className="text-gray-600 text-sm mb-2">{nome}</div>
                         <div className="flex gap-2">
-                            <button className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"}`}>
+                            <button
+                                className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
+                                    }`}
+                            >
                                 ON
                             </button>
-                            <button className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"}`}>
+                            <button
+                                className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                                    }`}
+                            >
                                 OFF
                             </button>
                         </div>
                     </div>
                 );
 
-            case "MI":
-                const estados = unidade.split("/");
+            case "MI": // Multi Input (lista apenas leitura)
+                const estadosMI = unidade.split("/");
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                    >
                         <div className="text-gray-600 text-sm mb-2">{nome}</div>
                         <div className="text-lg font-semibold text-gray-700">
-                            {estados[valor] || "—"}
+                            {estadosMI[valor] || "—"}
                         </div>
                     </div>
                 );
 
-            case "MO":
-                const opcoes = unidade.split("/");
+            case "MO": // Multi Output (lista editável)
+                const estadosMO = unidade.split("/");
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition"
+                    >
                         <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                        <select defaultValue={valor} className="border rounded-md p-1 text-gray-700">
-                            {opcoes.map((op, i) => (
+                        <select
+                            defaultValue={valor}
+                            className="border rounded-md p-1 text-gray-700"
+                        >
+                            {estadosMO.map((op, i) => (
                                 <option key={i} value={i}>
                                     {op}
                                 </option>
@@ -182,7 +210,10 @@ export default function Equipamento() {
 
             default:
                 return (
-                    <div key={nome} className="bg-white rounded-2xl shadow p-4 text-center text-gray-600">
+                    <div
+                        key={index}
+                        className="bg-white rounded-2xl shadow p-4 text-center text-gray-600"
+                    >
                         {nome}: {valor} {unidade}
                     </div>
                 );
@@ -213,11 +244,13 @@ export default function Equipamento() {
                         {info.modelo && ` • ${info.modelo}`}
                         {info.statusComunicacao && ` • Comunicação: ${info.statusComunicacao}`}
                         {info.ultimaAtualizacao &&
-                            ` • Último envio: ${new Date(info.ultimaAtualizacao).toLocaleString("pt-BR")}`}
+                            ` • Último envio: ${new Date(
+                                info.ultimaAtualizacao
+                            ).toLocaleString("pt-BR")}`}
                     </p>
                 </div>
 
-                {/* 📊 Cards das variáveis */}
+                {/* 📊 Cards */}
                 {variaveis.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {variaveis.map(renderCard)}
