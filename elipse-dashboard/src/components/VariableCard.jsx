@@ -8,13 +8,16 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 export default function VariableCard({ variavel, equipamentoTag }) {
     if (!Array.isArray(variavel) || variavel.length < 2) return null;
 
-    const [tipo, nome, valorInicial, unidade, mostrar, nominal] = variavel;
+    const [tipo, nome, valorInicialRaw, unidade, mostrar, nominalRaw] = variavel;
+    // Garantir números
+    const valorInicial = isNaN(parseFloat(valorInicialRaw)) ? 0 : parseFloat(valorInicialRaw);
+    const nominal = isNaN(parseFloat(nominalRaw)) ? null : parseFloat(nominalRaw);
+
     const [valor, setValor] = useState(valorInicial);
 
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔹 Função para enviar comandos ao backend
     const enviarComando = async (novoValor) => {
         const token = localStorage.getItem("authToken");
         try {
@@ -30,7 +33,6 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                     valor: novoValor,
                 }),
             });
-
             const data = await res.json();
             console.log("📤 Retorno write:", data);
             if (data.ok) setValor(novoValor);
@@ -40,30 +42,33 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         }
     };
 
-    // 🧮 Gráfico semicircular (ArcGraph)
+    // Componente do gráfico semicircular
     const ArcGraph = ({ valor, nominal }) => {
-        if (!nominal || nominal <= 0) return null;
+        if (!nominal || nominal <= 0 || typeof valor === "undefined") {
+            return null;
+        }
 
+        // intervalo ±20%
         const min = nominal * 0.8;
         const max = nominal * 1.2;
-        const dentroDoRange = valor >= min && valor <= max;
 
-        // Normaliza valor para 0–100 (0 = min, 50 = nominal, 100 = max)
+        // normaliza (0..100)
         const percent = ((valor - min) / (max - min)) * 100;
         const bounded = Math.min(Math.max(percent, 0), 100);
+
+        // cor: verde dentro da faixa, vermelho fora
+        const dentro = valor >= min && valor <= max;
+        const mainColor = dentro ? "#16a34a" : "#ef4444";
 
         const data = {
             datasets: [
                 {
                     data: [bounded, 100 - bounded],
-                    backgroundColor: [
-                        dentroDoRange ? "#16a34a" : "#dc2626",
-                        "rgba(229,231,235,0.3)",
-                    ],
+                    backgroundColor: [mainColor, "rgba(229,231,235,0.45)"],
                     borderWidth: 0,
-                    cutout: "75%",
-                    circumference: 180,
-                    rotation: -90,
+                    cutout: "72%",       // espessura do arco
+                    circumference: 180,  // semicirculo
+                    rotation: 270,       // inicia à esquerda, ajusta posição
                 },
             ],
         };
@@ -71,30 +76,35 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         const options = {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
             plugins: {
                 legend: { display: false },
                 tooltip: { enabled: false },
             },
-            animation: false,
         };
 
         return (
-            <div className="relative w-20 h-10 mx-auto mb-2">
+            <div className="relative w-28 h-14 mx-auto mb-2">
+                {/* Se quiser exibir o nominal pequeno acima do arco, mantemos este span */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-xs text-gray-500">
+                    {nominal.toFixed(2)}
+                </div>
+
                 <Doughnut data={data} options={options} />
-                <div className="absolute inset-0 flex items-center justify-center -translate-y-1">
-                    <div className="text-xs text-gray-700 font-semibold">
-                        {valor.toFixed(2)}
-                    </div>
+
+                {/* Overlay central com valor */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-1">
+                    <div className="text-sm font-semibold text-gray-700">{valor.toFixed(2)}</div>
+                    <div className="text-xs text-gray-400 -mt-1">{unidade}</div>
                 </div>
             </div>
         );
     };
 
-    // 🔸 Renderização conforme tipo
+    // Render por tipo
     switch (tipo) {
-        // ANALOG INPUT
         case "AI": {
-            const temNominal = nominal && !isNaN(nominal) && nominal > 0;
+            const temNominal = nominal && nominal > 0;
             const min = temNominal ? nominal * 0.8 : null;
             const max = temNominal ? nominal * 1.2 : null;
             const dentroDoRange = temNominal && valor >= min && valor <= max;
@@ -102,27 +112,24 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             return (
                 <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
+
                     {temNominal && mostrar ? (
                         <ArcGraph valor={valor} nominal={nominal} />
                     ) : (
-                        <div className="h-10 mb-2" />
+                        <div className="h-14 mb-2" />
                     )}
+
                     <div
-                        className={`text-2xl font-semibold ${temNominal
-                                ? dentroDoRange
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                : "text-green-600"
+                        className={`text-2xl font-semibold ${temNominal ? (dentroDoRange ? "text-green-600" : "text-red-600") : "text-gray-800"
                             }`}
                     >
-                        {valor}{" "}
-                        <span className="text-sm text-gray-500">{unidade}</span>
+                        {valor.toFixed(2)}
+                        <span className="text-sm text-gray-500 ml-1">{unidade}</span>
                     </div>
                 </div>
             );
         }
 
-        // ANALOG OUTPUT
         case "AO":
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center flex flex-col items-center hover:shadow-md transition">
@@ -131,29 +138,27 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                         type="number"
                         className="border rounded-md text-center p-1 w-20"
                         defaultValue={valor}
-                        onBlur={(e) => enviarComando(parseFloat(e.target.value))}
+                        onBlur={(e) => {
+                            const v = parseFloat(e.target.value);
+                            if (!isNaN(v)) enviarComando(v);
+                        }}
                     />
                     <span className="text-xs text-gray-400 mt-1">{unidade}</span>
                 </div>
             );
 
-        // DIGITAL INPUT
         case "DI": {
             const [onLabel, offLabel] = (unidade || "LIGADO/DESLIGADO").split("/");
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                    <div
-                        className={`text-lg font-semibold ${valor ? "text-green-600" : "text-red-600"
-                            }`}
-                    >
+                    <div className={`text-lg font-semibold ${valor ? "text-green-600" : "text-red-600"}`}>
                         {valor ? onLabel : offLabel}
                     </div>
                 </div>
             );
         }
 
-        // DIGITAL OUTPUT
         case "DO": {
             const [onDO, offDO] = (unidade || "LIGAR/DESLIGAR").split("/");
             return (
@@ -162,19 +167,13 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                     <div className="flex gap-2 justify-center">
                         <button
                             onClick={() => enviarComando(true)}
-                            className={`px-3 py-1 rounded-md ${valor
-                                    ? "bg-green-500 text-white"
-                                    : "bg-gray-200 text-gray-600"
-                                }`}
+                            className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"}`}
                         >
                             {onDO}
                         </button>
                         <button
                             onClick={() => enviarComando(false)}
-                            className={`px-3 py-1 rounded-md ${!valor
-                                    ? "bg-red-500 text-white"
-                                    : "bg-gray-200 text-gray-600"
-                                }`}
+                            className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"}`}
                         >
                             {offDO}
                         </button>
@@ -183,30 +182,22 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
-        // MULTIVARIABLE INPUT
         case "MI": {
             const estadosMI = (unidade || "").split("/");
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                    <div className="text-lg font-semibold text-gray-700">
-                        {estadosMI[valor] || "—"}
-                    </div>
+                    <div className="text-lg font-semibold text-gray-700">{estadosMI[valor] || "—"}</div>
                 </div>
             );
         }
 
-        // MULTIVARIABLE OUTPUT
         case "MO": {
             const estadosMO = (unidade || "").split("/");
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                    <select
-                        defaultValue={valor}
-                        onChange={(e) => enviarComando(parseInt(e.target.value))}
-                        className="border rounded-md p-1 text-gray-700"
-                    >
+                    <select defaultValue={valor} onChange={(e) => enviarComando(parseInt(e.target.value))} className="border rounded-md p-1 text-gray-700">
                         {estadosMO.map((op, i) => (
                             <option key={i} value={i}>
                                 {op}
@@ -217,7 +208,6 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
-        // Default (fallback)
         default:
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
