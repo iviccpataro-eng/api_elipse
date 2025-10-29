@@ -40,25 +40,30 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         }
     };
 
-    // 🧮 Gráfico semicircular com validação de faixa nominal
+    // 🧮 Componente gráfico semicircular corrigido
     const ArcGraph = ({ valor, nominal }) => {
-        if (isNaN(valor) || !nominal || nominal <= 0) return null;
+        if (!nominal || nominal <= 0) return null;
 
         const min = nominal * 0.8;
         const max = nominal * 1.2;
-
-        // Garante que a proporção visual nunca passe do máximo
-        const proporcao = Math.min(valor / max, 1);
-
         const dentroDoRange = valor >= min && valor <= max;
 
+        // 🔹 Normaliza o valor para um intervalo de 0 a 100 (%)
+        // onde 50% representa o valor nominal
+        const percent =
+            ((valor - min) / (max - min)) * 100; // 0% → mínimo, 100% → máximo
+
+        // 🔹 Garante que o valor fique dentro dos limites
+        const boundedPercent = Math.min(Math.max(percent, 0), 100);
+
+        // 🔹 Define a porção do gráfico que será preenchida
         const data = {
             datasets: [
                 {
-                    data: [proporcao, 1 - proporcao],
+                    data: [boundedPercent, 100 - boundedPercent],
                     backgroundColor: [
-                        dentroDoRange ? "#22c55e" : "#ef4444", // Verde dentro, vermelho fora
-                        "rgba(229,231,235,0.4)", // Cinza claro de fundo
+                        dentroDoRange ? "#22c55e" : "#ef4444",
+                        "rgba(229,231,235,0.3)",
                     ],
                     borderWidth: 0,
                     cutout: "75%",
@@ -71,7 +76,6 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         const options = {
             plugins: { legend: { display: false }, tooltip: { enabled: false } },
             responsive: true,
-            maintainAspectRatio: false,
         };
 
         return (
@@ -102,10 +106,10 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                     )}
                     <div
                         className={`text-2xl font-semibold ${temNominal
-                                ? dentroDoRange
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                : "text-green-600"
+                            ? dentroDoRange
+                                ? "text-green-600"
+                                : "text-red-600"
+                            : "text-green-600"
                             }`}
                     >
                         {valor} <span className="text-sm text-gray-500">{unidade}</span>
