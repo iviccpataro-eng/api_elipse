@@ -17,22 +17,31 @@ export default function EquipmentGrid({
         );
     }
 
+    // --- Função renderArcGraph aprimorada ---
+    // Mostra arco semicircular centrado no valor nominal
     const renderArcGraph = (valor, nominal) => {
         if (valor == null || nominal == null || isNaN(valor)) return null;
 
+        // Intervalo: ±20% do nominal
         const min = nominal * 0.8;
         const max = nominal * 1.2;
-        const dentroDoRange = valor >= min && valor <= max;
+
+        // Converte valor em porcentagem dentro do intervalo (0 = min, 50 = nominal, 100 = max)
+        const percent = ((valor - min) / (max - min)) * 100;
+        const capped = Math.max(0, Math.min(100, percent));
+
+        // Define cor do arco (verde se dentro do intervalo, vermelho fora)
+        const dentroFaixa = valor >= min && valor <= max;
 
         const data = {
             datasets: [
                 {
-                    data: [valor, max - valor],
-                    backgroundColor: [dentroDoRange ? "#16a34a" : "#dc2626", "#e5e7eb"],
+                    data: [capped, 100 - capped],
+                    backgroundColor: [dentroFaixa ? '#16a34a' : '#dc2626', '#e5e7eb'],
                     borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270,
-                    cutout: "75%",
+                    circumference: 180, // arco semicircular
+                    rotation: 270,      // começa embaixo
+                    cutout: '75%',      // espessura
                 },
             ],
         };
@@ -41,17 +50,25 @@ export default function EquipmentGrid({
             <div className="relative w-24 h-12 mx-auto mt-2">
                 <Doughnut
                     data={data}
-                    redraw
                     options={{
                         responsive: true,
                         maintainAspectRatio: false,
                         animation: false,
-                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false },
+                        },
                     }}
                 />
+                <div className="absolute inset-0 flex items-center justify-center -translate-y-1">
+                    <div className="text-xs text-gray-700 font-semibold">
+                        {valor.toFixed(2)}
+                    </div>
+                </div>
             </div>
         );
     };
+
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

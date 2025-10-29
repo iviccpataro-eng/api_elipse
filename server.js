@@ -94,22 +94,49 @@ function getByPath(root, pathStr) {
   return ref;
 }
 
+// --- Função normalizeBody aprimorada ---
+// Suporte a Base64 (Elipse), JSON direto e proteção de tamanho
 function normalizeBody(req) {
-  let payload = req.body;
-  if (payload && typeof payload.valor === "string") {
-    const b64 = payload.valor;
-    const buf = Buffer.from(b64, "base64");
-    let txt = buf.toString("utf8").replace(/^\uFEFF/, "");
+  const payload = req.body;
+
+  // Limite de tamanho extra (1MB)
+  const MAX_BYTES = 1 * 1024 * 1024;
+  const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+  if (contentLength > MAX_BYTES) {
+    throw new Error('Payload muito grande');
+  }
+
+  // Caso: body com campo "valor" (padrão Elipse codificado em Base64)
+  if (payload && typeof payload.valor === 'string') {
     try {
-      payload = JSON.parse(txt);
-    } catch (e) {
-      const err = new Error("Valor Base64 decodificado não é JSON válido.");
-      err.cause = e;
-      throw err;
+      const decoded = Buffer.from(payload.valor, 'base64').toString('utf8').replace(/^\uFEFF/, '');
+      const parsed = JSON.parse(decoded);
+      return parsed;
+    } catch (err) {
+      console.error('Erro ao decodificar Base64 do Elipse:', err);
+      throw new Error('Body Base64 inválido ou não é JSON válido.');
     }
   }
-  return payload;
+
+  // Caso: body já é objeto JSON
+  if (payload && typeof payload === 'object') {
+    return payload;
+  }
+
+  // Caso: body seja string JSON (sem Base64)
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload);
+    } catch (err) {
+      throw new Error('Body é string, mas não é JSON válido.');
+    }
+  }
+
+  // Caso não reconhecido
+  console.warn('Body vazio ou formato desconhecido recebido.');
+  return undefined;
 }
+
 
 // -------------------------
 // 4️⃣ AUTENTICAÇÃO
