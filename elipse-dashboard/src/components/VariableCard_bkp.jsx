@@ -40,19 +40,30 @@ export default function VariableCard({ variavel, equipamentoTag }) {
     }
   };
 
-  // 🔹 Gráfico semicircular
+  // 🧮 Componente gráfico semicircular corrigido
   const ArcGraph = ({ valor, nominal }) => {
+    if (!nominal || nominal <= 0) return null;
+
     const min = nominal * 0.8;
     const max = nominal * 1.2;
     const dentroDoRange = valor >= min && valor <= max;
 
+    // 🔹 Normaliza o valor para um intervalo de 0 a 100 (%)
+    // onde 50% representa o valor nominal
+    const percent =
+      ((valor - min) / (max - min)) * 100; // 0% → mínimo, 100% → máximo
+
+    // 🔹 Garante que o valor fique dentro dos limites
+    const boundedPercent = Math.min(Math.max(percent, 0), 100);
+
+    // 🔹 Define a porção do gráfico que será preenchida
     const data = {
       datasets: [
         {
-          data: [valor, max - valor],
+          data: [boundedPercent, 100 - boundedPercent],
           backgroundColor: [
             dentroDoRange ? "#22c55e" : "#ef4444",
-            "rgba(229,231,235,0.5)",
+            "rgba(229,231,235,0.3)",
           ],
           borderWidth: 0,
           cutout: "75%",
@@ -74,25 +85,40 @@ export default function VariableCard({ variavel, equipamentoTag }) {
     );
   };
 
-  // 🔸 Renderização de acordo com o tipo
+  // 🔸 Renderização conforme tipo
   switch (tipo) {
-    case "AI":
+    // ----- ANALOG INPUT -----
+    case "AI": {
+      const temNominal = nominal && !isNaN(nominal) && nominal > 0;
+      const min = temNominal ? nominal * 0.8 : null;
+      const max = temNominal ? nominal * 1.2 : null;
+      const dentroDoRange =
+        temNominal && valor >= min && valor <= max ? true : false;
+
       return (
         <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center text-center hover:shadow-md transition">
           <div className="text-gray-600 text-sm mb-2">{nome}</div>
-          {mostrar && nominal ? <ArcGraph valor={valor} nominal={nominal} /> : null}
+          {/* Só exibe gráfico se o nominal for válido */}
+          {temNominal && mostrar ? (
+            <ArcGraph valor={valor} nominal={nominal} />
+          ) : (
+            <div className="h-10 mb-2" /> // espaçamento consistente
+          )}
           <div
-            className={`text-2xl font-semibold ${nominal && (valor < nominal * 0.8 || valor > nominal * 1.2)
-              ? "text-red-600"
+            className={`text-2xl font-semibold ${temNominal
+              ? dentroDoRange
+                ? "text-green-600"
+                : "text-red-600"
               : "text-green-600"
               }`}
           >
-            {valor}{" "}
-            <span className="text-sm text-gray-500">{unidade}</span>
+            {valor} <span className="text-sm text-gray-500">{unidade}</span>
           </div>
         </div>
       );
+    }
 
+    // ----- ANALOG OUTPUT -----
     case "AO":
       return (
         <div className="bg-white rounded-2xl shadow p-4 text-center flex flex-col items-center hover:shadow-md transition">
@@ -107,6 +133,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         </div>
       );
 
+    // ----- DIGITAL INPUT -----
     case "DI": {
       const [onLabel, offLabel] = (unidade || "LIGADO/DESLIGADO").split("/");
       return (
@@ -122,6 +149,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
       );
     }
 
+    // ----- DIGITAL OUTPUT -----
     case "DO": {
       const [onDO, offDO] = (unidade || "LIGAR/DESLIGAR").split("/");
       return (
@@ -147,6 +175,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
       );
     }
 
+    // ----- MULTIVARIABLE INPUT -----
     case "MI": {
       const estadosMI = (unidade || "").split("/");
       return (
@@ -159,6 +188,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
       );
     }
 
+    // ----- MULTIVARIABLE OUTPUT -----
     case "MO": {
       const estadosMO = (unidade || "").split("/");
       return (

@@ -40,7 +40,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         }
     };
 
-    // 🧮 Componente gráfico semicircular corrigido
+    // 🧮 Gráfico semicircular (ArcGraph)
     const ArcGraph = ({ valor, nominal }) => {
         if (!nominal || nominal <= 0) return null;
 
@@ -48,21 +48,16 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         const max = nominal * 1.2;
         const dentroDoRange = valor >= min && valor <= max;
 
-        // 🔹 Normaliza o valor para um intervalo de 0 a 100 (%)
-        // onde 50% representa o valor nominal
-        const percent =
-            ((valor - min) / (max - min)) * 100; // 0% → mínimo, 100% → máximo
+        // Normaliza valor para 0–100 (0 = min, 50 = nominal, 100 = max)
+        const percent = ((valor - min) / (max - min)) * 100;
+        const bounded = Math.min(Math.max(percent, 0), 100);
 
-        // 🔹 Garante que o valor fique dentro dos limites
-        const boundedPercent = Math.min(Math.max(percent, 0), 100);
-
-        // 🔹 Define a porção do gráfico que será preenchida
         const data = {
             datasets: [
                 {
-                    data: [boundedPercent, 100 - boundedPercent],
+                    data: [bounded, 100 - bounded],
                     backgroundColor: [
-                        dentroDoRange ? "#22c55e" : "#ef4444",
+                        dentroDoRange ? "#16a34a" : "#dc2626",
                         "rgba(229,231,235,0.3)",
                     ],
                     borderWidth: 0,
@@ -74,51 +69,60 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         };
 
         const options = {
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
             responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false },
+            },
+            animation: false,
         };
 
         return (
-            <div className="w-20 h-10 mx-auto mb-2">
+            <div className="relative w-20 h-10 mx-auto mb-2">
                 <Doughnut data={data} options={options} />
+                <div className="absolute inset-0 flex items-center justify-center -translate-y-1">
+                    <div className="text-xs text-gray-700 font-semibold">
+                        {valor.toFixed(2)}
+                    </div>
+                </div>
             </div>
         );
     };
 
     // 🔸 Renderização conforme tipo
     switch (tipo) {
-        // ----- ANALOG INPUT -----
+        // ANALOG INPUT
         case "AI": {
             const temNominal = nominal && !isNaN(nominal) && nominal > 0;
             const min = temNominal ? nominal * 0.8 : null;
             const max = temNominal ? nominal * 1.2 : null;
-            const dentroDoRange =
-                temNominal && valor >= min && valor <= max ? true : false;
+            const dentroDoRange = temNominal && valor >= min && valor <= max;
 
             return (
                 <div className="bg-white rounded-2xl shadow p-4 flex flex-col items-center text-center hover:shadow-md transition">
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
-                    {/* Só exibe gráfico se o nominal for válido */}
                     {temNominal && mostrar ? (
                         <ArcGraph valor={valor} nominal={nominal} />
                     ) : (
-                        <div className="h-10 mb-2" /> // espaçamento consistente
+                        <div className="h-10 mb-2" />
                     )}
                     <div
                         className={`text-2xl font-semibold ${temNominal
-                            ? dentroDoRange
-                                ? "text-green-600"
-                                : "text-red-600"
-                            : "text-green-600"
+                                ? dentroDoRange
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                : "text-green-600"
                             }`}
                     >
-                        {valor} <span className="text-sm text-gray-500">{unidade}</span>
+                        {valor}{" "}
+                        <span className="text-sm text-gray-500">{unidade}</span>
                     </div>
                 </div>
             );
         }
 
-        // ----- ANALOG OUTPUT -----
+        // ANALOG OUTPUT
         case "AO":
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center flex flex-col items-center hover:shadow-md transition">
@@ -133,7 +137,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                 </div>
             );
 
-        // ----- DIGITAL INPUT -----
+        // DIGITAL INPUT
         case "DI": {
             const [onLabel, offLabel] = (unidade || "LIGADO/DESLIGADO").split("/");
             return (
@@ -149,7 +153,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
-        // ----- DIGITAL OUTPUT -----
+        // DIGITAL OUTPUT
         case "DO": {
             const [onDO, offDO] = (unidade || "LIGAR/DESLIGAR").split("/");
             return (
@@ -158,14 +162,18 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                     <div className="flex gap-2 justify-center">
                         <button
                             onClick={() => enviarComando(true)}
-                            className={`px-3 py-1 rounded-md ${valor ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
+                            className={`px-3 py-1 rounded-md ${valor
+                                    ? "bg-green-500 text-white"
+                                    : "bg-gray-200 text-gray-600"
                                 }`}
                         >
                             {onDO}
                         </button>
                         <button
                             onClick={() => enviarComando(false)}
-                            className={`px-3 py-1 rounded-md ${!valor ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                            className={`px-3 py-1 rounded-md ${!valor
+                                    ? "bg-red-500 text-white"
+                                    : "bg-gray-200 text-gray-600"
                                 }`}
                         >
                             {offDO}
@@ -175,7 +183,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
-        // ----- MULTIVARIABLE INPUT -----
+        // MULTIVARIABLE INPUT
         case "MI": {
             const estadosMI = (unidade || "").split("/");
             return (
@@ -188,7 +196,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
-        // ----- MULTIVARIABLE OUTPUT -----
+        // MULTIVARIABLE OUTPUT
         case "MO": {
             const estadosMO = (unidade || "").split("/");
             return (
@@ -209,6 +217,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             );
         }
 
+        // Default (fallback)
         default:
             return (
                 <div className="bg-white rounded-2xl shadow p-4 text-center hover:shadow-md transition">
