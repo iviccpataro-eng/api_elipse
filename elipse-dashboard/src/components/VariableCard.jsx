@@ -42,33 +42,37 @@ export default function VariableCard({ variavel, equipamentoTag }) {
         }
     };
 
-    // Componente do gráfico semicircular
-    const ArcGraph = ({ valor, nominal }) => {
+    // 🧮 Gráfico semicircular aprimorado (com correção de escala e visibilidade)
+    const ArcGraph = ({ valor, nominal, mostrar }) => {
+        // não renderiza se for explicitamente falso
+        if (!mostrar) return null;
+
+        // se nominal ausente ou <=0 → não mostra arco
         if (!nominal || nominal <= 0 || typeof valor === "undefined") {
             return null;
         }
 
-        // intervalo ±20%
         const min = nominal * 0.8;
         const max = nominal * 1.2;
+        const dentro = valor >= min && valor <= max;
 
-        // normaliza (0..100)
+        // percentual normalizado
         const percent = ((valor - min) / (max - min)) * 100;
         const bounded = Math.min(Math.max(percent, 0), 100);
-
-        // cor: verde dentro da faixa, vermelho fora
-        const dentro = valor >= min && valor <= max;
-        const mainColor = dentro ? "#16a34a" : "#ef4444";
 
         const data = {
             datasets: [
                 {
-                    data: [bounded, 100 - bounded],
-                    backgroundColor: [mainColor, "rgba(229,231,235,0.45)"],
+                    // inversão resolve arco invertido
+                    data: [100 - bounded, bounded],
+                    backgroundColor: [
+                        "rgba(229,231,235,0.45)",
+                        dentro ? "#16a34a" : "#ef4444",
+                    ],
                     borderWidth: 0,
-                    cutout: "72%",       // espessura do arco
-                    circumference: 180,  // semicirculo
-                    rotation: 270,       // inicia à esquerda, ajusta posição
+                    cutout: "72%",
+                    circumference: 180,
+                    rotation: 270,
                 },
             ],
         };
@@ -77,29 +81,22 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             responsive: true,
             maintainAspectRatio: false,
             animation: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false },
-            },
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
         };
 
         return (
             <div className="relative w-28 h-14 mx-auto mb-2">
-                {/* Se quiser exibir o nominal pequeno acima do arco, mantemos este span
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-xs text-gray-500">
-                    {nominal.toFixed(2)}
-                </div>*/}
-
                 <Doughnut data={data} options={options} />
-
-                {/* Overlay central com valor
                 <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-1">
-                    <div className="text-sm font-semibold text-gray-700">{valor.toFixed(2)}</div>
-                    <div className="text-xs text-gray-400 -mt-1">{unidade}</div>
-                </div> */}
+                    <div className="text-sm font-semibold text-gray-700">
+                        {valor.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-400 -mt-1">({nominal})</div>
+                </div>
             </div>
         );
     };
+
 
     // Render por tipo
     switch (tipo) {
