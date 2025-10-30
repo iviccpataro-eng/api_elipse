@@ -6,7 +6,6 @@ import {
   PolarAngleAxis,
 } from "recharts";
 
-// Utilitário simples para conversão numérica
 function toNumberMaybe(v) {
   const n = parseFloat(v);
   return isNaN(n) ? undefined : n;
@@ -15,16 +14,19 @@ function toNumberMaybe(v) {
 export default function VariableCard({ variavel, equipamentoTag }) {
   if (!Array.isArray(variavel) || variavel.length < 2) return null;
 
-  // Estrutura padrão das variáveis Elipse
+  // Estrutura padrão: [tipo, nome, valor, unidade, hasGraph, nominal]
   const [tipo, nome, valorInicial, unidade, hasGraphRaw, nominalRaw] = variavel;
   const [valor, setValor] = useState(parseFloat(valorInicial));
-  const hasGraph = hasGraphRaw === true || hasGraphRaw === "true";
+  const hasGraph =
+    hasGraphRaw === true ||
+    hasGraphRaw === "true" ||
+    hasGraphRaw === 1 ||
+    hasGraphRaw === "1";
   const nominal = toNumberMaybe(nominalRaw);
 
   const API_BASE =
     import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-  // Envia comandos ao backend (para AO, DO, MO)
   const enviarComando = async (novoValor) => {
     const token = localStorage.getItem("authToken");
     try {
@@ -48,10 +50,11 @@ export default function VariableCard({ variavel, equipamentoTag }) {
     }
   };
 
-  // Função para renderizar o arco com Recharts
+  // 🧮 Renderiza o gráfico somente se houver nominal e hasGraph = true
   const ArcGraph = ({ nome, valor, unidade, nominal }) => {
     const valNum = toNumberMaybe(valor);
     const nomNum = toNumberMaybe(nominal);
+
     if (!hasGraph || !nomNum || valNum === undefined) return null;
 
     const min = nomNum * 0.9;
@@ -63,7 +66,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
     if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316"; // laranja
     if (valNum < min || valNum > max) fill = "#ef4444"; // vermelho
 
-    const chartData = [{ name: nome, value: percent, fill }];
+    const chartData = [{ name, value: percent, fill }];
 
     return (
       <div className="flex flex-col items-center">
@@ -77,34 +80,38 @@ export default function VariableCard({ variavel, equipamentoTag }) {
           data={chartData}
         >
           <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-          <RadialBar
-            dataKey="value"
-            cornerRadius={10}
-            background
-            clockWise
-          />
+          <RadialBar dataKey="value" cornerRadius={10} background clockWise />
         </RadialBarChart>
 
         <div className="text-xl font-semibold text-gray-800 -mt-4">
           {valor} {unidade}
         </div>
-        <div className="text-sm text-gray-500">
-          Nominal: {nomNum}
-          {unidade}
-        </div>
+        {nomNum && (
+          <div className="text-sm text-gray-500">
+            Nominal: {nomNum}
+            {unidade}
+          </div>
+        )}
       </div>
     );
   };
 
-  // Renderização conforme o tipo da variável
+  // 🧭 Renderização conforme tipo
   switch (tipo) {
     // ---------------- ANALOG INPUT ----------------
     case "AI":
       return (
         <div className="rounded-xl border bg-white shadow p-4 text-center hover:shadow-md transition">
           <div className="font-medium mb-2 text-gray-700">{nome}</div>
+
+          {/* 🔹 Só renderiza gráfico se hasGraph === true */}
           {hasGraph && nominal ? (
-            <ArcGraph nome={nome} valor={valor} unidade={unidade} nominal={nominal} />
+            <ArcGraph
+              nome={nome}
+              valor={valor}
+              unidade={unidade}
+              nominal={nominal}
+            />
           ) : (
             <>
               <div className="text-2xl font-semibold text-gray-800">
@@ -219,7 +226,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
       );
     }
 
-    // ---------------- DEFAULT (FALLBACK) ----------------
+    // ---------------- DEFAULT ----------------
     default:
       return (
         <div className="rounded-xl border bg-white shadow p-4 text-center hover:shadow-md transition">
