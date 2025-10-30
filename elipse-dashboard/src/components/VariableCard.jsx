@@ -85,10 +85,10 @@ export default function VariableCard({ variavel, equipamentoTag }) {
 
         return (
             <div className="relative w-28 h-14 mx-auto mb-2">
-                {/* Se quiser exibir o nominal pequeno acima do arco, mantemos este span */}
+                {/* Se quiser exibir o nominal pequeno acima do arco, mantemos este span
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-xs text-gray-500">
                     {nominal.toFixed(2)}
-                </div>
+                </div>*/}
 
                 <Doughnut data={data} options={options} />
 
