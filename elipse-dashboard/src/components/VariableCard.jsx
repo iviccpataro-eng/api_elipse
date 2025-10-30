@@ -92,11 +92,11 @@ export default function VariableCard({ variavel, equipamentoTag }) {
 
                 <Doughnut data={data} options={options} />
 
-                {/* Overlay central com valor */}
+                {/* Overlay central com valor
                 <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-1">
                     <div className="text-sm font-semibold text-gray-700">{valor.toFixed(2)}</div>
                     <div className="text-xs text-gray-400 -mt-1">{unidade}</div>
-                </div>
+                </div> */}
             </div>
         );
     };
