@@ -8,7 +8,9 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 export default function VariableCard({ variavel, equipamentoTag }) {
     if (!Array.isArray(variavel) || variavel.length < 2) return null;
 
-    const [tipo, nome, valorInicialRaw, unidade, mostrar, nominalRaw] = variavel;
+    const [tipo, nome, valorInicialRaw, unidade, hasGraphRaw, nominalRaw] = variavel;
+    const mostrar = hasGraphRaw === true || hasGraphRaw === "true";
+
     // Garantir números
     const valorInicial = isNaN(parseFloat(valorInicialRaw)) ? 0 : parseFloat(valorInicialRaw);
     const nominal = isNaN(parseFloat(nominalRaw)) ? null : parseFloat(nominalRaw);
@@ -111,7 +113,7 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                     <div className="text-gray-600 text-sm mb-2">{nome}</div>
 
                     {temNominal && mostrar ? (
-                        <ArcGraph valor={valor} nominal={nominal} />
+                        <ArcGraph valor={valor} nominal={nominal} mostrar={mostrar} />
                     ) : (
                         <div className="h-14 mb-2" />
                     )}
