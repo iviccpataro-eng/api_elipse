@@ -716,48 +716,88 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     const data = [];
 
     for (const [nome, valor] of Object.entries(grandezas)) {
+          // 3️⃣ Normalização das grandezas
+    const grandezas = equipamento.grandezas || {};
+    const unidades = equipamento.unidades || {};
+    const nominais = equipamento.nominais || {}; // adiciona suporte a valores nominais
+    const exibirGrafico = equipamento.graficos || {}; // se existir estrutura de controle
+
+    const data = [];
+
+    for (const [nome, valor] of Object.entries(grandezas)) {
       const unidade = unidades?.[nome] || "";
-      let tipo = "AI"; // padrão (analógica de entrada)
+      const nominal = nominais?.[nome] ?? null;
+      const deveMostrar = exibirGrafico?.[nome] ?? null;
+      let tipo = "AI";
       let mostrarGrafico = false;
-      let referencia = null;
 
-      // Detecta o tipo pelo prefixo ou metadado
-      // Exemplo: nome pode vir com [AI], [DI], etc.
+      // Detecta tipo pelo prefixo ou padrão de nomenclatura
       const matchTipo = nome.match(/^(AI|AO|DI|DO|MI|MO)\s*[:\-]/i);
-      if (matchTipo) {
-        tipo = matchTipo[1].toUpperCase();
-      }
+      if (matchTipo) tipo = matchTipo[1].toUpperCase();
 
-      // Simulação de dados padrão (poderá ser sobrescrito pelo Elipse)
       switch (tipo) {
         case "AI":
-        case "AO":
-          mostrarGrafico = true;
-          referencia = equipamento?.nominais?.[nome] || 220;
-          data.push([tipo, nome.replace(/^(AI|AO)\s*[:\-]/i, "").trim(), valor, unidade, mostrarGrafico, referencia]);
+        case "AO": {
+          // Se o Elipse enviar flag explícita, respeita ela
+          if (deveMostrar !== null) mostrarGrafico = !!deveMostrar;
+          // Se não houver flag, decide pelo nome
+          else mostrarGrafico = !/consumo|energia|demanda/i.test(nome);
+          // Usa nominal individual se houver, senão faz estimativa
+          const referencia =
+            nominal ??
+            (/corrente/i.test(nome)
+              ? 40
+              : /potênci/i.test(nome)
+              ? 10000
+              : /frequênc/i.test(nome)
+              ? 60
+              : 220);
+          data.push([
+            tipo,
+            nome.replace(/^(AI|AO)\s*[:\-]/i, "").trim(),
+            valor,
+            unidade,
+            mostrarGrafico,
+            referencia,
+          ]);
           break;
+        }
 
         case "DI":
-        case "DO":
-          // Estrutura: [tipo, nome, valor, "LIGADO/DESLIGADO", showIcon, ref]
-          referencia = true;
-          data.push([tipo, nome.replace(/^(DI|DO)\s*[:\-]/i, "").trim(), !!valor, "LIGADO/DESLIGADO", true, referencia]);
+        case "DO": {
+          const estados = "LIGADO/DESLIGADO";
+          data.push([
+            tipo,
+            nome.replace(/^(DI|DO)\s*[:\-]/i, "").trim(),
+            !!valor,
+            estados,
+            true,
+            1,
+          ]);
           break;
+        }
 
         case "MI":
-        case "MO":
-          // Estrutura: [tipo, nome, valor, "ESTADO1/ESTADO2/...", showIcon, ref]
+        case "MO": {
           const estados =
             equipamento?.estados?.[nome] ||
             "DESLIGADO/OPERANDO/LIGADO COM ALARME/DESLIGADO POR ALARME/FALHA CRÍTICA";
-          referencia = 1;
-          data.push([tipo, nome.replace(/^(MI|MO)\s*[:\-]/i, "").trim(), valor ?? 0, estados, true, referencia]);
+          data.push([
+            tipo,
+            nome.replace(/^(MI|MO)\s*[:\-]/i, "").trim(),
+            valor ?? 0,
+            estados,
+            true,
+            1,
+          ]);
           break;
+        }
 
         default:
-          data.push(["AI", nome, valor, unidade, false, 0]);
+          data.push(["AI", nome, valor, unidade, false, null]);
           break;
       }
+    }
     }
 
     return res.json({
