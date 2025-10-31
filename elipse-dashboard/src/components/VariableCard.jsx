@@ -77,12 +77,12 @@ export default function VariableCard({ variavel, equipamentoTag }) {
                 <div className="text-2xl font-semibold">
                     {valor} {unidade}
                 </div>
-                {nomNum && (
+                {/*{nomNum && (
                     <div className="mt-2 text-sm text-gray-600">
                         Nominal: {nomNum}
                         {unidade}
                     </div>
-                )}
+                )}*/}
             </div>
         );
     }
