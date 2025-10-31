@@ -52,31 +52,22 @@ export default function VariableCard({ variavel }) {
             if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
             if (valNum < min || valNum > max) fill = "#ef4444";
 
-            const chartData = [{ name: nome, value: percent, fill }];
+            const mainArc = [{ name: nome, value: percent, fill }];
 
-            // Gráfico fantasma — Faixas cinzas ao fundo
-            const ghostData = [
-                { name: "Zona Crítica", value: 10, fill: "#e5e7eb" }, // cinza claro
-                { name: "Zona Alerta", value: 10, fill: "#d1d5db" }, // cinza mais escuro
-                { name: "Zona OK", value: 80, fill: "#9ca3af" },
+            // 🎨 Arco fantasma segmentado — 3 faixas de cinza sobrepostas
+            const ghostArcs = [
+                { name: "Zona Inferior", value: 10, fill: "#f3f4f6" },
+                { name: "Zona Estável", value: 80, fill: "#d1d5db" },
+                { name: "Zona Superior", value: 10, fill: "#f3f4f6" },
             ];
 
             return (
                 <div className="rounded-xl border bg-white shadow p-4">
                     <div className="font-medium mb-2 text-gray-800">{nome}</div>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center relative">
                         {hasGraph && tipo === "AI" && (
-                            <RadialBarChart
-                                width={180}
-                                height={120}
-                                innerRadius="70%"
-                                outerRadius="100%"
-                                startAngle={180}
-                                endAngle={0}
-                                data={ghostData}
-                            >
-                                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                                <RadialBar dataKey="value" background clockWise />
+                            <div className="relative">
+                                {/* Arco fantasma no fundo */}
                                 <RadialBarChart
                                     width={180}
                                     height={120}
@@ -84,12 +75,28 @@ export default function VariableCard({ variavel }) {
                                     outerRadius="100%"
                                     startAngle={180}
                                     endAngle={0}
-                                    data={chartData}
+                                    data={ghostArcs}
+                                    className="absolute top-0 left-0 opacity-90"
+                                >
+                                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                                    <RadialBar dataKey="value" cornerRadius={8} clockWise />
+                                </RadialBarChart>
+
+                                {/* Arco principal sobreposto */}
+                                <RadialBarChart
+                                    width={180}
+                                    height={120}
+                                    innerRadius="70%"
+                                    outerRadius="100%"
+                                    startAngle={180}
+                                    endAngle={0}
+                                    data={mainArc}
+                                    className="relative z-10"
                                 >
                                     <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                                     <RadialBar dataKey="value" cornerRadius={10} clockWise />
                                 </RadialBarChart>
-                            </RadialBarChart>
+                            </div>
                         )}
 
                         {tipo === "AO" && (
@@ -156,16 +163,16 @@ export default function VariableCard({ variavel }) {
                     <div className="flex justify-center gap-2">
                         <button
                             className={`px-4 py-2 rounded-md border ${!valor
-                                    ? "bg-gray-200 text-gray-700"
-                                    : "bg-white text-gray-500 hover:bg-gray-100"
+                                ? "bg-gray-200 text-gray-700"
+                                : "bg-white text-gray-500 hover:bg-gray-100"
                                 }`}
                         >
                             {offLabel || "OFF"}
                         </button>
                         <button
                             className={`px-4 py-2 rounded-md border ${valor
-                                    ? "bg-red-500 text-white"
-                                    : "bg-white text-gray-500 hover:bg-gray-100"
+                                ? "bg-red-500 text-white"
+                                : "bg-white text-gray-500 hover:bg-gray-100"
                                 }`}
                         >
                             {onLabel || "ON"}
