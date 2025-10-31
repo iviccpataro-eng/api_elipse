@@ -52,70 +52,65 @@ export default function VariableCard({ variavel }) {
             if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
             if (valNum < min || valNum > max) fill = "#ef4444";
 
+            // Dados principais
             const mainArc = [{ name: nome, value: percent, fill }];
 
-            // 🎨 Arco fantasma segmentado — 3 faixas de cinza sobrepostas
-            const ghostArcs = [
+            // Ghost Arc base — tons em gradiente
+            const ghostArc = [
                 { name: "Zona Inferior", value: 10, fill: "#f3f4f6" },
-                { name: "Zona Estável", value: 80, fill: "#d1d5db" },
+                { name: "Zona Estável", value: 80, fill: "#e5e7eb" },
                 { name: "Zona Superior", value: 10, fill: "#f3f4f6" },
             ];
 
             return (
                 <div className="rounded-xl border bg-white shadow p-4">
                     <div className="font-medium mb-2 text-gray-800">{nome}</div>
-                    <div className="flex justify-center relative">
-                        {hasGraph && tipo === "AI" && (
-                            <div className="relative">
-                                {/* Arco fantasma no fundo */}
-                                <RadialBarChart
-                                    width={180}
-                                    height={120}
-                                    innerRadius="70%"
-                                    outerRadius="100%"
-                                    startAngle={180}
-                                    endAngle={0}
-                                    data={ghostArcs}
-                                    className="absolute top-0 left-0 opacity-90"
-                                >
-                                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                                    <RadialBar dataKey="value" cornerRadius={8} clockWise />
-                                </RadialBarChart>
 
-                                {/* Arco principal sobreposto */}
-                                <RadialBarChart
-                                    width={180}
-                                    height={120}
-                                    innerRadius="70%"
-                                    outerRadius="100%"
-                                    startAngle={180}
-                                    endAngle={0}
-                                    data={mainArc}
-                                    className="relative z-10"
-                                >
-                                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                                    <RadialBar dataKey="value" cornerRadius={10} clockWise />
-                                </RadialBarChart>
-                            </div>
-                        )}
-
-                        {tipo === "AO" && (
-                            <div className="flex flex-col w-full">
-                                <input
-                                    type="number"
-                                    className="w-full border rounded-md p-2 text-center text-lg"
-                                    value={value}
-                                    onChange={(e) => setValue(e.target.value)}
-                                    min={nominalMin ?? 0}
-                                    max={nominalMax ?? 100}
+                    <div className="flex justify-center relative w-[180px] h-[120px] mx-auto">
+                        {/* 🎨 Arco fantasma fixo (camada inferior) */}
+                        <div className="absolute inset-0 opacity-90">
+                            <RadialBarChart
+                                width={180}
+                                height={120}
+                                innerRadius="70%"
+                                outerRadius="100%"
+                                startAngle={180}
+                                endAngle={0}
+                                data={ghostArc}
+                            >
+                                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                                <RadialBar
+                                    dataKey="value"
+                                    cornerRadius={8}
+                                    clockWise
+                                    background={false}
                                 />
-                                <p className="text-xs text-gray-400 mt-1 text-center">
-                                    Variação permitida:{" "}
-                                    {nominalRaw ? nominalRaw : `0 - ${nominalMax ?? "?"}`}
-                                </p>
-                            </div>
-                        )}
+                            </RadialBarChart>
+                        </div>
+
+                        {/* 🟢 Arco principal (camada superior) */}
+                        <div className="absolute inset-0 z-10">
+                            <RadialBarChart
+                                width={180}
+                                height={120}
+                                innerRadius="70%"
+                                outerRadius="100%"
+                                startAngle={180}
+                                endAngle={0}
+                                data={mainArc}
+                            >
+                                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                                <RadialBar
+                                    dataKey="value"
+                                    cornerRadius={10}
+                                    clockWise
+                                    background={false}
+                                />
+                            </RadialBarChart>
+                        </div>
                     </div>
+
+                    {/* 🔢 Valor numérico */}
                     <div className="text-center mt-2">
                         <div className="text-xl font-semibold">
                             {valor}
