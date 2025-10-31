@@ -5,7 +5,6 @@ import {
     RadialBar,
     PolarAngleAxis,
 } from "recharts";
-import { Button } from "@/components/ui/button";
 
 export default function VariableCard({ variavel, equipamentoTag }) {
     if (!variavel || !Array.isArray(variavel)) return null;
@@ -154,18 +153,19 @@ export default function VariableCard({ variavel, equipamentoTag }) {
             <div className="rounded-xl border bg-white shadow p-4 text-center">
                 <div className="font-medium mb-3">{nome}</div>
                 <div className="flex justify-center gap-3">
-                    <Button
-                        variant={valor ? "outline" : "destructive"}
-                        className={`px-4 ${valor ? "border-gray-300" : "bg-red-500 text-white"}`}
+                    <button
+                        className={`px-4 py-2 rounded-md ${valor ? "bg-gray-200 text-gray-700" : "bg-red-500 text-white"
+                            }`}
                     >
                         {labelOff}
-                    </Button>
-                    <Button
-                        variant={!valor ? "outline" : "destructive"}
-                        className={`px-4 ${!valor ? "border-gray-300" : "bg-green-600 text-white"}`}
+                    </button>
+                    <button
+                        className={`px-4 py-2 rounded-md ${!valor ? "bg-gray-200 text-gray-700" : "bg-green-600 text-white"
+                            }`}
                     >
                         {labelOn}
-                    </Button>
+                    </button>
+
                 </div>
             </div>
         );
