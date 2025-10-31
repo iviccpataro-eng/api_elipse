@@ -81,8 +81,36 @@ export default function VariableCard({ variavel }) {
                                     strokeLinecap="round"
                                 />
                             </svg>
-
                             {/* 🟢 Arco dinâmico */}
+                            <div className="absolute inset-0 z-10">
+                                <RadialBarChart
+                                    width={180}
+                                    height={120}
+                                    // 1. ALINHANDO OS CENTROS (cx, cy)
+                                    cx={90}
+                                    cy={95}
+
+                                    // 2. ALINHANDO OS RAIOS (pixels, não %)
+                                    innerRadius={49}
+                                    outerRadius={61}
+
+                                    startAngle={180}
+                                    endAngle={0}
+                                    data={[{ nome, valor: percent, fill }]}
+                                >
+                                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                                    <RadialBar
+                                        dataKey="valor"
+                                        // 3. (Opcional) Ajuste para
+                                        //    corresponder perfeitamente ao 
+                                        //    strokeLinecap="round" do SVG
+                                        cornerRadius={6}
+                                        clockWise
+                                        background={false}
+                                    />
+                                </RadialBarChart>
+                            </div>
+                            {/* {/* 🟢 Arco dinâmico 
                             <div className="absolute inset-0 z-10">
                                 <RadialBarChart
                                     width={180}
@@ -101,7 +129,7 @@ export default function VariableCard({ variavel }) {
                                         background={false}
                                     />
                                 </RadialBarChart>
-                            </div>
+                            </div>*/}
                         </div>
                     )}
 
