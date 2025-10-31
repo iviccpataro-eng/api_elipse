@@ -4,7 +4,6 @@ import {
     RadialBarChart,
     RadialBar,
     PolarAngleAxis,
-    Tooltip,
 } from "recharts";
 
 // Função auxiliar
@@ -14,11 +13,11 @@ function toNumberMaybe(value) {
 }
 
 export default function VariableCard({ variavel }) {
-    const [value, setValue] = useState(variavel?.[2] ?? "");
-    const [editing, setEditing] = useState(false);
-
     if (!Array.isArray(variavel)) return null;
+
     const [tipo, nome, valor, unidade, hasGraph, nominalRaw] = variavel;
+    const [value, setValue] = useState(valor ?? "");
+    const [editing, setEditing] = useState(false);
 
     // NOMINAL pode ser número ou string com faixa "X/Y"
     let nominalMin = null;
@@ -51,27 +50,26 @@ export default function VariableCard({ variavel }) {
             if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
             if (valNum < min || valNum > max) fill = "#ef4444";
 
-            // ✅ Corrigido: usar o "hasGraph" recebido no array d
             const showGraph = hasGraph !== false;
 
             return (
-                <div key={idx} className="rounded-xl border bg-white shadow p-4">
-                    <div className="font-medium mb-2 text-gray-800">{name}</div>
+                <div className="rounded-xl border bg-white shadow p-4">
+                    <div className="font-medium mb-2 text-gray-800">{nome}</div>
 
                     {showGraph && (
                         <div className="flex justify-center relative w-[180px] h-[120px] mx-auto">
-                            {/* 🎨 Arco fantasma contínuo */}
+                            {/* 🎨 Arco fantasma (base cinza contínua) */}
                             <svg
                                 width="180"
                                 height="120"
                                 viewBox="0 0 180 120"
-                                className="absolute inset-0 opacity-60"
+                                className="absolute inset-0 opacity-70"
                             >
                                 <defs>
                                     <linearGradient id="ghostGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stopColor="#f4f4f5" />
-                                        <stop offset="50%" stopColor="#e5e7eb" />
-                                        <stop offset="100%" stopColor="#f4f4f5" />
+                                        <stop offset="0%" stopColor="#f3f4f6" />
+                                        <stop offset="50%" stopColor="#d1d5db" />
+                                        <stop offset="100%" stopColor="#f3f4f6" />
                                     </linearGradient>
                                 </defs>
                                 <path
@@ -83,7 +81,7 @@ export default function VariableCard({ variavel }) {
                                 />
                             </svg>
 
-                            {/* 🟢 Arco dinâmico */}
+                            {/* 🟢 Arco dinâmico sobreposto */}
                             <div className="absolute inset-0 z-10">
                                 <RadialBarChart
                                     width={180}
@@ -92,11 +90,11 @@ export default function VariableCard({ variavel }) {
                                     outerRadius="100%"
                                     startAngle={180}
                                     endAngle={0}
-                                    data={[{ name, value: percent, fill }]}
+                                    data={[{ nome, valor: percent, fill }]}
                                 >
                                     <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                                     <RadialBar
-                                        dataKey="value"
+                                        dataKey="valor"
                                         cornerRadius={10}
                                         clockWise
                                         background={false}
@@ -109,13 +107,13 @@ export default function VariableCard({ variavel }) {
                     {/* 🔢 Valor numérico */}
                     <div className="text-center mt-2">
                         <div className="text-xl font-semibold">
-                            {value}
-                            {unit ? ` ${unit}` : ""}
+                            {valor}
+                            {unidade ? ` ${unidade}` : ""}
                         </div>
                         {nomNum && (
                             <div className="text-sm text-gray-500">
                                 Nominal: {nomNum}
-                                {unit}
+                                {unidade}
                             </div>
                         )}
                     </div>
@@ -126,10 +124,35 @@ export default function VariableCard({ variavel }) {
         // =======================================================================
         // 🔹 AO — Variáveis analógicas de Saída
         // =======================================================================
-        //case "AO":
-        //    {
+        case "AO": {
+            const [min, max] =
+                typeof nominalRaw === "string" && nominalRaw.includes("/")
+                    ? nominalRaw.split("/").map(toNumberMaybe)
+                    : [0, nomNum || 100];
 
-        //    }
+            const handleChange = (e) => {
+                const val = parseFloat(e.target.value);
+                setValue(isNaN(val) ? "" : val);
+            };
+
+            return (
+                <div className="rounded-xl border bg-white shadow p-4 text-center">
+                    <div className="font-medium mb-2">{nome}</div>
+                    <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={value}
+                        onChange={handleChange}
+                        className="border rounded-md p-2 w-full text-center"
+                    />
+                    <div className="text-sm text-gray-500 mt-1">
+                        Faixa: {min} - {max} {unidade || ""}
+                    </div>
+                </div>
+            );
+        }
+
         // =======================================================================
         // 🔸 DI — Variáveis digitais de entrada
         // =======================================================================
