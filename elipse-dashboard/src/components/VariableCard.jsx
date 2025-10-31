@@ -58,35 +58,36 @@ export default function VariableCard({ variavel }) {
 
                     {showGraph && (
                         <div className="flex justify-center relative w-[180px] h-[120px] mx-auto">
-                            {/* 🎨 Arco fantasma (base cinza contínua) */}
+                            {/* 🎨 Arco fantasma perfeitamente alinhado */}
                             <svg
                                 width="180"
                                 height="120"
                                 viewBox="0 0 180 120"
-                                className="absolute inset-0 opacity-70"
+                                className="absolute inset-0 opacity-60"
                             >
                                 <defs>
                                     <linearGradient id="ghostGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stopColor="#f3f4f6" />
+                                        <stop offset="0%" stopColor="#e5e7eb" />
                                         <stop offset="50%" stopColor="#d1d5db" />
-                                        <stop offset="100%" stopColor="#f3f4f6" />
+                                        <stop offset="100%" stopColor="#e5e7eb" />
                                     </linearGradient>
                                 </defs>
+                                {/* ⚙️ Trajeto exato do arco do Recharts (mesmo centro e raio) */}
                                 <path
-                                    d="M30,100 A60,60 0 0,1 150,100"
+                                    d="M45,100 A45,45 0 0,1 135,100"
                                     fill="none"
                                     stroke="url(#ghostGradient)"
-                                    strokeWidth="14"
+                                    strokeWidth="12"
                                     strokeLinecap="round"
                                 />
                             </svg>
 
-                            {/* 🟢 Arco dinâmico sobreposto */}
+                            {/* 🟢 Arco dinâmico perfeitamente sobreposto */}
                             <div className="absolute inset-0 z-10">
                                 <RadialBarChart
                                     width={180}
                                     height={120}
-                                    innerRadius="70%"
+                                    innerRadius="75%"
                                     outerRadius="100%"
                                     startAngle={180}
                                     endAngle={0}
