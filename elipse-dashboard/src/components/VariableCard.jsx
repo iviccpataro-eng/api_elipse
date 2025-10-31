@@ -110,26 +110,6 @@ export default function VariableCard({ variavel }) {
                                     />
                                 </RadialBarChart>
                             </div>
-                            {/* {/* 🟢 Arco dinâmico 
-                            <div className="absolute inset-0 z-10">
-                                <RadialBarChart
-                                    width={180}
-                                    height={120}
-                                    innerRadius="70%"
-                                    outerRadius="100%"
-                                    startAngle={180}
-                                    endAngle={0}
-                                    data={[{ nome, valor: percent, fill }]}
-                                >
-                                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                                    <RadialBar
-                                        dataKey="valor"
-                                        cornerRadius={10}
-                                        clockWise
-                                        background={false}
-                                    />
-                                </RadialBarChart>
-                            </div>*/}
                         </div>
                     )}
 
