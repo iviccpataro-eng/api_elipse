@@ -58,7 +58,7 @@ export default function VariableCard({ variavel }) {
 
                     {showGraph && (
                         <div className="flex justify-center relative w-[180px] h-[120px] mx-auto">
-                            {/* 🎨 Arco fantasma perfeitamente alinhado */}
+                            {/* 🎨 Arco fantasma perfeitamente sobreposto */}
                             <svg
                                 width="180"
                                 height="120"
@@ -67,14 +67,14 @@ export default function VariableCard({ variavel }) {
                             >
                                 <defs>
                                     <linearGradient id="ghostGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stopColor="#e5e7eb" />
+                                        <stop offset="0%" stopColor="#f3f4f6" />
                                         <stop offset="50%" stopColor="#d1d5db" />
-                                        <stop offset="100%" stopColor="#e5e7eb" />
+                                        <stop offset="100%" stopColor="#f3f4f6" />
                                     </linearGradient>
                                 </defs>
-                                {/* ⚙️ Trajeto exato do arco do Recharts (mesmo centro e raio) */}
+                                {/* ⚙️ Raio e centro ajustados ao RadialBarChart */}
                                 <path
-                                    d="M45,100 A45,45 0 0,1 135,100"
+                                    d="M35,95 A55,55 0 0,1 145,95"
                                     fill="none"
                                     stroke="url(#ghostGradient)"
                                     strokeWidth="12"
@@ -82,12 +82,12 @@ export default function VariableCard({ variavel }) {
                                 />
                             </svg>
 
-                            {/* 🟢 Arco dinâmico perfeitamente sobreposto */}
+                            {/* 🟢 Arco dinâmico */}
                             <div className="absolute inset-0 z-10">
                                 <RadialBarChart
                                     width={180}
                                     height={120}
-                                    innerRadius="75%"
+                                    innerRadius="70%"
                                     outerRadius="100%"
                                     startAngle={180}
                                     endAngle={0}
