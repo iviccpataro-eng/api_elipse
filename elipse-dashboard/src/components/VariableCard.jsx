@@ -51,16 +51,16 @@ export default function VariableCard({ variavel }) {
             if (valNum < nomNum * 0.95 || valNum > nomNum * 1.05) fill = "#f97316";
             if (valNum < min || valNum > max) fill = "#ef4444";
 
-            // Apenas mostra gráfico se hasGraph = true
-            const showGraph = variable.hasGraph !== false;
+            // ✅ Corrigido: usar o "hasGraph" recebido no array d
+            const showGraph = hasGraph !== false;
 
             return (
-                <div className="rounded-xl border bg-white shadow p-4">
-                    <div className="font-medium mb-2 text-gray-800">{nome}</div>
+                <div key={idx} className="rounded-xl border bg-white shadow p-4">
+                    <div className="font-medium mb-2 text-gray-800">{name}</div>
 
                     {showGraph && (
                         <div className="flex justify-center relative w-[180px] h-[120px] mx-auto">
-                            {/* 🎨 Arco fantasma único (fundo cinza com gradiente radial) */}
+                            {/* 🎨 Arco fantasma contínuo */}
                             <svg
                                 width="180"
                                 height="120"
@@ -92,7 +92,7 @@ export default function VariableCard({ variavel }) {
                                     outerRadius="100%"
                                     startAngle={180}
                                     endAngle={0}
-                                    data={[{ name: nome, value: percent, fill }]}
+                                    data={[{ name, value: percent, fill }]}
                                 >
                                     <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                                     <RadialBar
@@ -109,13 +109,13 @@ export default function VariableCard({ variavel }) {
                     {/* 🔢 Valor numérico */}
                     <div className="text-center mt-2">
                         <div className="text-xl font-semibold">
-                            {valor}
-                            {unidade ? ` ${unidade}` : ""}
+                            {value}
+                            {unit ? ` ${unit}` : ""}
                         </div>
                         {nomNum && (
                             <div className="text-sm text-gray-500">
                                 Nominal: {nomNum}
-                                {unidade}
+                                {unit}
                             </div>
                         )}
                     </div>
@@ -126,10 +126,10 @@ export default function VariableCard({ variavel }) {
         // =======================================================================
         // 🔹 AO — Variáveis analógicas de Saída
         // =======================================================================
-        case "AO":
-            {
+        //case "AO":
+        //    {
 
-            }
+        //    }
         // =======================================================================
         // 🔸 DI — Variáveis digitais de entrada
         // =======================================================================
