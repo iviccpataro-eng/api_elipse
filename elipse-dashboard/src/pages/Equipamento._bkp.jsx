@@ -82,6 +82,10 @@ export default function Equipamento() {
   const info = dados?.info || {};
   const variaveis = Array.isArray(dados?.data) ? dados.data : [];
 
+  // 🎞️ Classe de transição suave
+  const transitionClass =
+    "transition-all duration-500 ease-in-out transform opacity-100 translate-y-0";
+
   return (
     <div className="min-h-screen bg-gray-50 pt-20 p-6">
       <div className="max-w-6xl mx-auto">
@@ -100,21 +104,21 @@ export default function Equipamento() {
               <LayoutGrid
                 onClick={() => setLayoutMode("cards")}
                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
-                  ? "text-blue-600"
+                  ? "text-blue-600 scale-110"
                   : "text-gray-400 hover:text-gray-600"
                   }`}
               />
               <List
                 onClick={() => setLayoutMode("list")}
                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
-                  ? "text-blue-600"
+                  ? "text-blue-600 scale-110"
                   : "text-gray-400 hover:text-gray-600"
                   }`}
               />
               <FileText
                 onClick={() => setLayoutMode("detailed")}
                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
-                  ? "text-blue-600"
+                  ? "text-blue-600 scale-110"
                   : "text-gray-400 hover:text-gray-600"
                   }`}
               />
@@ -143,7 +147,7 @@ export default function Equipamento() {
             {info.name || tag}
           </h1>
           <p className="text-gray-500 mb-1">
-            {info.descricao || info.description || "Equipamento sem descrição"}
+            {info.description || info.descricao || "Equipamento sem descrição"}
           </p>
           <p className="text-sm text-gray-400">
             {info.fabricante && `${info.fabricante}`}
@@ -158,9 +162,9 @@ export default function Equipamento() {
 
         {/* 🔹 Renderização das variáveis */}
         {variaveis.length > 0 ? (
-          <>
+          <div className={`transition-all duration-500 ${transitionClass}`}>
             {layoutMode === "cards" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
                 {variaveis.map((variavel, i) => (
                   <VariableCard
                     key={i}
@@ -172,13 +176,13 @@ export default function Equipamento() {
             )}
 
             {layoutMode === "list" && (
-              <div className="bg-white rounded-xl shadow divide-y">
+              <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
                 {variaveis.map((v, i) => {
                   const [tipo, nome, valor, unidade] = v;
                   return (
                     <div
                       key={i}
-                      className="flex justify-between items-center px-4 py-3 hover:bg-gray-50"
+                      className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
                     >
                       <span className="font-medium text-gray-700">
                         {nome}
@@ -193,15 +197,23 @@ export default function Equipamento() {
             )}
 
             {layoutMode === "detailed" && (
-              <div className="bg-white rounded-xl shadow divide-y">
+              <div className="bg-white rounded-xl shadow animate-fadeIn">
+                {/* Cabeçalho fixo */}
+                <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
+                  <div>Nome</div>
+                  <div>Tipo</div>
+                  <div>Valor</div>
+                  <div>Nominal</div>
+                </div>
+
                 {variaveis.map((v, i) => {
                   const [tipo, nome, valor, unidade, , nominal] = v;
                   return (
                     <div
                       key={i}
-                      className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50"
+                      className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none transition"
                     >
-                      <div className="font-semibold text-gray-700">
+                      <div className="font-medium text-gray-800">
                         {nome}
                       </div>
                       <div className="text-gray-600">{tipo}</div>
@@ -209,17 +221,16 @@ export default function Equipamento() {
                         {valor} {unidade}
                       </div>
                       <div className="text-gray-500">
-                        Nominal: {nominal ?? "-"}
-                        {unidade}
+                        {nominal ? `${nominal} ${unidade || ""}` : "-"}
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <div className="text-gray-400 text-center py-10">
+          <div className="text-gray-400 text-center py-10 animate-fadeIn">
             Nenhuma grandeza disponível para este equipamento.
           </div>
         )}

@@ -22,7 +22,8 @@ export default function Equipamento() {
     );
 
     const API_BASE =
-        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+        import.meta?.env?.VITE_API_BASE_URL ||
+        "https://api-elipse.onrender.com";
 
     // 🔹 Função principal de carregamento
     const carregarDados = useCallback(() => {
@@ -76,7 +77,9 @@ export default function Equipamento() {
         );
 
     if (erro)
-        return <div className="p-6 text-center text-red-500 font-medium">{erro}</div>;
+        return (
+            <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
+        );
 
     // 🔹 Dados gerais do equipamento
     const info = dados?.info || {};
@@ -85,6 +88,17 @@ export default function Equipamento() {
     // 🎞️ Classe de transição suave
     const transitionClass =
         "transition-all duration-500 ease-in-out transform opacity-100 translate-y-0";
+
+    // 🧭 Descrição unificada (compatível com 'description' e 'descricao')
+    const descricaoEquipamento =
+        info.description?.trim() ||
+        info.descricao?.trim() ||
+        "Equipamento sem descrição";
+
+    // 🕒 Formata última atualização, se existir
+    const ultimaAtualizacao = info.ultimaAtualizacao
+        ? new Date(info.ultimaAtualizacao).toLocaleString("pt-BR")
+        : null;
 
     return (
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
@@ -104,22 +118,22 @@ export default function Equipamento() {
                             <LayoutGrid
                                 onClick={() => setLayoutMode("cards")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
-                                    ? "text-blue-600 scale-110"
-                                    : "text-gray-400 hover:text-gray-600"
+                                        ? "text-blue-600 scale-110"
+                                        : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                             <List
                                 onClick={() => setLayoutMode("list")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
-                                    ? "text-blue-600 scale-110"
-                                    : "text-gray-400 hover:text-gray-600"
+                                        ? "text-blue-600 scale-110"
+                                        : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                             <FileText
                                 onClick={() => setLayoutMode("detailed")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
-                                    ? "text-blue-600 scale-110"
-                                    : "text-gray-400 hover:text-gray-600"
+                                        ? "text-blue-600 scale-110"
+                                        : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                         </div>
@@ -128,8 +142,8 @@ export default function Equipamento() {
                         <button
                             onClick={carregarDados}
                             className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
-                                ? "opacity-50 pointer-events-none"
-                                : "hover:bg-blue-50"
+                                    ? "opacity-50 pointer-events-none"
+                                    : "hover:bg-blue-50"
                                 }`}
                         >
                             <RefreshCcw
@@ -146,17 +160,18 @@ export default function Equipamento() {
                     <h1 className="text-2xl font-bold text-gray-800 mb-2">
                         {info.name || tag}
                     </h1>
-                    <p className="text-gray-500 mb-1">
-                        {info.description || info.descricao || "Equipamento sem descrição"}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                        {info.fabricante && `${info.fabricante}`}
-                        {info.modelo && ` • ${info.modelo}`}
-                        {info.statusComunicacao && ` • Comunicação: ${info.statusComunicacao}`}
-                        {info.ultimaAtualizacao &&
-                            ` • Último envio: ${new Date(
-                                info.ultimaAtualizacao
-                            ).toLocaleString("pt-BR")}`}
+
+                    <p className="text-gray-500 mb-1">{descricaoEquipamento}</p>
+
+                    <p className="text-sm text-gray-400 flex flex-wrap gap-x-2">
+                        {info.fabricante && <span>{info.fabricante}</span>}
+                        {info.modelo && <span>• {info.modelo}</span>}
+                        {info.statusComunicacao && (
+                            <span>• Comunicação: {info.statusComunicacao}</span>
+                        )}
+                        {ultimaAtualizacao && (
+                            <span>• Último envio: {ultimaAtualizacao}</span>
+                        )}
                     </p>
                 </div>
 
@@ -184,9 +199,7 @@ export default function Equipamento() {
                                             key={i}
                                             className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
                                         >
-                                            <span className="font-medium text-gray-700">
-                                                {nome}
-                                            </span>
+                                            <span className="font-medium text-gray-700">{nome}</span>
                                             <span className="text-gray-900">
                                                 {valor} {unidade}
                                             </span>
@@ -213,9 +226,7 @@ export default function Equipamento() {
                                             key={i}
                                             className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none transition"
                                         >
-                                            <div className="font-medium text-gray-800">
-                                                {nome}
-                                            </div>
+                                            <div className="font-medium text-gray-800">{nome}</div>
                                             <div className="text-gray-600">{tipo}</div>
                                             <div className="text-gray-900">
                                                 {valor} {unidade}
