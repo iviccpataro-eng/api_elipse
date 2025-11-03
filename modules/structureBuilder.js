@@ -158,23 +158,20 @@ function extractEquipmentInfo(tag) {
     const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
     const dataRaw = ref.data || [];
 
-   const grandezas = {};
+    const grandezas = {};
     const unidades = {};
     const dataArray = [];
 
+    // 🧭 Montagem das grandezas
     if (Array.isArray(dataRaw)) {
       for (const item of dataRaw) {
         if (!Array.isArray(item) || item.length < 3) continue;
 
         const [tipo, nome, valor, unidade, mostrarGrafico, nominal] = item;
-
         if (!tipo || !nome) continue;
 
-        // Monta as grandezas e unidades
         grandezas[nome] = valor;
         unidades[nome] = unidade || "";
-
-        // Guarda tudo para o frontend
         dataArray.push([tipo, nome, valor, unidade, mostrarGrafico, nominal]);
       }
     } else if (typeof dataRaw === "object") {
@@ -187,34 +184,37 @@ function extractEquipmentInfo(tag) {
 
     console.log(`✅ [extractEquipmentInfo] ${tag} => ${Object.keys(grandezas).length} grandezas extraídas`);
 
- return {
-  // 🔹 Copia todos os campos originais que vierem do Elipse
-  ...infoRaw,
+    // 🔧 Retorno final unificado
+    return {
+      ...infoRaw, // preserva tudo o que vier do Elipse (compatibilidade futura)
 
-  // 🔹 Mapeia e prioriza os padrões internacionais
-  name: infoRaw.name || pathParts.at(-1),
-  description: infoRaw.description || infoRaw.descricao || "", // ✅ aceita os dois
-  disciplina: infoRaw.discipline || pathParts[0],
-  edificio: infoRaw.building || pathParts[1],
-  pavimento: infoRaw.floor || pathParts[2],
-  ordPav: parseInt(infoRaw.ordPav) || 0,
-  fabricante:
-    infoRaw.producer ||
-    infoRaw.fabricante ||
-    infoRaw.manufacturer ||
-    "",
-  modelo: infoRaw.model || infoRaw.modelo || "",
-  statusComunicacao:
-    infoRaw.communication ||
-    infoRaw.statusComunicacao ||
-    "",
-  ultimaAtualizacao: infoRaw["last-send"] || infoRaw.ultimaAtualizacao || "",
+      // Mapeamento padronizado
+      name: infoRaw.name || pathParts.at(-1),
+      description: infoRaw.description || infoRaw.descricao || "", // ✅ aceita ambos
+      disciplina: infoRaw.discipline || pathParts[0],
+      edificio: infoRaw.building || pathParts[1],
+      pavimento: infoRaw.floor || pathParts[2],
+      ordPav: parseInt(infoRaw.ordPav) || 0,
 
-  grandezas,
-  unidades,
-  data: dataArray,
-  };
+      fabricante:
+        infoRaw.producer ||
+        infoRaw.fabricante ||
+        infoRaw.manufacturer ||
+        "",
 
+      modelo: infoRaw.model || infoRaw.modelo || "",
+
+      statusComunicacao:
+        infoRaw.communication ||
+        infoRaw.statusComunicacao ||
+        "",
+
+      ultimaAtualizacao: infoRaw["last-send"] || infoRaw.ultimaAtualizacao || "",
+
+      grandezas,
+      unidades,
+      data: dataArray,
+    };
 
   } catch (err) {
     console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);
