@@ -195,12 +195,14 @@ function extractEquipmentInfo(tag) {
       ordPav: parseInt(infoRaw.ordPav) || 0,
       fabricante: infoRaw.producer || infoRaw.manufacturer || "",
       modelo: infoRaw.model || "",
+      description: infoRaw.description || "", // 🟢 Adicionado aqui
       statusComunicacao: infoRaw.communication || "",
       ultimaAtualizacao: infoRaw["last-send"] || "",
       grandezas,
       unidades,
       data: dataArray,
     };
+    
   } catch (err) {
     console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);
     return {};
