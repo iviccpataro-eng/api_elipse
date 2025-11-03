@@ -189,19 +189,20 @@ function extractEquipmentInfo(tag) {
 
     return {
       name: infoRaw.name || pathParts.at(-1),
+      description: infoRaw.description || infoRaw.descricao || "", // ✅ Corrigido
       disciplina: infoRaw.discipline || pathParts[0],
       edificio: infoRaw.building || pathParts[1],
       pavimento: infoRaw.floor || pathParts[2],
       ordPav: parseInt(infoRaw.ordPav) || 0,
       fabricante: infoRaw.producer || infoRaw.manufacturer || "",
       modelo: infoRaw.model || "",
-      description: infoRaw.description || "", // 🟢 Adicionado aqui
       statusComunicacao: infoRaw.communication || "",
       ultimaAtualizacao: infoRaw["last-send"] || "",
       grandezas,
       unidades,
       data: dataArray,
     };
+
     
   } catch (err) {
     console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);

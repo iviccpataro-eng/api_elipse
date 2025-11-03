@@ -147,7 +147,7 @@ export default function Equipamento() {
                         {info.name || tag}
                     </h1>
                     <p className="text-gray-500 mb-1">
-                        {info.description || "Equipamento sem descrição"}
+                        {info.description || info.descricao || "Equipamento sem descrição"}
                     </p>
                     <p className="text-sm text-gray-400">
                         {info.fabricante && `${info.fabricante}`}
