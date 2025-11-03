@@ -187,36 +187,35 @@ function extractEquipmentInfo(tag) {
 
     console.log(`✅ [extractEquipmentInfo] ${tag} => ${Object.keys(grandezas).length} grandezas extraídas`);
 
-    return {
-      // 🔹 Copia tudo que o Elipse enviou (garante que "description", "fabricante", etc. venham completos)
-      ...infoRaw,
+ return {
+  // 🔹 Copia todos os campos originais que vierem do Elipse
+  ...infoRaw,
 
-      // 🔹 Mantém compatibilidade com campos já usados no front
-      name: infoRaw.name || pathParts.at(-1),
-      disciplina: infoRaw.discipline || pathParts[0],
-      edificio: infoRaw.building || pathParts[1],
-      pavimento: infoRaw.floor || pathParts[2],
-      ordPav: parseInt(infoRaw.ordPav) || 0,
+  // 🔹 Mapeia e prioriza os padrões internacionais
+  name: infoRaw.name || pathParts.at(-1),
+  description: infoRaw.description || infoRaw.descricao || "", // ✅ aceita os dois
+  disciplina: infoRaw.discipline || pathParts[0],
+  edificio: infoRaw.building || pathParts[1],
+  pavimento: infoRaw.floor || pathParts[2],
+  ordPav: parseInt(infoRaw.ordPav) || 0,
+  fabricante:
+    infoRaw.producer ||
+    infoRaw.fabricante ||
+    infoRaw.manufacturer ||
+    "",
+  modelo: infoRaw.model || infoRaw.modelo || "",
+  statusComunicacao:
+    infoRaw.communication ||
+    infoRaw.statusComunicacao ||
+    "",
+  ultimaAtualizacao: infoRaw["last-send"] || infoRaw.ultimaAtualizacao || "",
 
-      // 🔹 Normaliza nomes para compatibilidade retroativa
-      fabricante:
-        infoRaw.producer ||
-        infoRaw.fabricante ||
-        infoRaw.manufacturer ||
-        "",
-      modelo: infoRaw.model || infoRaw.modelo || "",
-      statusComunicacao:
-        infoRaw.communication ||
-        infoRaw.statusComunicacao ||
-        "",
-      ultimaAtualizacao: infoRaw["last-send"] || infoRaw.ultimaAtualizacao || "",
+  grandezas,
+  unidades,
+  data: dataArray,
+  };
 
-      // 🔹 Mantém arrays processados
-      grandezas,
-      unidades,
-      data: dataArray,
-    };
-    
+
   } catch (err) {
     console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);
     return {};
