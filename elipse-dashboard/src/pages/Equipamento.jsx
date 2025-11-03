@@ -104,22 +104,22 @@ export default function Equipamento() {
                             <LayoutGrid
                                 onClick={() => setLayoutMode("cards")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400 hover:text-gray-600"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                             <List
                                 onClick={() => setLayoutMode("list")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400 hover:text-gray-600"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                             <FileText
                                 onClick={() => setLayoutMode("detailed")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400 hover:text-gray-600"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                         </div>
@@ -128,8 +128,8 @@ export default function Equipamento() {
                         <button
                             onClick={carregarDados}
                             className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
-                                    ? "opacity-50 pointer-events-none"
-                                    : "hover:bg-blue-50"
+                                ? "opacity-50 pointer-events-none"
+                                : "hover:bg-blue-50"
                                 }`}
                         >
                             <RefreshCcw
@@ -147,7 +147,7 @@ export default function Equipamento() {
                         {info.name || tag}
                     </h1>
                     <p className="text-gray-500 mb-1">
-                        {info.descricao || info.description || "Equipamento sem descrição"}
+                        {info.description || "Equipamento sem descrição"}
                     </p>
                     <p className="text-sm text-gray-400">
                         {info.fabricante && `${info.fabricante}`}
