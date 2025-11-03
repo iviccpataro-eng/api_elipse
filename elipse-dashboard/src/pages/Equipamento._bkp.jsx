@@ -1,7 +1,13 @@
 // src/pages/Equipamento.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCcw,
+  LayoutGrid,
+  List,
+  FileText,
+} from "lucide-react";
 import VariableCard from "../components/VariableCard.jsx";
 
 export default function Equipamento() {
@@ -11,6 +17,9 @@ export default function Equipamento() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [layoutMode, setLayoutMode] = useState(
+    localStorage.getItem("layoutMode") || "cards"
+  );
 
   const API_BASE =
     import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -53,6 +62,11 @@ export default function Equipamento() {
     return () => clearInterval(interval);
   }, [carregarDados]);
 
+  // 💾 Persistir layout preferido
+  useEffect(() => {
+    localStorage.setItem("layoutMode", layoutMode);
+  }, [layoutMode]);
+
   // 🔸 Estados de carregamento e erro
   if (loading)
     return (
@@ -71,7 +85,7 @@ export default function Equipamento() {
   return (
     <div className="min-h-screen bg-gray-50 pt-20 p-6">
       <div className="max-w-6xl mx-auto">
-        {/* 🔙 Botão Voltar + Atualizar */}
+        {/* 🔙 Botão Voltar + Atualizar + Seletor de Layout */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate(-1)}
@@ -80,16 +94,47 @@ export default function Equipamento() {
             <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
 
-          <button
-            onClick={carregarDados}
-            className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md ${isRefreshing ? "opacity-50 pointer-events-none" : "hover:bg-blue-50"
-              } transition`}
-          >
-            <RefreshCcw
-              className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""}`}
-            />
-            Atualizar
-          </button>
+          <div className="flex items-center gap-4">
+            {/* 🔘 Seletor de layout */}
+            <div className="flex items-center gap-3">
+              <LayoutGrid
+                onClick={() => setLayoutMode("cards")}
+                className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
+                  ? "text-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
+              />
+              <List
+                onClick={() => setLayoutMode("list")}
+                className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
+                  ? "text-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
+              />
+              <FileText
+                onClick={() => setLayoutMode("detailed")}
+                className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
+                  ? "text-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
+              />
+            </div>
+
+            {/* 🔁 Botão Atualizar */}
+            <button
+              onClick={carregarDados}
+              className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
+                ? "opacity-50 pointer-events-none"
+                : "hover:bg-blue-50"
+                }`}
+            >
+              <RefreshCcw
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""
+                  }`}
+              />
+              Atualizar
+            </button>
+          </div>
         </div>
 
         {/* 🔹 Cabeçalho do equipamento */}
@@ -113,11 +158,66 @@ export default function Equipamento() {
 
         {/* 🔹 Renderização das variáveis */}
         {variaveis.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {variaveis.map((variavel, i) => (
-              <VariableCard key={i} variavel={variavel} equipamentoTag={tag} />
-            ))}
-          </div>
+          <>
+            {layoutMode === "cards" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {variaveis.map((variavel, i) => (
+                  <VariableCard
+                    key={i}
+                    variavel={variavel}
+                    equipamentoTag={tag}
+                  />
+                ))}
+              </div>
+            )}
+
+            {layoutMode === "list" && (
+              <div className="bg-white rounded-xl shadow divide-y">
+                {variaveis.map((v, i) => {
+                  const [tipo, nome, valor, unidade] = v;
+                  return (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center px-4 py-3 hover:bg-gray-50"
+                    >
+                      <span className="font-medium text-gray-700">
+                        {nome}
+                      </span>
+                      <span className="text-gray-900">
+                        {valor} {unidade}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {layoutMode === "detailed" && (
+              <div className="bg-white rounded-xl shadow divide-y">
+                {variaveis.map((v, i) => {
+                  const [tipo, nome, valor, unidade, , nominal] = v;
+                  return (
+                    <div
+                      key={i}
+                      className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50"
+                    >
+                      <div className="font-semibold text-gray-700">
+                        {nome}
+                      </div>
+                      <div className="text-gray-600">{tipo}</div>
+                      <div className="text-gray-900">
+                        {valor} {unidade}
+                      </div>
+                      <div className="text-gray-500">
+                        Nominal: {nominal ?? "-"}
+                        {unidade}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-gray-400 text-center py-10">
             Nenhuma grandeza disponível para este equipamento.
