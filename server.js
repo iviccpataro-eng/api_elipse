@@ -698,17 +698,17 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     }
 
     // 2️⃣ Informações gerais do equipamento
-    const info = {
+        const info = {
       tag: tagDecoded,
       name: equipamento.name || tagDecoded.split("/").pop(),
-      descricao: equipamento.descricao || "",
+      description: equipamento.description || "",
       pavimento: equipamento.pavimento,
       fabricante: equipamento.fabricante,
       modelo: equipamento.modelo,
       statusComunicacao: equipamento.statusComunicacao || "OK",
-      ultimaAtualizacao:
-        equipamento.ultimaAtualizacao || new Date().toISOString(),
+      ultimaAtualizacao: equipamento.ultimaAtualizacao || new Date().toISOString(),
     };
+
 
     // 3️⃣ Normalização das grandezas
     const grandezas = equipamento.grandezas || {};

@@ -89,12 +89,6 @@ export default function Equipamento() {
     const transitionClass =
         "transition-all duration-500 ease-in-out transform opacity-100 translate-y-0";
 
-    // 🧭 Descrição unificada (compatível com 'description' e 'descricao')
-    const descricaoEquipamento =
-        info.description?.trim() ||
-        info.descricao?.trim() ||
-        "Equipamento sem descrição";
-
     // 🕒 Formata última atualização, se existir
     const ultimaAtualizacao = info.ultimaAtualizacao
         ? new Date(info.ultimaAtualizacao).toLocaleString("pt-BR")
@@ -118,22 +112,22 @@ export default function Equipamento() {
                             <LayoutGrid
                                 onClick={() => setLayoutMode("cards")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400 hover:text-gray-600"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                             <List
                                 onClick={() => setLayoutMode("list")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400 hover:text-gray-600"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                             <FileText
                                 onClick={() => setLayoutMode("detailed")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400 hover:text-gray-600"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
                                     }`}
                             />
                         </div>
@@ -142,8 +136,8 @@ export default function Equipamento() {
                         <button
                             onClick={carregarDados}
                             className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
-                                    ? "opacity-50 pointer-events-none"
-                                    : "hover:bg-blue-50"
+                                ? "opacity-50 pointer-events-none"
+                                : "hover:bg-blue-50"
                                 }`}
                         >
                             <RefreshCcw
@@ -161,7 +155,9 @@ export default function Equipamento() {
                         {info.name || tag}
                     </h1>
 
-                    <p className="text-gray-500 mb-1">{descricaoEquipamento}</p>
+                    <p className="text-gray-500 mb-1">
+                        {info.description || "Equipamento sem descrição"}
+                    </p>
 
                     <p className="text-sm text-gray-400 flex flex-wrap gap-x-2">
                         {info.fabricante && <span>{info.fabricante}</span>}

@@ -186,29 +186,26 @@ function extractEquipmentInfo(tag) {
 
     // 🔧 Retorno final unificado
     return {
-      ...infoRaw, // preserva tudo o que vier do Elipse (compatibilidade futura)
+      // 🔹 Copia todos os campos originais que vierem do Elipse
+      ...infoRaw,
 
-      // Mapeamento padronizado
+      // 🔹 Normaliza e prioriza os padrões (sempre expõe `description`)
       name: infoRaw.name || pathParts.at(-1),
-      description: infoRaw.description || infoRaw.descricao || "", // ✅ aceita ambos
+      description: infoRaw.description, 
       disciplina: infoRaw.discipline || pathParts[0],
       edificio: infoRaw.building || pathParts[1],
       pavimento: infoRaw.floor || pathParts[2],
       ordPav: parseInt(infoRaw.ordPav) || 0,
-
       fabricante:
         infoRaw.producer ||
         infoRaw.fabricante ||
         infoRaw.manufacturer ||
         "",
-
       modelo: infoRaw.model || infoRaw.modelo || "",
-
       statusComunicacao:
         infoRaw.communication ||
         infoRaw.statusComunicacao ||
         "",
-
       ultimaAtualizacao: infoRaw["last-send"] || infoRaw.ultimaAtualizacao || "",
 
       grandezas,
