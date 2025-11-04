@@ -6,19 +6,26 @@ import { setByPath, getByPath, normalizeBody } from "./utils.js";
 import { regenerateStructure } from "./updater.js";
 import { registerAlarm, clearAlarm } from "./alarmManager.js";
 
-export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
-  const router = express.Router();
+console.log("[IMPORT] Todos os módulos carregados com sucesso.");
 
-  // -------------------------
+// -------------------------
+// 🧩 Função principal
+// -------------------------
+const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
+  const router = express.Router();
+  console.log("[DEBUG dataRouter] Criando rotas Express...");
+
   // 🧩 Middleware de autenticação
-  // -------------------------
   router.use((req, res, next) => {
     const authHeader = req.headers["authorization"];
     if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
     const token = authHeader.split(" ")[1];
 
-    // Token fixo do Elipse para POSTs automáticos
-    if (token === ELIPSE_FIXED_TOKEN && req.method === "POST" && req.path.startsWith("/dados")) {
+    if (
+      token === ELIPSE_FIXED_TOKEN &&
+      req.method === "POST" &&
+      req.path.startsWith("/dados")
+    ) {
       req.user = { id: "elipse-system", role: "system" };
       return next();
     }
@@ -31,9 +38,7 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
     }
   });
 
-  // -------------------------
   // 🌿 GET /dados
-  // -------------------------
   router.get(["/dados", "/data"], (req, res) => res.json(dados));
 
   router.get(["/dados/*", "/data/*"], (req, res) => {
@@ -44,9 +49,7 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
     res.json(ref);
   });
 
-  // -------------------------
   // 💾 POST /dados/*
-  // -------------------------
   router.post(["/dados/*", "/data/*"], async (req, res) => {
     try {
       const payload = normalizeBody(req);
@@ -55,7 +58,6 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
       const path = req.params[0] || "";
       setByPath(dados, path, payload);
 
-      // ✅ Atualiza lista de tags automaticamente
       const disciplina = path.split("/")[0]?.toUpperCase();
       if (["EL", "IL", "AC", "HI", "DT", "CM"].includes(disciplina)) {
         const tagsList = gerarTagsListAutomaticamente(dados);
@@ -66,26 +68,22 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
         console.log(`✅ Estrutura atualizada (${tagsList.length} tags)`);
       }
 
-      // ⚠️ NOVO: Tratamento do bloco 'alarm'
       if (payload.alarm) {
         const alarmData = payload.alarm;
         const tagPath = path.split("/").slice(0, 4).join("/");
 
         if (alarmData.active) {
-          // 🚨 Registra alarme ativo
           registerAlarm(tagPath, {
             message: alarmData.message || "Alarme ativo",
             priority: alarmData.priority || "normal",
             timestamp: alarmData.timestamp || new Date().toISOString(),
           });
-          console.log(`🚨 Alarme registrado para ${tagPath}: ${alarmData.message}`);
+          console.log(`🚨 Alarme registrado para ${tagPath}`);
         } else {
-          // ✅ Limpa alarme quando active = false
           clearAlarm(tagPath);
           console.log(`✅ Alarme limpo para ${tagPath}`);
         }
 
-        // 🔄 Mantém referência do bloco dentro do global.dados
         setByPath(dados, `${path}/alarm`, alarmData);
       }
 
@@ -96,32 +94,25 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
     }
   });
 
-  // -------------------------
   // 🔍 GET /discipline/:code
-  // -------------------------
   router.get("/discipline/:code", (req, res) => {
     const code = req.params.code?.toUpperCase();
     if (!code)
       return res.status(400).json({ ok: false, erro: "Disciplina inválida." });
-
     const result = getDisciplineData(dados, code);
     if (!result.ok) return res.status(404).json(result);
-
     res.json({ ok: true, dados: result });
   });
 
-  // -------------------------
   // ⚙️ GET /equipamento/:tag
-  // -------------------------
   router.get("/equipamento/:tag", (req, res) => {
     try {
       const tagDecoded = decodeURIComponent(req.params.tag);
       const equipamento = dados.structureDetails?.[tagDecoded];
-      if (!equipamento) {
+      if (!equipamento)
         return res
           .status(404)
           .json({ ok: false, erro: "Equipamento não encontrado." });
-      }
 
       const info = {
         tag: tagDecoded,
@@ -145,12 +136,11 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
     }
   });
 
+  console.log("[DEBUG dataRouter] Retornando router Express!");
   return router;
-}
+};
 
-// -------------------------
 // 🔧 Função auxiliar
-// -------------------------
 function gerarTagsListAutomaticamente(base) {
   const lista = [];
   const percorrer = (obj, caminho = "") => {
@@ -158,20 +148,20 @@ function gerarTagsListAutomaticamente(base) {
       if (!Object.hasOwn(obj, chave)) continue;
       const valor = obj[chave];
       const novoCaminho = caminho ? `${caminho}/${chave}` : chave;
-
       if (
         valor &&
         typeof valor === "object" &&
         !Array.isArray(valor) &&
         !valor.info &&
         !valor.data
-      ) {
+      )
         percorrer(valor, novoCaminho);
-      } else if (valor?.info) {
-        lista.push(novoCaminho);
-      }
+      else if (valor?.info) lista.push(novoCaminho);
     }
   };
   percorrer(base);
   return lista;
 }
+
+// 🚀 Export isolado (garante que o ESM exporte a função corretamente)
+export default dataRouter;
