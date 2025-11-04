@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { getDisciplineData, generateFrontendData } from "./structureBuilder.js";
 import { setByPath, getByPath, normalizeBody } from "./utils.js";
 import { regenerateStructure } from "./updater.js";
+import { registerAlarm, clearAlarm } from "./alarmManager.js";
 
 export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
   const router = express.Router();
@@ -16,6 +17,7 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
     if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
     const token = authHeader.split(" ")[1];
 
+    // Token fixo do Elipse para POSTs automáticos
     if (token === ELIPSE_FIXED_TOKEN && req.method === "POST" && req.path.startsWith("/dados")) {
       req.user = { id: "elipse-system", role: "system" };
       return next();
@@ -37,7 +39,8 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
   router.get(["/dados/*", "/data/*"], (req, res) => {
     const path = req.params[0] || "";
     const ref = getByPath(dados, path);
-    if (typeof ref === "undefined") return res.status(404).json({ erro: "Caminho não encontrado" });
+    if (typeof ref === "undefined")
+      return res.status(404).json({ erro: "Caminho não encontrado" });
     res.json(ref);
   });
 
@@ -52,6 +55,7 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
       const path = req.params[0] || "";
       setByPath(dados, path, payload);
 
+      // ✅ Atualiza lista de tags automaticamente
       const disciplina = path.split("/")[0]?.toUpperCase();
       if (["EL", "IL", "AC", "HI", "DT", "CM"].includes(disciplina)) {
         const tagsList = gerarTagsListAutomaticamente(dados);
@@ -60,6 +64,29 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
         dados.structure = generated.structure;
         dados.structureDetails = generated.details;
         console.log(`✅ Estrutura atualizada (${tagsList.length} tags)`);
+      }
+
+      // ⚠️ NOVO: Tratamento do bloco 'alarm'
+      if (payload.alarm) {
+        const alarmData = payload.alarm;
+        const tagPath = path.split("/").slice(0, 4).join("/");
+
+        if (alarmData.active) {
+          // 🚨 Registra alarme ativo
+          registerAlarm(tagPath, {
+            message: alarmData.message || "Alarme ativo",
+            priority: alarmData.priority || "normal",
+            timestamp: alarmData.timestamp || new Date().toISOString(),
+          });
+          console.log(`🚨 Alarme registrado para ${tagPath}: ${alarmData.message}`);
+        } else {
+          // ✅ Limpa alarme quando active = false
+          clearAlarm(tagPath);
+          console.log(`✅ Alarme limpo para ${tagPath}`);
+        }
+
+        // 🔄 Mantém referência do bloco dentro do global.dados
+        setByPath(dados, `${path}/alarm`, alarmData);
       }
 
       res.json({ status: "OK", caminho: `/dados/${path}` });
@@ -74,9 +101,12 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
   // -------------------------
   router.get("/discipline/:code", (req, res) => {
     const code = req.params.code?.toUpperCase();
-    if (!code) return res.status(400).json({ ok: false, erro: "Disciplina inválida." });
+    if (!code)
+      return res.status(400).json({ ok: false, erro: "Disciplina inválida." });
+
     const result = getDisciplineData(dados, code);
     if (!result.ok) return res.status(404).json(result);
+
     res.json({ ok: true, dados: result });
   });
 
@@ -88,7 +118,9 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
       const tagDecoded = decodeURIComponent(req.params.tag);
       const equipamento = dados.structureDetails?.[tagDecoded];
       if (!equipamento) {
-        return res.status(404).json({ ok: false, erro: "Equipamento não encontrado." });
+        return res
+          .status(404)
+          .json({ ok: false, erro: "Equipamento não encontrado." });
       }
 
       const info = {
@@ -99,11 +131,14 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
         fabricante: equipamento.fabricante,
         modelo: equipamento.modelo,
         statusComunicacao: equipamento.statusComunicacao || "OK",
-        ultimaAtualizacao: equipamento.ultimaAtualizacao || new Date().toISOString(),
+        ultimaAtualizacao:
+          equipamento.ultimaAtualizacao || new Date().toISOString(),
       };
 
       const data = equipamento.data || [];
-      res.json({ ok: true, dados: { info, data } });
+      const alarm = equipamento.alarm || null;
+
+      res.json({ ok: true, dados: { info, data, alarm } });
     } catch (err) {
       console.error("[EQUIPAMENTO] Erro:", err);
       res.status(500).json({ ok: false, erro: "Erro ao obter equipamento." });
@@ -113,6 +148,9 @@ export default function dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN) {
   return router;
 }
 
+// -------------------------
+// 🔧 Função auxiliar
+// -------------------------
 function gerarTagsListAutomaticamente(base) {
   const lista = [];
   const percorrer = (obj, caminho = "") => {
@@ -121,9 +159,17 @@ function gerarTagsListAutomaticamente(base) {
       const valor = obj[chave];
       const novoCaminho = caminho ? `${caminho}/${chave}` : chave;
 
-      if (valor && typeof valor === "object" && !Array.isArray(valor) && !valor.info && !valor.data)
+      if (
+        valor &&
+        typeof valor === "object" &&
+        !Array.isArray(valor) &&
+        !valor.info &&
+        !valor.data
+      ) {
         percorrer(valor, novoCaminho);
-      else if (valor?.info) lista.push(novoCaminho);
+      } else if (valor?.info) {
+        lista.push(novoCaminho);
+      }
     }
   };
   percorrer(base);
