@@ -25,8 +25,8 @@ export default function authRouter(pool, SECRET) {
   }
 
   function somenteAdmin(req, res, next) {
-    if (!req.user || req.user.role !== "admin") {
-      return res.status(403).json({ erro: "Apenas administradores têm acesso." });
+    if (!req.user || !["admin", "supervisor"].includes(req.user.role)) {
+      return res.status(403).json({ erro: "Apenas administradores ou supervisores têm acesso." });
     }
     next();
   }
@@ -175,63 +175,53 @@ export default function authRouter(pool, SECRET) {
   });
 
   // -------------------------
-  // 👥 Atualizar outro usuário (somente admin/supervisor)
+  // 🛠️ Atualizar outro usuário (somente admin/supervisor)
   // -------------------------
-  router.post("/auth/admin-update-user", autenticar, async (req, res) => {
+  router.post("/admin-update-user", autenticar, somenteAdmin, async (req, res) => {
     try {
-          const { targetUser, fullname, registernumb, username, role } = req.body || {};
-    const callerRole = req.user.role;
+      const { targetUser, fullname, registernumb, username, role } = req.body || {};
+      if (!targetUser) {
+        return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
+      }
 
-    if (!["admin", "supervisor"].includes(callerRole)) {
-      return res.status(403).json({ ok: false, erro: "Acesso negado." });
+      const updates = [];
+      const values = [];
+      let idx = 1;
+
+      if (fullname) {
+        updates.push(`fullname = $${idx++}`);
+        values.push(fullname);
+      }
+
+      if (registernumb) {
+        updates.push(`registernumb = $${idx++}`);
+        values.push(registernumb);
+      }
+
+      if (role) {
+        updates.push(`rolename = $${idx++}`);
+        values.push(role);
+      }
+
+      if (req.user.role === "admin" && username) {
+        updates.push(`username = $${idx++}`);
+        values.push(username);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
+      }
+
+      values.push(targetUser);
+      const query = `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`;
+      await pool.query(query, values);
+
+      res.json({ ok: true, msg: "Usuário atualizado com sucesso!" });
+    } catch (err) {
+      console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message);
+      res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
     }
-
-    if (!targetUser) {
-      return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
-    }
-
-    const updates = [];
-    const values = [];
-    let idx = 1;
-
-    if (fullname) {
-      updates.push(`fullname = $${idx++}`);
-      values.push(fullname);
-    }
-
-    if (registernumb) {
-      updates.push(`registernumb = $${idx++}`);
-      values.push(registernumb);
-    }
-
-    if (role) {
-      updates.push(`rolename = $${idx++}`);
-      values.push(role);
-    }
-
-    if (callerRole === "admin" && username) {
-      updates.push(`username = $${idx++}`);
-      values.push(username);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
-    }
-
-    values.push(targetUser);
-
-    await pool.query(
-      `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
-      values
-    );
-
-    res.json({ ok: true, msg: "Usuário atualizado com sucesso!" });
-  } catch (err) {
-    console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message);
-    res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
-  }
   });
 
   return router;
-  
 }
