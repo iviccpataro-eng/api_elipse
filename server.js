@@ -10,7 +10,7 @@ import authRouter from "./modules/authRouter.js";
 import dataRouter from "./modules/dataRouter.js";
 import configRouter from "./modules/configRouter.js";
 import { initUpdater } from "./modules/updater.js";
-import { getActiveAlarms, registerAlarm, clearAlarm } from "./modules/alarmManager.js";
+import { getActiveAlarms, registerAlarm, clearAlarm } from "./modules/alarms.js";
 import { normalizeBody } from "./modules/utils.js";
 
 const { Pool } = pkg;
