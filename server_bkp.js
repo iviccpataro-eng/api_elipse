@@ -94,22 +94,49 @@ function getByPath(root, pathStr) {
   return ref;
 }
 
+// --- Função normalizeBody aprimorada ---
+// Suporte a Base64 (Elipse), JSON direto e proteção de tamanho
 function normalizeBody(req) {
-  let payload = req.body;
-  if (payload && typeof payload.valor === "string") {
-    const b64 = payload.valor;
-    const buf = Buffer.from(b64, "base64");
-    let txt = buf.toString("utf8").replace(/^\uFEFF/, "");
+  const payload = req.body;
+
+  // Limite de tamanho extra (1MB)
+  const MAX_BYTES = 1 * 1024 * 1024;
+  const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+  if (contentLength > MAX_BYTES) {
+    throw new Error('Payload muito grande');
+  }
+
+  // Caso: body com campo "valor" (padrão Elipse codificado em Base64)
+  if (payload && typeof payload.valor === 'string') {
     try {
-      payload = JSON.parse(txt);
-    } catch (e) {
-      const err = new Error("Valor Base64 decodificado não é JSON válido.");
-      err.cause = e;
-      throw err;
+      const decoded = Buffer.from(payload.valor, 'base64').toString('utf8').replace(/^\uFEFF/, '');
+      const parsed = JSON.parse(decoded);
+      return parsed;
+    } catch (err) {
+      console.error('Erro ao decodificar Base64 do Elipse:', err);
+      throw new Error('Body Base64 inválido ou não é JSON válido.');
     }
   }
-  return payload;
+
+  // Caso: body já é objeto JSON
+  if (payload && typeof payload === 'object') {
+    return payload;
+  }
+
+  // Caso: body seja string JSON (sem Base64)
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload);
+    } catch (err) {
+      throw new Error('Body é string, mas não é JSON válido.');
+    }
+  }
+
+  // Caso não reconhecido
+  console.warn('Body vazio ou formato desconhecido recebido.');
+  return undefined;
 }
+
 
 // -------------------------
 // 4️⃣ AUTENTICAÇÃO
@@ -671,10 +698,10 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     }
 
     // 2️⃣ Informações gerais do equipamento
-    const info = {
+        const info = {
       tag: tagDecoded,
       name: equipamento.name || tagDecoded.split("/").pop(),
-      descricao: equipamento.descricao || "",
+      description: equipamento.description || "",
       pavimento: equipamento.pavimento,
       fabricante: equipamento.fabricante,
       modelo: equipamento.modelo,
@@ -682,54 +709,76 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
       ultimaAtualizacao: equipamento.ultimaAtualizacao || new Date().toISOString(),
     };
 
+
     // 3️⃣ Normalização das grandezas
     const grandezas = equipamento.grandezas || {};
     const unidades = equipamento.unidades || {};
+    const dataRaw = equipamento.data || [];
 
     const data = [];
 
-    for (const [nome, valor] of Object.entries(grandezas)) {
-      const unidade = unidades?.[nome] || "";
-      let tipo = "AI"; // padrão (analógica de entrada)
-      let mostrarGrafico = false;
-      let referencia = null;
+    // 🔍 Caso o Elipse já envie a estrutura padronizada [tipo, nome, valor, unidade, hasGraph, nominal]
+    if (Array.isArray(dataRaw) && Array.isArray(dataRaw[0])) {
+      for (const item of dataRaw) {
+        const [tipo, nome, valor, unidade, hasGraph, nominal] = item;
 
-      // Detecta o tipo pelo prefixo ou metadado
-      // Exemplo: nome pode vir com [AI], [DI], etc.
-      const matchTipo = nome.match(/^(AI|AO|DI|DO|MI|MO)\s*[:\-]/i);
-      if (matchTipo) {
-        tipo = matchTipo[1].toUpperCase();
+        // ⚙️ Usa o tipo informado pelo Elipse e mantém exatamente o que foi enviado
+        switch (tipo?.toUpperCase()) {
+          case "AI":
+          case "AO":
+            data.push([
+              tipo,
+              nome,
+              valor,
+              unidade || "",
+              !!hasGraph,
+              nominal ?? null,
+            ]);
+            break;
+
+          case "DI":
+          case "DO":
+            data.push([
+              tipo,
+              nome,
+              !!valor,
+              unidade || "LIGADO/DESLIGADO",
+              !!hasGraph,
+              nominal ?? true,
+            ]);
+            break;
+
+          case "MI":
+          case "MO":
+            data.push([
+              tipo,
+              nome,
+              valor ?? 0,
+              unidade ||
+                "DESLIGADO/OPERANDO/LIGADO COM ALARME/DESLIGADO POR ALARME/FALHA",
+              !!hasGraph,
+              nominal ?? 1,
+            ]);
+            break;
+
+          default:
+            // fallback seguro
+            data.push([
+              tipo || "AI",
+              nome,
+              valor,
+              unidade || "",
+              !!hasGraph,
+              nominal ?? null,
+            ]);
+            break;
+        }
       }
-
-      // Simulação de dados padrão (poderá ser sobrescrito pelo Elipse)
-      switch (tipo) {
-        case "AI":
-        case "AO":
-          mostrarGrafico = true;
-          referencia = equipamento?.nominais?.[nome] || 220;
-          data.push([tipo, nome.replace(/^(AI|AO)\s*[:\-]/i, "").trim(), valor, unidade, mostrarGrafico, referencia]);
-          break;
-
-        case "DI":
-        case "DO":
-          // Estrutura: [tipo, nome, valor, "LIGADO/DESLIGADO", showIcon, ref]
-          referencia = true;
-          data.push([tipo, nome.replace(/^(DI|DO)\s*[:\-]/i, "").trim(), !!valor, "LIGADO/DESLIGADO", true, referencia]);
-          break;
-
-        case "MI":
-        case "MO":
-          // Estrutura: [tipo, nome, valor, "ESTADO1/ESTADO2/...", showIcon, ref]
-          const estados =
-            equipamento?.estados?.[nome] ||
-            "DESLIGADO/OPERANDO/LIGADO COM ALARME/DESLIGADO POR ALARME/FALHA CRÍTICA";
-          referencia = 1;
-          data.push([tipo, nome.replace(/^(MI|MO)\s*[:\-]/i, "").trim(), valor ?? 0, estados, true, referencia]);
-          break;
-
-        default:
-          data.push(["AI", nome, valor, unidade, false, 0]);
-          break;
+    } else {
+      // ⚙️ Caso raro — estrutura simples (apenas nome/valor)
+      for (const [nome, valor] of Object.entries(grandezas)) {
+        const unidade = unidades?.[nome] || "";
+        data.push(["AI", nome, valor, unidade, false, null]);
       }
     }
 
@@ -748,7 +797,6 @@ app.get("/equipamento/:tag", autenticar, async (req, res) => {
     });
   }
 });
-
 
 let lastAutoUpdate = null;
 let autoUpdateInterval = null;
