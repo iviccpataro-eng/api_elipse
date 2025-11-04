@@ -6,7 +6,9 @@ import bcrypt from "bcrypt";
 export default function authRouter(pool, SECRET) {
   const router = express.Router();
 
-  // 🔧 Middlewares auxiliares
+  // -------------------------
+  // 🧠 Middlewares auxiliares
+  // -------------------------
   function autenticar(req, res, next) {
     const authHeader = req.headers["authorization"];
     if (!authHeader)
@@ -29,7 +31,9 @@ export default function authRouter(pool, SECRET) {
     next();
   }
 
-  // 🔐 Login
+  // -------------------------
+  // 🔐 LOGIN
+  // -------------------------
   router.post("/login", async (req, res) => {
     const { user, senha } = req.body || {};
     if (!user || !senha)
@@ -61,7 +65,9 @@ export default function authRouter(pool, SECRET) {
     }
   });
 
-  // 🔗 Convite (somente admin)
+  // -------------------------
+  // 🎟️ Geração de convite (Admin)
+  // -------------------------
   router.post("/invite", autenticar, somenteAdmin, (req, res) => {
     const { role, expiresIn } = req.body || {};
     const payload = {
@@ -76,7 +82,9 @@ export default function authRouter(pool, SECRET) {
     res.json({ msg: "Convite gerado", link, token, payload });
   });
 
+  // -------------------------
   // ✅ Validação de convite
+  // -------------------------
   router.get("/validate-invite", (req, res) => {
     try {
       const { token } = req.query;
@@ -89,7 +97,9 @@ export default function authRouter(pool, SECRET) {
     }
   });
 
-  // 🧾 Registro
+  // -------------------------
+  // 🧾 Registro de novo usuário
+  // -------------------------
   router.post("/register", async (req, res) => {
     const { invite, senha, username, fullName, registerNumb } = req.body || {};
     if (!invite || !senha || !username)
@@ -122,7 +132,9 @@ export default function authRouter(pool, SECRET) {
     }
   });
 
-  // 👤 Perfil
+  // -------------------------
+  // 👤 Perfil do usuário autenticado
+  // -------------------------
   router.get("/me", autenticar, async (req, res) => {
     try {
       const result = await pool.query(
@@ -139,6 +151,26 @@ export default function authRouter(pool, SECRET) {
     } catch (err) {
       console.error("[AUTH ME] Erro:", err.message);
       res.status(500).json({ erro: "Erro ao buscar perfil." });
+    }
+  });
+
+  // -------------------------
+  // 👥 Listar todos os usuários (admin/supervisor)
+  // -------------------------
+  router.get("/list-users", autenticar, async (req, res) => {
+    try {
+      if (!["admin", "supervisor"].includes(req.user.role)) {
+        return res.status(403).json({ ok: false, erro: "Acesso negado." });
+      }
+      const result = await pool.query(`
+        SELECT username, rolename, COALESCE(fullname, '') AS fullname,
+               COALESCE(registernumb, '') AS registernumb
+        FROM users ORDER BY username ASC
+      `);
+      res.json({ ok: true, usuarios: result.rows });
+    } catch (err) {
+      console.error("[AUTH LIST-USERS] Erro:", err.message);
+      res.status(500).json({ ok: false, erro: "Erro ao listar usuários." });
     }
   });
 
