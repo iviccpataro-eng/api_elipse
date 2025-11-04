@@ -84,9 +84,16 @@ console.log("[BOOT] Token fixo do Elipse definido.");
 // -------------------------
 // 🧩 Middlewares e Rotas
 // -------------------------
+
+// ✅ 1. Rota pública de status (antes de qualquer autenticação)
+app.get("/", (req, res) => {
+  res.json({ ok: true, msg: "API Elipse rodando no Render!" });
+});
+
+// ✅ 2. Rotas principais
 app.use("/auth", authRouter(pool, SECRET));
-app.use("/", dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN));
 app.use("/config", configRouter(pool));
+app.use("/", dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN));
 
 // -------------------------
 // 🚨 Rotas de Alarme
@@ -138,6 +145,25 @@ app.get("*", (req, res) => {
 // 🔁 Inicia auto-updater
 // -------------------------
 await initUpdater(dados, pool);
+
+// ✅ 3. Geração automática de estrutura inicial (caso dados esteja vazio)
+import { generateFrontendData } from "./modules/structureBuilder.js";
+
+if (!dados.tagsList || dados.tagsList.length === 0) {
+  console.log("⚙️ Gerando estrutura inicial...");
+  try {
+    dados.tagsList = [];
+    dados.structure = {};
+    dados.structureDetails = {};
+
+    const generated = generateFrontendData(dados.tagsList);
+    dados.structure = generated.structure;
+    dados.structureDetails = generated.details;
+    console.log("✅ Estrutura inicial pronta (vazia, aguardando dados do Elipse).");
+  } catch (err) {
+    console.error("❌ Erro ao gerar estrutura inicial:", err);
+  }
+}
 
 // -------------------------
 // 🚀 Inicialização
