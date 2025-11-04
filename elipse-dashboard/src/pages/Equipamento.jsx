@@ -1,175 +1,247 @@
-// modules/structureBuilder.js
-// 🔧 Monta hierarquia genérica (Disciplinas > Prédios > Pavimentos > Equipamentos)
-// Compatível com qualquer disciplina enviada pelo Elipse E3.
+// src/pages/Equipamento.jsx
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+    ArrowLeft,
+    RefreshCcw,
+    LayoutGrid,
+    List,
+    FileText,
+} from "lucide-react";
+import VariableCard from "../components/VariableCard.jsx";
 
-export function generateFrontendData(tagsList = []) {
-    if (!Array.isArray(tagsList) || tagsList.length === 0) {
-        return { structure: {}, details: {} };
-    }
-
-    const structure = {};
-    const details = {};
-
-    for (const tag of tagsList) {
-        // Exemplo: EL/Principal/PAV01/MM_01_01
-        const parts = tag.split("/").filter(Boolean);
-        if (parts.length < 4) continue;
-
-        const [discCode, buildingCode, floorCode, equipCode] = parts;
-
-        // Cria hierarquia
-        if (!structure[discCode]) structure[discCode] = {};
-        if (!structure[discCode][buildingCode]) structure[discCode][buildingCode] = {};
-        if (!structure[discCode][buildingCode][floorCode])
-            structure[discCode][buildingCode][floorCode] = [];
-
-        // Evita duplicidade
-        if (!structure[discCode][buildingCode][floorCode].includes(equipCode)) {
-            structure[discCode][buildingCode][floorCode].push(equipCode);
-        }
-
-        // Monta informações individuais
-        const equipInfo = extractEquipmentInfo(tag);
-        details[tag] = {
-            disciplina: discCode,
-            edificio: buildingCode,
-            pavimento: floorCode,
-            equipamento: equipCode,
-            ...equipInfo,
-        };
-    }
-
-    return { structure, details };
-}
-
-// 🧩 Filtra dados por disciplina (dinâmico, sem mapa fixo)
-export function getDisciplineData(dados, disciplineCode) {
-    const tagsList = Array.isArray(dados?.tagsList)
-        ? dados.tagsList
-        : dados?.tags || dados?.Tags || [];
-
-    if (!Array.isArray(tagsList) || tagsList.length === 0) {
-        return { ok: false, erro: "Nenhuma lista de tags disponível." };
-    }
-
-    const filteredTags = tagsList.filter((tag) =>
-        tag.startsWith(`${disciplineCode}/`)
+export default function Equipamento() {
+    const { tag } = useParams();
+    const navigate = useNavigate();
+    const [dados, setDados] = useState(null);
+    const [erro, setErro] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [layoutMode, setLayoutMode] = useState(
+        localStorage.getItem("layoutMode") || "cards"
     );
 
-    if (filteredTags.length === 0) {
-        return {
-            ok: false,
-            erro: `Nenhum equipamento encontrado para a disciplina ${disciplineCode}.`,
-            disciplina: disciplineCode,
-            estrutura: {},
-        };
-    }
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL ||
+        "https://api-elipse.onrender.com";
 
-    const structure = {};
-    const details = {};
-
-    for (const tag of filteredTags) {
-        const parts = tag.split("/").filter(Boolean);
-        if (parts.length < 4) continue;
-
-        const [, buildingCode, floorCode, equipCode] = parts;
-
-        if (!structure[buildingCode]) structure[buildingCode] = {};
-        if (!structure[buildingCode][floorCode])
-            structure[buildingCode][floorCode] = [];
-
-        if (!structure[buildingCode][floorCode].includes(equipCode)) {
-            structure[buildingCode][floorCode].push(equipCode);
+    // 🔹 Função principal de carregamento
+    const carregarDados = useCallback(() => {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+            setErro("Token não encontrado. Faça login novamente.");
+            setLoading(false);
+            return;
         }
 
-        const equipInfo = extractEquipmentInfo(tag);
-        details[tag] = equipInfo;
-    }
+        setIsRefreshing(true);
+        fetch(`${API_BASE}/equipamento/${encodeURIComponent(tag)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                console.log("📡 Retorno da API Equipamento:", data);
+                if (data.ok) {
+                    setDados(data.dados);
+                    setErro("");
+                } else {
+                    setErro(data.erro || "Erro ao carregar dados do equipamento.");
+                }
+            })
+            .catch(() => setErro("Falha na comunicação com a API."))
+            .finally(() => {
+                setLoading(false);
+                setIsRefreshing(false);
+            });
+    }, [tag, API_BASE]);
 
-    return {
-        ok: true,
-        disciplina: disciplineCode,
-        estrutura: structure,
-        detalhes: details,
-    };
-}
+    // 🔄 Atualização automática
+    useEffect(() => {
+        carregarDados();
+        const refreshTime = localStorage.getItem("refreshTime") || 15000;
+        const interval = setInterval(carregarDados, parseInt(refreshTime, 10));
+        return () => clearInterval(interval);
+    }, [carregarDados]);
 
-/**
- * 🔍 Busca informações do equipamento dentro do objeto global `dados`
- * Caminho esperado: dados["EL"]["Principal"]["PAV01"]["MM_01_01"]
- */
-function extractEquipmentInfo(tag) {
-    try {
-        const dados = global.dados || {};
-        const pathParts = tag.split("/").filter(Boolean);
-        let ref = dados;
+    // 💾 Persistir layout preferido
+    useEffect(() => {
+        localStorage.setItem("layoutMode", layoutMode);
+    }, [layoutMode]);
 
-        for (const part of pathParts) {
-            if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
-                ref = ref[part];
-            } else {
-                ref = null;
-                break;
-            }
-        }
+    // 🔸 Estados de carregamento e erro
+    if (loading)
+        return (
+            <div className="flex items-center justify-center h-screen text-gray-500">
+                Carregando dados do equipamento...
+            </div>
+        );
 
-        if (!ref) {
-            console.warn(`[extractEquipmentInfo] Caminho não encontrado para: ${tag}`);
-            return {};
-        }
+    if (erro)
+        return (
+            <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
+        );
 
-        const infoRaw = Array.isArray(ref.info) ? ref.info[0] : ref.info || {};
-        const dataRaw = ref.data || [];
+    // 🔹 Dados gerais do equipamento
+    const info = dados?.info || {};
+    const variaveis = Array.isArray(dados?.data) ? dados.data : [];
 
-        const grandezas = {};
-        const unidades = {};
-        const dataArray = [];
+    // 🎞️ Classe de transição suave
+    const transitionClass =
+        "transition-all duration-500 ease-in-out transform opacity-100 translate-y-0";
 
-        if (Array.isArray(dataRaw)) {
-            for (const item of dataRaw) {
-                if (!Array.isArray(item) || item.length < 3) continue;
+    // 🕒 Formata última atualização, se existir
+    const ultimaAtualizacao = info.ultimaAtualizacao
+        ? new Date(info.ultimaAtualizacao).toLocaleString("pt-BR")
+        : null;
 
-                const [tipo, nome, valor, unidade, mostrarGrafico, nominal] = item;
-                if (!tipo || !nome) continue;
+    return (
+        <div className="min-h-screen bg-gray-50 pt-20 p-6">
+            <div className="max-w-6xl mx-auto">
+                {/* 🔙 Botão Voltar + Atualizar + Seletor de Layout */}
+                <div className="flex items-center justify-between mb-4">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600"
+                    >
+                        <ArrowLeft className="w-4 h-4" /> Voltar
+                    </button>
 
-                grandezas[nome] = valor;
-                unidades[nome] = unidade || "";
-                dataArray.push([tipo, nome, valor, unidade, mostrarGrafico, nominal]);
-            }
-        } else if (typeof dataRaw === "object") {
-            for (const [nome, valor] of Object.entries(dataRaw)) {
-                grandezas[nome] = valor?.value ?? valor;
-                unidades[nome] = valor?.unit ?? "";
-                dataArray.push(["AI", nome, valor?.value ?? valor, valor?.unit ?? ""]);
-            }
-        }
+                    <div className="flex items-center gap-4">
+                        {/* 🔘 Seletor de layout */}
+                        <div className="flex items-center gap-3">
+                            <LayoutGrid
+                                onClick={() => setLayoutMode("cards")}
+                                className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
+                                    }`}
+                            />
+                            <List
+                                onClick={() => setLayoutMode("list")}
+                                className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
+                                    }`}
+                            />
+                            <FileText
+                                onClick={() => setLayoutMode("detailed")}
+                                className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400 hover:text-gray-600"
+                                    }`}
+                            />
+                        </div>
 
-        return {
-            ...infoRaw,
-            name: infoRaw.name || pathParts.at(-1),
-            description: infoRaw.description ?? "", // agora tudo vem padronizado
-            disciplina: infoRaw.discipline || pathParts[0],
-            edificio: infoRaw.building || pathParts[1],
-            pavimento: infoRaw.floor || pathParts[2],
-            ordPav: parseInt(infoRaw.ordPav) || 0,
-            fabricante:
-                infoRaw.producer ||
-                infoRaw.fabricante ||
-                infoRaw.manufacturer ||
-                "",
-            modelo: infoRaw.model || infoRaw.modelo || "",
-            statusComunicacao:
-                infoRaw.communication ||
-                infoRaw.statusComunicacao ||
-                "",
-            ultimaAtualizacao:
-                infoRaw["last-send"] || infoRaw.ultimaAtualizacao || "",
-            grandezas,
-            unidades,
-            data: dataArray,
-        };
-    } catch (err) {
-        console.error("[extractEquipmentInfo] Erro ao processar tag:", tag, err);
-        return {};
-    }
+                        {/* 🔁 Botão Atualizar */}
+                        <button
+                            onClick={carregarDados}
+                            className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
+                                ? "opacity-50 pointer-events-none"
+                                : "hover:bg-blue-50"
+                                }`}
+                        >
+                            <RefreshCcw
+                                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""
+                                    }`}
+                            />
+                            Atualizar
+                        </button>
+                    </div>
+                </div>
+
+                {/* 🔹 Cabeçalho do equipamento */}
+                <div className="bg-white rounded-2xl shadow p-6 mb-6">
+                    <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                        {info.name || tag}
+                    </h1>
+
+                    <p className="text-gray-500 mb-1">
+                        {info.description || "Equipamento sem descrição"}
+                    </p>
+
+                    <p className="text-sm text-gray-400 flex flex-wrap gap-x-2">
+                        {info.fabricante && <span>{info.fabricante}</span>}
+                        {info.modelo && <span>• {info.modelo}</span>}
+                        {info.statusComunicacao && (
+                            <span>• Comunicação: {info.statusComunicacao}</span>
+                        )}
+                        {ultimaAtualizacao && (
+                            <span>• Último envio: {ultimaAtualizacao}</span>
+                        )}
+                    </p>
+                </div>
+
+                {/* 🔹 Renderização das variáveis */}
+                {variaveis.length > 0 ? (
+                    <div className={`transition-all duration-500 ${transitionClass}`}>
+                        {layoutMode === "cards" && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
+                                {variaveis.map((variavel, i) => (
+                                    <VariableCard
+                                        key={i}
+                                        variavel={variavel}
+                                        equipamentoTag={tag}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {layoutMode === "list" && (
+                            <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
+                                {variaveis.map((v, i) => {
+                                    const [tipo, nome, valor, unidade] = v;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
+                                        >
+                                            <span className="font-medium text-gray-700">{nome}</span>
+                                            <span className="text-gray-900">
+                                                {valor} {unidade}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {layoutMode === "detailed" && (
+                            <div className="bg-white rounded-xl shadow animate-fadeIn">
+                                {/* Cabeçalho fixo */}
+                                <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
+                                    <div>Nome</div>
+                                    <div>Tipo</div>
+                                    <div>Valor</div>
+                                    <div>Nominal</div>
+                                </div>
+
+                                {variaveis.map((v, i) => {
+                                    const [tipo, nome, valor, unidade, , nominal] = v;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none transition"
+                                        >
+                                            <div className="font-medium text-gray-800">{nome}</div>
+                                            <div className="text-gray-600">{tipo}</div>
+                                            <div className="text-gray-900">
+                                                {valor} {unidade}
+                                            </div>
+                                            <div className="text-gray-500">
+                                                {nominal ? `${nominal} ${unidade || ""}` : "-"}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="text-gray-400 text-center py-10 animate-fadeIn">
+                        Nenhuma grandeza disponível para este equipamento.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }
