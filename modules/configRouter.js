@@ -15,7 +15,10 @@ export default function configRouter(pool) {
 
     const token = authHeader.split(" ")[1];
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c");
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c"
+      );
       req.user = payload;
       next();
     } catch {
@@ -54,15 +57,23 @@ export default function configRouter(pool) {
   // 💾 POST /config/system
   // -------------------------
   router.post("/system", autenticar, async (req, res) => {
-    const {
-      buildingname,
-      buildingaddress,
-      adminenterprise,
-      adminname,
-      admincontact,
-    } = req.body || {};
-
     try {
+      // Garante que o corpo é JSON válido
+      if (!req.body || typeof req.body !== "object") {
+        console.warn("[/config/system] Corpo inválido recebido:", req.body);
+        return res
+          .status(400)
+          .json({ ok: false, erro: "Corpo da requisição inválido." });
+      }
+
+      const {
+        buildingname,
+        buildingaddress,
+        adminenterprise,
+        adminname,
+        admincontact,
+      } = req.body;
+
       if (!["admin", "supervisor"].includes(req.user.role)) {
         return res.status(403).json({
           ok: false,
@@ -77,19 +88,34 @@ export default function configRouter(pool) {
         await pool.query(
           `INSERT INTO buildings (buildingname, buildingaddress, adminenterprise, adminname, admincontact)
            VALUES ($1,$2,$3,$4,$5)`,
-          [buildingname, buildingaddress, adminenterprise, adminname, admincontact]
+          [
+            buildingname || "",
+            buildingaddress || "",
+            adminenterprise || "",
+            adminname || "",
+            admincontact || "",
+          ]
         );
+        console.log("[CONFIG] Novo registro de edifício criado.");
       } else {
         const id = check.rows[0].buildingid;
         await pool.query(
           `UPDATE buildings
            SET buildingname=$1, buildingaddress=$2, adminenterprise=$3, adminname=$4, admincontact=$5
            WHERE buildingid=$6`,
-          [buildingname, buildingaddress, adminenterprise, adminname, admincontact, id]
+          [
+            buildingname || "",
+            buildingaddress || "",
+            adminenterprise || "",
+            adminname || "",
+            admincontact || "",
+            id,
+          ]
         );
+        console.log("[CONFIG] Configurações do edifício atualizadas.");
       }
 
-      // ✅ Retorno consistente em JSON
+      // ✅ Retorno sempre em JSON (corrige erro no front)
       res.json({ ok: true, msg: "Configurações atualizadas com sucesso!" });
     } catch (err) {
       console.error("[ERRO] /config/system POST:", err);
@@ -97,6 +123,13 @@ export default function configRouter(pool) {
         .status(500)
         .json({ ok: false, erro: "Erro ao salvar configurações." });
     }
+  });
+
+  // -------------------------
+  // 🧭 Rota padrão (teste de saúde)
+  // -------------------------
+  router.get("/", (req, res) => {
+    res.json({ ok: true, msg: "ConfigRouter ativo e funcional." });
   });
 
   return router;
