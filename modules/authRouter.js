@@ -179,9 +179,6 @@ export default function authRouter(pool, SECRET) {
   // -------------------------
   // 🧭 Buscar dados detalhados de um usuário (admin/supervisor)
   // -------------------------
-  // -------------------------
-// 🧭 Buscar dados detalhados de um usuário (admin/supervisor)
-// -------------------------
   router.get("/user/:username", autenticar, somenteAdmin, async (req, res) => {
     try {
       const username = req.params.username; // <-- parâmetro de rota
@@ -206,6 +203,7 @@ export default function authRouter(pool, SECRET) {
       res.status(500).json({ ok: false, erro: "Erro ao buscar usuário." });
     }
   });
+
 
   // -------------------------
   // 👥 Atualizar outro usuário (somente admin/supervisor)
