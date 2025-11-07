@@ -10,8 +10,9 @@ import authRouter from "./modules/authRouter.js";
 import dataRouter from "./modules/dataRouter.js";
 import configRouter from "./modules/configRouter.js";
 import { initUpdater } from "./modules/updater.js";
-import { getActiveAlarms, registerAlarm, clearAlarm } from "./modules/alarmManager.js"
+import { getActiveAlarms, registerAlarm, clearAlarm } from "./modules/alarmManager.js";
 import { normalizeBody } from "./modules/utils.js";
+import { generateFrontendData } from "./modules/structureBuilder.js";
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -55,6 +56,7 @@ app.use(
   })
 );
 
+// Trata requisições OPTIONS manuais
 app.options("*", (req, res) => {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin))
@@ -66,8 +68,8 @@ app.options("*", (req, res) => {
   return res.sendStatus(200);
 });
 
+// Middleware global extra: garante cabeçalhos CORS até mesmo em respostas de erro
 app.use((req, res, next) => {
-  // se já houver header, não altera
   if (!res.getHeader("Access-Control-Allow-Origin")) {
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
@@ -160,8 +162,6 @@ app.get("*", (req, res) => {
 await initUpdater(dados, pool);
 
 // ✅ 3. Geração automática de estrutura inicial (caso dados esteja vazio)
-import { generateFrontendData } from "./modules/structureBuilder.js";
-
 if (!dados.tagsList || dados.tagsList.length === 0) {
   console.log("⚙️ Gerando estrutura inicial...");
   try {
@@ -182,6 +182,7 @@ if (!dados.tagsList || dados.tagsList.length === 0) {
 // 🚀 Inicialização
 // -------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
-  console.log(`[BOOT] Servidor rodando na porta ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`[BOOT] Servidor rodando na porta ${PORT}`);
+  console.log(`🌐 API disponível em http://localhost:${PORT} ou Render URL`);
+});
