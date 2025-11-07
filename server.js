@@ -66,6 +66,21 @@ app.options("*", (req, res) => {
   return res.sendStatus(200);
 });
 
+app.use((req, res, next) => {
+  // se já houver header, não altera
+  if (!res.getHeader("Access-Control-Allow-Origin")) {
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+  next();
+});
+
 // -------------------------
 // 🧠 Memória global
 // -------------------------
@@ -86,9 +101,7 @@ console.log("[BOOT] Token fixo do Elipse definido.");
 // -------------------------
 
 // ✅ 1. Rota pública de status (antes de qualquer autenticação)
-app.get("/", (req, res) => {
-  res.json({ ok: true, msg: "API Elipse rodando no Render!" });
-});
+app.get("/", (req, res) => res.send("API Elipse rodando!"));
 
 // ✅ 2. Rotas principais
 app.use("/auth", authRouter(pool, SECRET));

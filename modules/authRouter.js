@@ -167,7 +167,7 @@ export default function authRouter(pool, SECRET) {
       }
       const result = await pool.query(`
         SELECT username, rolename, COALESCE(fullname, '') AS fullname,
-               COALESCE(registernumb, '') AS registernumb
+               COALESCE(registernumb, '') AS reginternumb
         FROM users ORDER BY username ASC
       `);
       res.json({ ok: true, usuarios: result.rows });
@@ -183,76 +183,70 @@ export default function authRouter(pool, SECRET) {
   router.post("/admin-update-user", autenticar, somenteAdmin, async (req, res) => {
     try {
       const { targetUser, fullname, registernumb, username, role } = req.body || {};
-  const callerRole = req.user.role;
-
-  if (!["admin", "supervisor"].includes(callerRole)) {
-   return res.status(403).json({ ok: false, erro: "Acesso negado." });
-  }
 
       if (!targetUser)
         return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
-      
-      if (!["admin", "supervisor"].includes(callerRole)) {
-        return res.status(403).json({ ok: false, erro: "Acesso negado." });
+
+      // Se não há campos para atualizar => modo consulta
+      const hasUpdates = fullname !== undefined || registernumb !== undefined || username !== undefined || role !== undefined;
+      if (!hasUpdates) {
+        const result = await pool.query(
+          `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
+                  COALESCE(registernumb,'') AS registernumb
+           FROM users WHERE username = $1`,
+          [targetUser]
+        );
+        if (result.rows.length === 0)
+          return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
+
+        return res.json({ ok: true, usuario: result.rows[0] });
       }
 
-      // 🧭 Se não há campos para atualizar → apenas retorna os dados do usuário (modo consulta)
-      //const hasUpdates = fullname || registernumb || username || role;
-      //if (!hasUpdates) {
-      //  const result = await pool.query(
-      //    `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
-      //            COALESCE(registernumb,'') AS registernumb
-      //     FROM users WHERE username = $1`,
-      //    [targetUser]
-      //  );
-
-      //  if (result.rows.length === 0)
-      //    return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
-
-      //  return res.json({ ok: true, usuario: result.rows[0] });
-      //}
-
-      if (!targetUser) {
-        return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
-      }
-
-      // 🧱 Atualização de fato
+      // Atualização efetiva
       const updates = [];
       const values = [];
       let idx = 1;
 
-      if (fullname) {
-      updates.push(`fullname = $${idx++}`);
-      values.push(fullname);
+      if (fullname !== undefined) {
+        updates.push(`fullname = $${idx++}`);
+        values.push(fullname);
       }
 
-      if (registernumb) {
-      updates.push(`registernumb = $${idx++}`);
-      values.push(registernumb);
+      if (registernumb !== undefined) {
+        updates.push(`registernumb = $${idx++}`);
+        values.push(registernumb);
       }
 
-      if (role) {
-      updates.push(`rolename = $${idx++}`);
-      values.push(role);
+      if (role !== undefined) {
+        updates.push(`rolename = $${idx++}`);
+        values.push(role);
       }
 
-      if (callerRole === "admin" && username) {
-      updates.push(`username = $${idx++}`);
-      values.push(username);
+      if (req.user.role === "admin" && username !== undefined) {
+        updates.push(`username = $${idx++}`);
+        values.push(username);
       }
 
       if (updates.length === 0) {
-      return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
+        return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
       }
 
       values.push(targetUser);
-
       await pool.query(
-      `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
-      values
+        `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
+        values
       );
 
-      res.json({ ok: true, msg: "Usuário atualizado com sucesso!" });
+      // Retorna o registro atualizado (pega novo username se trocado)
+      const lookupUser = username || targetUser;
+      const updated = await pool.query(
+        `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
+                COALESCE(registernumb,'') AS registernumb
+         FROM users WHERE username = $1`,
+        [lookupUser]
+      );
+
+      res.json({ ok: true, usuario: updated.rows[0], msg: "Usuário atualizado com sucesso!" });
     } catch (err) {
       console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message);
       res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
