@@ -257,5 +257,54 @@ export default function authRouter(pool, SECRET) {
     }
   });
 
+  // -------------------------
+  // ⚙️ Atualizar preferências do usuário (tempo de recarga e tema)
+  // -------------------------
+  router.post("/update-profile", autenticar, async (req, res) => {
+    try {
+      const { refreshtime, usertheme } = req.body || {};
+
+      if (!refreshtime && !usertheme) {
+        return res.status(400).json({ ok: false, erro: "Nenhum campo para atualizar." });
+      }
+
+      const updates = [];
+      const values = [];
+      let idx = 1;
+
+      if (refreshtime !== undefined) {
+        updates.push(`refreshtime = $${idx++}`);
+        values.push(refreshtime);
+      }
+
+      if (usertheme !== undefined) {
+        updates.push(`usertheme = $${idx++}`);
+        values.push(usertheme);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
+      }
+
+      values.push(req.user.user);
+
+      await pool.query(
+        `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
+        values
+      );
+
+      console.log(`[AUTH] Preferências atualizadas para ${req.user.user}`);
+
+      res.json({
+        ok: true,
+        msg: "Preferências atualizadas com sucesso!",
+        updated: { refreshtime, usertheme },
+      });
+    } catch (err) {
+      console.error("[AUTH UPDATE-PROFILE] Erro:", err);
+      res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
+    }
+  });
+
   return router;
 }
