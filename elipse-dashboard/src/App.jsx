@@ -8,7 +8,7 @@ import Navbar from "./components/Navbar";
 import Eletrica from "./pages/Eletrica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
-import RegisterPage from "./pages/RegisterPage"; // ✅ import do seu componente
+import RegisterPage from "./RegisterPage";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
