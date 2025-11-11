@@ -1,12 +1,12 @@
 // App.jsx
-import React, { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import Eletrica from "./pages/Eletrica";
-import Dashboard from "./pages/Dashboard"; // 🔹 Dashboard movido para arquivo separado
+import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
 
 const API_BASE =
@@ -79,6 +79,65 @@ function LoginPage({ onLogin }) {
   );
 }
 
+/* --- Proteção de Rotas --- */
+function ProtectedRoutes({ onLogout }) {
+  const [token, setToken] = useState(localStorage.getItem("authToken"));
+  const [user, setUser] = useState(() => {
+    const t = localStorage.getItem("authToken");
+    return t ? jwtDecode(t) : null;
+  });
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const invite = params.get("invite");
+
+    // 🚫 Se o link tiver "invite", redireciona para a tela de registro
+    if (invite) {
+      if (location.pathname !== "/register") {
+        navigate(`/register?invite=${invite}`, { replace: true });
+      }
+      return;
+    }
+
+    // 🚫 Se não tiver token válido, vai pro login
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
+  }, [location, navigate, token]);
+
+  if (!token) return null; // evita piscar o dashboard antes do redirecionamento
+
+  return (
+    <>
+      <Navbar onLogout={onLogout} />
+      <Routes>
+        {/* Página inicial */}
+        <Route index element={<Dashboard token={token} />} />
+
+        {/* 🔌 Disciplinas */}
+        <Route path="/eletrica" element={<Eletrica />} />
+        <Route
+          path="/arcondicionado"
+          element={<div className="p-6">Ar Condicionado</div>}
+        />
+        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
+        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
+        <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
+
+        {/* Página de equipamento genérica */}
+        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
+
+        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
+        <Route path="*" element={<Dashboard token={token} />} />
+      </Routes>
+    </>
+  );
+}
+
 /* --- Root component --- */
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
@@ -102,28 +161,5 @@ export default function App() {
 
   if (!token) return <LoginPage onLogin={handleLogin} />;
 
-  return (
-    <>
-      <Navbar onLogout={handleLogout} />
-      <Routes>
-        {/* Página inicial */}
-        <Route index element={<Dashboard token={token} />} />
-
-        {/* 🔌 Disciplinas */}
-        <Route path="/eletrica" element={<Eletrica />} />
-        <Route path="/arcondicionado" element={<div className="p-6">Ar Condicionado</div>} />
-        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
-        <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
-        <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
-
-        {/* Página de equipamento genérica */}
-        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
-
-        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
-        <Route path="*" element={<Dashboard token={token} />} />
-
-      </Routes>
-    </>
-  );
+  return <ProtectedRoutes onLogout={handleLogout} />;
 }
