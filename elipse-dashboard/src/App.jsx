@@ -1,6 +1,6 @@
 // App.jsx
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 import ToolsPage from "./ToolsPage";
@@ -8,6 +8,7 @@ import Navbar from "./components/Navbar";
 import Eletrica from "./pages/Eletrica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
+import RegisterPage from "./pages/RegisterPage"; // ✅ import do seu componente
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -79,40 +80,51 @@ function LoginPage({ onLogin }) {
   );
 }
 
-/* --- Proteção de Rotas --- */
-function ProtectedRoutes({ onLogout }) {
+/* --- Root component --- */
+export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [token, setToken] = useState(localStorage.getItem("authToken"));
   const [user, setUser] = useState(() => {
     const t = localStorage.getItem("authToken");
     return t ? jwtDecode(t) : null;
   });
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const invite = params.get("invite");
 
-    // 🚫 Se o link tiver "invite", redireciona para a tela de registro
-    if (invite) {
-      if (location.pathname !== "/register") {
-        navigate(`/register?invite=${invite}`, { replace: true });
-      }
-      return;
+    // ✅ Redireciona para a tela de registro se tiver convite
+    if (invite && location.pathname !== "/register") {
+      navigate(`/register?invite=${invite}`, { replace: true });
     }
+  }, [location, navigate]);
 
-    // 🚫 Se não tiver token válido, vai pro login
-    if (!token) {
-      navigate("/login", { replace: true });
-    }
-  }, [location, navigate, token]);
+  const handleLogin = (tk, decodedUser) => {
+    localStorage.setItem("authToken", tk);
+    setToken(tk);
+    setUser(decodedUser || jwtDecode(tk));
+  };
 
-  if (!token) return null; // evita piscar o dashboard antes do redirecionamento
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userInfo");
+    setToken(null);
+    setUser(null);
+  };
+
+  // Se não há token e não é um link de convite, mostra login
+  const params = new URLSearchParams(location.search);
+  const invite = params.get("invite");
+  if (!token && !invite) return <LoginPage onLogin={handleLogin} />;
+
+  // Se o link é de convite, mostra a tela de registro
+  if (invite) return <RegisterPage />;
 
   return (
     <>
-      <Navbar onLogout={onLogout} />
+      <Navbar onLogout={handleLogout} />
       <Routes>
         {/* Página inicial */}
         <Route index element={<Dashboard token={token} />} />
@@ -131,35 +143,15 @@ function ProtectedRoutes({ onLogout }) {
         {/* Página de equipamento genérica */}
         <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
 
+        {/* Ferramentas e admin */}
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
+
+        {/* Tela de registro */}
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Rota fallback */}
         <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </>
   );
-}
-
-/* --- Root component --- */
-export default function App() {
-  const [token, setToken] = useState(localStorage.getItem("authToken"));
-  const [user, setUser] = useState(() => {
-    const t = localStorage.getItem("authToken");
-    return t ? jwtDecode(t) : null;
-  });
-
-  const handleLogin = (tk, decodedUser) => {
-    localStorage.setItem("authToken", tk);
-    setToken(tk);
-    setUser(decodedUser || jwtDecode(tk));
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userInfo");
-    setToken(null);
-    setUser(null);
-  };
-
-  if (!token) return <LoginPage onLogin={handleLogin} />;
-
-  return <ProtectedRoutes onLogout={handleLogout} />;
 }
