@@ -43,9 +43,13 @@ export default function authRouter(pool, SECRET) {
 
     try {
       const result = await pool.query(
-        "SELECT username, passhash, rolename FROM users WHERE username = $1",
+        `SELECT username, passhash, rolename, 
+                COALESCE(refreshtime,10) AS refreshtime, 
+                COALESCE(usertheme,'light') AS usertheme
+         FROM users WHERE username = $1`,
         [user]
       );
+
       if (result.rows.length === 0)
         return res.status(401).json({ erro: "Credenciais inválidas" });
 
@@ -60,7 +64,12 @@ export default function authRouter(pool, SECRET) {
         { expiresIn: "8h" }
       );
 
-      res.json({ token });
+      // 🔁 Retorna o token junto com preferências do usuário
+      res.json({
+        token,
+        refreshtime: usuario.refreshtime,
+        usertheme: usuario.usertheme,
+      });
     } catch (err) {
       console.error("[AUTH LOGIN] Erro:", err.message);
       res.status(500).json({ erro: "Erro interno no servidor" });
@@ -90,7 +99,8 @@ export default function authRouter(pool, SECRET) {
   router.get("/validate-invite", (req, res) => {
     try {
       const { token } = req.query;
-      if (!token) return res.status(400).json({ ok: false, erro: "Token ausente" });
+      if (!token)
+        return res.status(400).json({ ok: false, erro: "Token ausente" });
       const payload = jwt.verify(token, SECRET);
       if (payload.type !== "invite") throw new Error();
       res.json({ ok: true, role: payload.role });
@@ -181,7 +191,7 @@ export default function authRouter(pool, SECRET) {
   // -------------------------
   router.get("/user/:username", autenticar, somenteAdmin, async (req, res) => {
     try {
-      const username = req.params.username; // <-- parâmetro de rota
+      const username = req.params.username;
       if (!username) {
         return res.status(400).json({ ok: false, erro: "Usuário não informado." });
       }
@@ -189,7 +199,7 @@ export default function authRouter(pool, SECRET) {
       const result = await pool.query(
         `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
                 COALESCE(registernumb,'') AS registernumb
-        FROM users WHERE username = $1`,
+         FROM users WHERE username = $1`,
         [username]
       );
 
@@ -203,7 +213,6 @@ export default function authRouter(pool, SECRET) {
       res.status(500).json({ ok: false, erro: "Erro ao buscar usuário." });
     }
   });
-
 
   // -------------------------
   // 👥 Atualizar outro usuário (somente admin/supervisor)

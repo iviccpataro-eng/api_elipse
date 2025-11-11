@@ -17,6 +17,14 @@ export default function authRouter(pool, SECRET) {
     const token = authHeader.split(" ")[1];
     try {
       const payload = jwt.verify(token, SECRET);
+
+      // 🚫 Bloqueia tokens de convite
+      if (payload.type === "invite") {
+        return res.status(403).json({
+          erro: "Convites não têm permissão para acessar o sistema.",
+        });
+      }
+
       req.user = payload;
       next();
     } catch {
@@ -43,13 +51,9 @@ export default function authRouter(pool, SECRET) {
 
     try {
       const result = await pool.query(
-        `SELECT username, passhash, rolename, 
-                COALESCE(refreshtime,10) AS refreshtime, 
-                COALESCE(usertheme,'light') AS usertheme
-         FROM users WHERE username = $1`,
+        "SELECT username, passhash, rolename FROM users WHERE username = $1",
         [user]
       );
-
       if (result.rows.length === 0)
         return res.status(401).json({ erro: "Credenciais inválidas" });
 
@@ -64,12 +68,7 @@ export default function authRouter(pool, SECRET) {
         { expiresIn: "8h" }
       );
 
-      // 🔁 Retorna o token junto com preferências do usuário
-      res.json({
-        token,
-        refreshtime: usuario.refreshtime,
-        usertheme: usuario.usertheme,
-      });
+      res.json({ token });
     } catch (err) {
       console.error("[AUTH LOGIN] Erro:", err.message);
       res.status(500).json({ erro: "Erro interno no servidor" });
@@ -122,6 +121,7 @@ export default function authRouter(pool, SECRET) {
     try {
       const payload = jwt.verify(invite, SECRET);
       if (payload.type !== "invite") throw new Error();
+
       const { role } = payload;
       const hash = await bcrypt.hash(senha, 10);
 
@@ -192,20 +192,22 @@ export default function authRouter(pool, SECRET) {
   router.get("/user/:username", autenticar, somenteAdmin, async (req, res) => {
     try {
       const username = req.params.username;
-      if (!username) {
-        return res.status(400).json({ ok: false, erro: "Usuário não informado." });
-      }
+      if (!username)
+        return res
+          .status(400)
+          .json({ ok: false, erro: "Usuário não informado." });
 
       const result = await pool.query(
         `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
                 COALESCE(registernumb,'') AS registernumb
-         FROM users WHERE username = $1`,
+        FROM users WHERE username = $1`,
         [username]
       );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
-      }
+      if (result.rows.length === 0)
+        return res
+          .status(404)
+          .json({ ok: false, erro: "Usuário não encontrado." });
 
       res.json({ ok: true, usuario: result.rows[0] });
     } catch (err) {
@@ -220,9 +222,10 @@ export default function authRouter(pool, SECRET) {
   router.post("/admin-update-user", autenticar, somenteAdmin, async (req, res) => {
     try {
       const { targetUser, fullname, registernumb, username, role } = req.body || {};
-      if (!targetUser) {
-        return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
-      }
+      if (!targetUser)
+        return res
+          .status(400)
+          .json({ ok: false, erro: "Usuário alvo não informado." });
 
       const updates = [];
       const values = [];
@@ -248,12 +251,10 @@ export default function authRouter(pool, SECRET) {
         values.push(username);
       }
 
-      if (updates.length === 0) {
+      if (updates.length === 0)
         return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
-      }
 
       values.push(targetUser);
-
       await pool.query(
         `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`,
         values
@@ -273,9 +274,10 @@ export default function authRouter(pool, SECRET) {
     try {
       const { refreshtime, usertheme } = req.body || {};
 
-      if (!refreshtime && !usertheme) {
-        return res.status(400).json({ ok: false, erro: "Nenhum campo para atualizar." });
-      }
+      if (!refreshtime && !usertheme)
+        return res
+          .status(400)
+          .json({ ok: false, erro: "Nenhum campo para atualizar." });
 
       const updates = [];
       const values = [];
@@ -291,10 +293,6 @@ export default function authRouter(pool, SECRET) {
         values.push(usertheme);
       }
 
-      if (updates.length === 0) {
-        return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
-      }
-
       values.push(req.user.user);
 
       await pool.query(
@@ -303,7 +301,6 @@ export default function authRouter(pool, SECRET) {
       );
 
       console.log(`[AUTH] Preferências atualizadas para ${req.user.user}`);
-
       res.json({
         ok: true,
         msg: "Preferências atualizadas com sucesso!",
