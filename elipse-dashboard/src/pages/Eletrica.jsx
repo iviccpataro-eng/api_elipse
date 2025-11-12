@@ -13,26 +13,44 @@ export default function Eletrica() {
     const [selectedFloor, setSelectedFloor] = useState(null);
     const navigate = useNavigate();
 
-    const API_BASE =
-        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
-
+    const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
     const token = localStorage.getItem("authToken");
     const user = token ? jwtDecode(token) : null;
-    const refreshTime = (user?.refreshTime || 10) * 1000;
+    const refreshTime = ((user?.refreshtime || 10) * 1000);
 
     // 🔹 Buscar dados da disciplina Elétrica
     const fetchEletrica = useCallback(async () => {
+        if (!token) {
+            setErro("Token não encontrado. Faça login novamente.");
+            setLoading(false);
+            return;
+        }
+
         try {
-            const res = await fetch(`${API_BASE}/eletrica`, {
+            const res = await fetch(`${API_BASE}/data/EL`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const data = await res.json();
-            console.log("📡 Retorno da API Elétrica:", data);
 
-            if (data.ok && data.dados?.ok) {
+            if (res.status === 401 || res.status === 403) {
+                setErro("Acesso negado. Faça login novamente.");
+                setLoading(false);
+                return;
+            }
+
+            const data = await res.json();
+            console.log("📡 Retorno da API /data/EL:", data);
+
+            if (data.ok && data.estrutura) {
                 setDados({
-                    estrutura: data.dados.estrutura,
-                    detalhes: data.dados.detalhes,
+                    estrutura: data.estrutura,
+                    detalhes: data.detalhes,
+                });
+                setErro("");
+            } else if (data.structure) {
+                // Caso a resposta venha no formato do generateFrontendData()
+                setDados({
+                    estrutura: data.structure,
+                    detalhes: data.structureDetails || {},
                 });
                 setErro("");
             } else {
@@ -46,41 +64,14 @@ export default function Eletrica() {
         }
     }, [API_BASE, token]);
 
-    // 🔹 Buscar dados da disciplina "Elétrica" com refresh automático
+    // 🔁 Atualização automática
     useEffect(() => {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-            setErro("Token não encontrado. Faça login novamente.");
-            setLoading(false);
-            return;
-        }
+        fetchEletrica();
+        const interval = setInterval(fetchEletrica, refreshTime);
+        return () => clearInterval(interval);
+    }, [fetchEletrica, refreshTime]);
 
-        const fetchData = () => {
-            fetch(`${API_BASE}/eletrica`, {
-                headers: { Authorization: `Bearer ${token}` },
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    console.log("📡 Retorno da API Elétrica:", data);
-                    if (data.ok && data.dados?.ok) {
-                        setDados({
-                            estrutura: data.dados.estrutura || {},
-                            detalhes: data.dados.detalhes || {},
-                        });
-                    } else {
-                        setErro(data.erro || "Erro ao carregar dados da disciplina.");
-                    }
-                })
-                .catch(() => setErro("Falha na comunicação com a API."))
-                .finally(() => setLoading(false));
-        };
-
-        fetchData();
-        const refreshInterval = setInterval(fetchData, 5000); // 🔁 Atualiza a cada 5 segundos
-
-        return () => clearInterval(refreshInterval);
-    }, []);
-
+    // ---------------- Renderização ----------------
 
     if (loading)
         return (
@@ -90,7 +81,11 @@ export default function Eletrica() {
         );
 
     if (erro)
-        return <div className="p-6 text-center text-red-500 font-medium">{erro}</div>;
+        return (
+            <div className="p-6 text-center text-red-500 font-medium">
+                {erro}
+            </div>
+        );
 
     const { estrutura, detalhes } = dados;
 
@@ -173,7 +168,9 @@ export default function Eletrica() {
                 />
             </aside>
 
-            <main className="flex-1 pt-20 p-6 overflow-y-auto">{renderEquipamentos()}</main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto">
+                {renderEquipamentos()}
+            </main>
         </div>
     );
 }
