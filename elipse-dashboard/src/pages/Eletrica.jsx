@@ -40,25 +40,20 @@ export default function Eletrica() {
             const data = await res.json();
             console.log("📡 Retorno da API /dados/EL:", data);
 
-            // 🧩 Ajuste automático da estrutura
             let estrutura = {};
             let detalhes = {};
 
             if (data.estrutura) {
-                // Caso venha encapsulado (ex: { estrutura: {...}, detalhes: {...} })
                 estrutura = data.estrutura;
                 detalhes = data.detalhes || {};
             } else if (data.structure) {
-                // Caso venha no formato generateFrontendData()
                 estrutura = data.structure;
                 detalhes = data.structureDetails || {};
             } else {
-                // Caso venha direto (ex: { "Principal": {...} })
                 estrutura = data;
                 detalhes = data.structureDetails || {};
             }
 
-            // Define no estado
             setDados({ estrutura, detalhes });
             setErro("");
         } catch (err) {
@@ -75,22 +70,6 @@ export default function Eletrica() {
         const interval = setInterval(fetchEletrica, refreshTime);
         return () => clearInterval(interval);
     }, [fetchEletrica, refreshTime]);
-
-    // ---------------- Renderização ----------------
-
-    if (loading)
-        return (
-            <div className="flex items-center justify-center h-screen text-gray-500">
-                Carregando dados da Elétrica...
-            </div>
-        );
-
-    if (erro)
-        return (
-            <div className="p-6 text-center text-red-500 font-medium">
-                {erro}
-            </div>
-        );
 
     const { estrutura, detalhes } = dados;
 
@@ -123,9 +102,16 @@ export default function Eletrica() {
                 <div className="space-y-6">
                     {pavimentosOrdenados.map(([pav, equipamentos]) => (
                         <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
-                            <h2 className="text-xl font-semibold mb-4">{pav}</h2>
+                            <h2 className="text-xl font-semibold mb-4">
+                                {Object.values(equipamentos)?.[0]?.info?.[0]?.floor || pav}
+                            </h2>
                             <EquipmentGrid
-                                equipamentos={Object.keys(equipamentos)}
+                                equipamentos={Object.entries(equipamentos).map(([tag, info]) => ({
+                                    tag,
+                                    name: detalhes[tag]?.name || tag,
+                                    description: detalhes[tag]?.description || "Sem descrição",
+                                    communication: detalhes[tag]?.communication || "FAIL!",
+                                }))}
                                 selectedBuilding={selectedBuilding}
                                 selectedFloor={pav}
                                 detalhes={detalhes}
@@ -142,10 +128,16 @@ export default function Eletrica() {
             return (
                 <div className="bg-white rounded-2xl shadow-md p-4">
                     <h2 className="text-xl font-semibold mb-4">
-                        {selectedBuilding} — {selectedFloor}
+                        {selectedBuilding} —{" "}
+                        {Object.values(equipamentos)?.[0]?.info?.[0]?.floor || selectedFloor}
                     </h2>
                     <EquipmentGrid
-                        equipamentos={Object.keys(equipamentos)}
+                        equipamentos={Object.entries(equipamentos).map(([tag, info]) => ({
+                            tag,
+                            name: detalhes[tag]?.name || tag,
+                            description: detalhes[tag]?.description || "Sem descrição",
+                            communication: detalhes[tag]?.communication || "FAIL!",
+                        }))}
                         selectedBuilding={selectedBuilding}
                         selectedFloor={selectedFloor}
                         detalhes={detalhes}
@@ -156,6 +148,20 @@ export default function Eletrica() {
         }
     };
 
+    if (loading)
+        return (
+            <div className="flex items-center justify-center h-screen text-gray-500">
+                Carregando dados da Elétrica...
+            </div>
+        );
+
+    if (erro)
+        return (
+            <div className="p-6 text-center text-red-500 font-medium">
+                {erro}
+            </div>
+        );
+
     return (
         <div className="flex min-h-screen bg-gray-50">
             <aside className="w-64 bg-white border-r pt-20 p-4 shadow-md overflow-y-auto">
@@ -163,14 +169,20 @@ export default function Eletrica() {
                     <Zap className="w-5 h-5 text-yellow-500" />
                     Elétrica
                 </h2>
-                <DisciplineSidebar
-                    estrutura={estrutura}
-                    onSelectBuilding={(b) => {
-                        setSelectedBuilding(b);
-                        setSelectedFloor(null);
-                    }}
-                    onSelectFloor={(f) => setSelectedFloor(f)}
-                />
+                {estrutura && Object.keys(estrutura).length > 0 ? (
+                    <DisciplineSidebar
+                        estrutura={estrutura}
+                        onSelectBuilding={(b) => {
+                            setSelectedBuilding(b);
+                            setSelectedFloor(null);
+                        }}
+                        onSelectFloor={(f) => setSelectedFloor(f)}
+                    />
+                ) : (
+                    <p className="text-gray-400 italic text-sm">
+                        Sem dados de Elétrica até o momento.
+                    </p>
+                )}
             </aside>
 
             <main className="flex-1 pt-20 p-6 overflow-y-auto">

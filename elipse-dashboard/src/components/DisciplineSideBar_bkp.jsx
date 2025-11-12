@@ -1,55 +1,55 @@
-// components/DisciplineSidebar.jsx
 import React from "react";
 
 export default function DisciplineSidebar({ estrutura, onSelectBuilding, onSelectFloor }) {
   if (!estrutura || Object.keys(estrutura).length === 0) {
-    return <p className="text-gray-400 text-sm italic">Nenhum dado disponível.</p>;
+    return (
+      <div className="text-gray-400 italic text-sm">
+        Sem dados da disciplina até o momento.
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      {Object.entries(estrutura).map(([buildingName, pavimentos]) => {
-        // 🔹 Coleta todos os pavimentos com seus nomes amigáveis e ordem
-        const pavimentosInfo = Object.entries(pavimentos).map(([alias, equipamentos]) => {
-          let floorName = alias;
-          let ordPav = 0;
+    <div className="space-y-3">
+      {Object.entries(estrutura).map(([buildingName, floors]) => (
+        <div key={buildingName}>
+          <h3
+            className="font-semibold text-gray-800 mb-1 cursor-pointer hover:text-blue-600 transition"
+            onClick={() => onSelectBuilding(buildingName)}
+          >
+            {buildingName}
+          </h3>
 
-          // Busca o primeiro equipamento que tenha o campo "info"
-          const primeiroEquip = Object.values(equipamentos)[0];
-          if (primeiroEquip?.info?.[0]) {
-            floorName = primeiroEquip.info[0].floor || alias;
-            ordPav = parseInt(primeiroEquip.info[0].ordPav) || 0;
-          }
-
-          return { alias, floorName, ordPav };
-        });
-
-        // 🔽 Ordena de forma decrescente (ordPav maior primeiro)
-        pavimentosInfo.sort((a, b) => b.ordPav - a.ordPav);
-
-        return (
-          <div key={buildingName}>
-            <button
-              onClick={() => onSelectBuilding(buildingName)}
-              className="w-full text-left font-semibold text-gray-700 hover:text-blue-600 transition"
-            >
-              {buildingName}
-            </button>
-            <ul className="ml-3 mt-1 space-y-1">
-              {pavimentosInfo.map(({ alias, floorName }) => (
-                <li key={alias}>
-                  <button
-                    onClick={() => onSelectFloor(alias)}
-                    className="text-gray-600 hover:text-blue-500 text-sm"
+          <ul className="ml-3 border-l border-gray-200">
+            {Object.entries(floors)
+              .sort(([a], [b]) => {
+                const ordA = Object.values(floors[a] || {}).find(
+                  (eq) => eq.info?.[0]?.ordPav
+                )?.info?.[0]?.ordPav ?? 0;
+                const ordB = Object.values(floors[b] || {}).find(
+                  (eq) => eq.info?.[0]?.ordPav
+                )?.info?.[0]?.ordPav ?? 0;
+                return ordB - ordA;
+              })
+              .map(([floorKey, floorData]) => {
+                const pavRealName =
+                  Object.values(floorData)?.[0]?.info?.[0]?.floor || floorKey;
+                return (
+                  <li
+                    key={floorKey}
+                    className="text-gray-600 text-sm pl-3 py-1 cursor-pointer hover:text-blue-600 transition"
+                    onClick={() => {
+                      onSelectBuilding(buildingName);
+                      onSelectFloor(floorKey);
+                    }}
                   >
-                    {floorName}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+                    {pavRealName}
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }
