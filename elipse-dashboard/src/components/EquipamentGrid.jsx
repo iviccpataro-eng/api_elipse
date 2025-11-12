@@ -1,124 +1,84 @@
-// src/components/EquipmentGrid.jsx
+// src/components/EquipamentGrid.jsx
 import React from "react";
-import { Doughnut } from "react-chartjs-2";
+import { Gauge } from "lucide-react";
 
 export default function EquipmentGrid({
     equipamentos = [],
+    detalhes = {},
     selectedBuilding,
     selectedFloor,
-    detalhes = {},
     onClick,
 }) {
     if (!equipamentos || equipamentos.length === 0) {
         return (
-            <div className="text-gray-400 text-center py-6">
+            <div className="flex items-center justify-center text-gray-400 italic py-6">
                 Nenhum equipamento encontrado neste pavimento.
             </div>
         );
     }
 
-    // --- Função renderArcGraph aprimorada ---
-    // Mostra arco semicircular centrado no valor nominal
-    const renderArcGraph = (valor, nominal) => {
-        if (valor == null || nominal == null || isNaN(valor)) return null;
-
-        // Intervalo: ±20% do nominal
-        const min = nominal * 0.8;
-        const max = nominal * 1.2;
-
-        // Converte valor em porcentagem dentro do intervalo (0 = min, 50 = nominal, 100 = max)
-        const percent = ((valor - min) / (max - min)) * 100;
-        const capped = Math.max(0, Math.min(100, percent));
-
-        // Define cor do arco (verde se dentro do intervalo, vermelho fora)
-        const dentroFaixa = valor >= min && valor <= max;
-
-        const data = {
-            datasets: [
-                {
-                    data: [capped, 100 - capped],
-                    backgroundColor: [dentroFaixa ? '#16a34a' : '#dc2626', '#e5e7eb'],
-                    borderWidth: 0,
-                    circumference: 180, // arco semicircular
-                    rotation: 270,      // começa embaixo
-                    cutout: '75%',      // espessura
-                },
-            ],
-        };
-
-        return (
-            <div className="relative w-24 h-12 mx-auto mt-2">
-                <Doughnut
-                    data={data}
-                    options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { enabled: false },
-                        },
-                    }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center -translate-y-1">
-                    <div className="text-xs text-gray-700 font-semibold">
-                        {valor.toFixed(2)}
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {equipamentos.map((eq) => {
-                const tag = `EL/${selectedBuilding}/${selectedFloor}/${eq}`;
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {equipamentos.map((tag) => {
                 const info = detalhes[tag] || {};
-                const dataVars = info.data || [];
+                const nomeAmigavel =
+                    info.nomeExibicao ||
+                    tag.replace(/_/g, "-"); // Ex: MM_01_01 → MM-01-01
+                const descricao = info.descricao || "Equipamento sem descrição";
+                const comunicacao = info.comunicacao ?? true; // true=ok, false=erro
+                const status = comunicacao ? "OK" : "Falha de Comunicação";
+                const statusColor = comunicacao ? "text-green-600" : "text-red-600";
 
                 return (
-                    <button
-                        key={eq}
-                        onClick={() => onClick(tag)}
-                        className="flex flex-col border rounded-xl p-4 bg-gray-50 hover:bg-blue-50 transition text-left shadow-sm"
+                    <div
+                        key={tag}
+                        onClick={() => onClick && onClick(tag)}
+                        className="flex items-center bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden border border-gray-100 hover:border-blue-300"
                     >
-                        <span className="font-semibold text-gray-800">{info.name || eq}</span>
-
-                        {info.description && (
-                            <span className="text-xs text-gray-500">{info.description}</span>
-                        )}
-
-                        <span className="text-sm text-gray-500">
-                            {info.modelo || info.fabricante || ""}
-                        </span>
-
-                        {info.statusComunicacao && (
-                            <span
-                                className={`text-xs font-medium mt-1 ${info.statusComunicacao === "OK"
-                                    ? "text-green-600"
-                                    : "text-red-500"
-                                    }`}
+                        {/* SVG Gauge lateral */}
+                        <div className="bg-gray-50 flex items-center justify-center p-4 w-24 h-full">
+                            <svg
+                                viewBox="0 0 100 100"
+                                className="w-12 h-12 text-blue-500"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="8"
                             >
-                                {info.statusComunicacao}
-                            </span>
-                        )}
+                                <circle
+                                    cx="50"
+                                    cy="50"
+                                    r="40"
+                                    stroke="currentColor"
+                                    strokeOpacity="0.2"
+                                />
+                                <path
+                                    d="M50 50 L50 10"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                />
+                                <path
+                                    d="M50 50 L85 50"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                />
+                            </svg>
+                        </div>
 
-                        {/* 🔹 Renderiza até 2 grandezas com gráfico */}
-                        {Array.isArray(dataVars) &&
-                            dataVars
-                                .filter((d) => d[3] === true)
-                                .slice(0, 2)
-                                .map(([nome, valor, unidade, , nominal], i) => (
-                                    <div key={i} className="mt-3 border-t pt-2 text-center">
-                                        <div className="font-medium text-sm text-gray-700">{nome}</div>
-                                        <div className="text-xs text-gray-500">
-                                            {valor} {unidade}
-                                        </div>
-                                        {renderArcGraph(valor, nominal)}
-                                    </div>
-                                ))}
-                    </button>
+                        {/* Linha divisória */}
+                        <div className="h-20 w-px bg-gray-200"></div>
+
+                        {/* Texto */}
+                        <div className="flex-1 p-4 overflow-hidden">
+                            <h3 className="text-lg font-semibold text-gray-800 truncate">
+                                {nomeAmigavel}
+                            </h3>
+                            <p className="text-sm text-gray-600 truncate flex items-center gap-1">
+                                {descricao}
+                                <span className="text-gray-400">•</span>
+                                <span className={`font-medium ${statusColor}`}>{status}</span>
+                            </p>
+                        </div>
+                    </div>
                 );
             })}
         </div>

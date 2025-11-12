@@ -1,6 +1,6 @@
 // src/pages/Disciplina.jsx
 import { useEffect, useState } from "react";
-import DisciplineSidebar from "../components/DisciplineSidebar";
+import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipmentGrid";
 
 export default function Disciplina({ disciplina }) {
