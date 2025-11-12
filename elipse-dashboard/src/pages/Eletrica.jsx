@@ -27,7 +27,7 @@ export default function Eletrica() {
         }
 
         try {
-            const res = await fetch(`${API_BASE}/data/EL`, {
+            const res = await fetch(`${API_BASE}/dados/EL`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -38,7 +38,7 @@ export default function Eletrica() {
             }
 
             const data = await res.json();
-            console.log("📡 Retorno da API /data/EL:", data);
+            console.log("📡 Retorno da API /dados/EL:", data);
 
             if (data.ok && data.estrutura) {
                 setDados({
