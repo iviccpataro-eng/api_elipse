@@ -40,22 +40,27 @@ export default function Eletrica() {
             const data = await res.json();
             console.log("📡 Retorno da API /dados/EL:", data);
 
-            if (data.ok && data.estrutura) {
-                setDados({
-                    estrutura: data.estrutura,
-                    detalhes: data.detalhes,
-                });
-                setErro("");
+            // 🧩 Ajuste automático da estrutura
+            let estrutura = {};
+            let detalhes = {};
+
+            if (data.estrutura) {
+                // Caso venha encapsulado (ex: { estrutura: {...}, detalhes: {...} })
+                estrutura = data.estrutura;
+                detalhes = data.detalhes || {};
             } else if (data.structure) {
-                // Caso a resposta venha no formato do generateFrontendData()
-                setDados({
-                    estrutura: data.structure,
-                    detalhes: data.structureDetails || {},
-                });
-                setErro("");
+                // Caso venha no formato generateFrontendData()
+                estrutura = data.structure;
+                detalhes = data.structureDetails || {};
             } else {
-                setErro(data.erro || "Erro ao carregar dados da disciplina.");
+                // Caso venha direto (ex: { "Principal": {...} })
+                estrutura = data;
+                detalhes = data.structureDetails || {};
             }
+
+            // Define no estado
+            setDados({ estrutura, detalhes });
+            setErro("");
         } catch (err) {
             console.error("Erro no fetch:", err);
             setErro("Falha na comunicação com a API.");
@@ -120,7 +125,7 @@ export default function Eletrica() {
                         <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
                             <h2 className="text-xl font-semibold mb-4">{pav}</h2>
                             <EquipmentGrid
-                                equipamentos={equipamentos}
+                                equipamentos={Object.keys(equipamentos)}
                                 selectedBuilding={selectedBuilding}
                                 selectedFloor={pav}
                                 detalhes={detalhes}
@@ -133,14 +138,14 @@ export default function Eletrica() {
         }
 
         if (selectedBuilding && selectedFloor) {
-            const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
+            const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || {};
             return (
                 <div className="bg-white rounded-2xl shadow-md p-4">
                     <h2 className="text-xl font-semibold mb-4">
                         {selectedBuilding} — {selectedFloor}
                     </h2>
                     <EquipmentGrid
-                        equipamentos={equipamentos}
+                        equipamentos={Object.keys(equipamentos)}
                         selectedBuilding={selectedBuilding}
                         selectedFloor={selectedFloor}
                         detalhes={detalhes}
