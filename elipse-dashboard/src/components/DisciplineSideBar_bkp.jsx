@@ -23,21 +23,24 @@ export default function DisciplineSidebar({ estrutura, onSelectBuilding, onSelec
           <ul className="ml-3 border-l border-gray-200">
             {Object.entries(floors)
               .sort(([a], [b]) => {
-                const ordA = Object.values(floors[a] || {}).find(
-                  (eq) => eq.info?.[0]?.ordPav
-                )?.info?.[0]?.ordPav ?? 0;
-                const ordB = Object.values(floors[b] || {}).find(
-                  (eq) => eq.info?.[0]?.ordPav
-                )?.info?.[0]?.ordPav ?? 0;
+                const ordA =
+                  Object.values(floors[a] || {}).find(
+                    (eq) => eq.info?.[0]?.ordPav
+                  )?.info?.[0]?.ordPav ?? 0;
+                const ordB =
+                  Object.values(floors[b] || {}).find(
+                    (eq) => eq.info?.[0]?.ordPav
+                  )?.info?.[0]?.ordPav ?? 0;
                 return ordB - ordA;
               })
               .map(([floorKey, floorData]) => {
                 const pavRealName =
                   Object.values(floorData)?.[0]?.info?.[0]?.floor || floorKey;
+
                 return (
                   <li
                     key={floorKey}
-                    className="text-gray-600 text-sm pl-3 py-1 cursor-pointer hover:text-blue-600 transition"
+                    className="cursor-pointer text-sm text-gray-700 hover:text-blue-600"
                     onClick={() => {
                       onSelectBuilding(buildingName);
                       onSelectFloor(floorKey);

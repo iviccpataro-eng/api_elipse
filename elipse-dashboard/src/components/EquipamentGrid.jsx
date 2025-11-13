@@ -13,9 +13,13 @@ export default function EquipmentGrid({ equipamentos, onClick }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {equipamentos.map((equip) => {
-                const statusOk =
-                    equip.communication === "OK" ||
-                    equip.communication?.toLowerCase() === "ok";
+                const status = equip.communication || "FAIL!";
+                const statusColor =
+                    status === "OK"
+                        ? "text-green-600"
+                        : status.toLowerCase().includes("fail")
+                            ? "text-red-600"
+                            : "text-gray-400";
 
                 return (
                     <div
@@ -23,24 +27,24 @@ export default function EquipmentGrid({ equipamentos, onClick }) {
                         onClick={() => onClick(equip.tag)}
                         className="flex items-center bg-white rounded-2xl shadow-md border hover:shadow-lg hover:border-blue-400 transition cursor-pointer p-4"
                     >
+                        {/* Ícone gauge */}
                         <div className="flex-shrink-0 text-gray-500">
                             <Gauge size={48} strokeWidth={1.75} />
                         </div>
 
+                        {/* Separador vertical */}
                         <div className="mx-4 border-l h-12 border-gray-200" />
 
+                        {/* Texto */}
                         <div className="flex flex-col justify-center flex-grow">
                             <span className="font-semibold text-gray-800 text-base">
                                 {equip.name}
                             </span>
                             <span className="text-sm text-gray-600 flex items-center gap-1">
-                                {equip.description}
+                                {equip.description || "Sem descrição"}
                                 <span className="text-gray-400">•</span>
-                                <span
-                                    className={`font-medium ${statusOk ? "text-green-600" : "text-red-600"
-                                        }`}
-                                >
-                                    {statusOk
+                                <span className={`${statusColor} font-medium`}>
+                                    {status === "OK"
                                         ? "Comunicação OK"
                                         : "Falha de Comunicação"}
                                 </span>
