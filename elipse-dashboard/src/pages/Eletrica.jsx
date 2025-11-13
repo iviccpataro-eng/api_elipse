@@ -15,7 +15,6 @@ export default function Eletrica() {
 
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
-
     const token = localStorage.getItem("authToken");
     const user = token ? jwtDecode(token) : null;
     const refreshTime = (user?.refreshTime || 10) * 1000;
@@ -32,7 +31,8 @@ export default function Eletrica() {
             const data = await res.json();
             console.log("📡 Retorno bruto da API /dados/EL:", data);
 
-            const estrutura = data?.EL?.Principal || data?.EL || {};
+            // 🧠 Corrige o ponto de leitura
+            const estrutura = data?.Principal || data?.EL?.Principal || {};
             const detalhes = data?.structureDetails || {};
 
             console.log("🧩 Estrutura identificada:", estrutura);
@@ -54,7 +54,6 @@ export default function Eletrica() {
         }
     }, [API_BASE, token]);
 
-    // 🔁 Atualização automática
     useEffect(() => {
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
@@ -67,8 +66,6 @@ export default function Eletrica() {
         return () => clearInterval(refreshInterval);
     }, [fetchEletrica, refreshTime]);
 
-    // ---------------- Renderização ----------------
-
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
@@ -77,11 +74,6 @@ export default function Eletrica() {
         );
 
     const { estrutura, detalhes } = dados;
-
-    console.log("🎯 [Render] Estrutura atual:", estrutura);
-    console.log("🎯 [Render] Detalhes atuais:", detalhes);
-    console.log("🎯 [Render] Prédio selecionado:", selectedBuilding);
-    console.log("🎯 [Render] Pavimento selecionado:", selectedFloor);
 
     const handleEquipamentoClick = (tag) => {
         console.log("🖱️ Equipamento clicado:", tag);
@@ -100,10 +92,7 @@ export default function Eletrica() {
         }
 
         if (selectedBuilding && !selectedFloor) {
-            const pavimentos =
-                estrutura[selectedBuilding] || estrutura || {};
-            console.log("🏢 Pavimentos disponíveis:", pavimentos);
-
+            const pavimentos = estrutura[selectedBuilding] || {};
             const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
                 const ordA =
                     Object.values(detalhes).find(
@@ -146,11 +135,7 @@ export default function Eletrica() {
 
         if (selectedBuilding && selectedFloor) {
             const equipamentos =
-                estrutura[selectedBuilding]?.[selectedFloor] ||
-                estrutura[selectedFloor] ||
-                [];
-
-            console.log("⚙️ Equipamentos do pavimento:", equipamentos);
+                estrutura[selectedBuilding]?.[selectedFloor] || [];
 
             return (
                 <div className="bg-white rounded-2xl shadow-md p-4">
@@ -158,7 +143,8 @@ export default function Eletrica() {
                         {selectedBuilding} —{" "}
                         {
                             Object.values(detalhes).find(
-                                (d) => d?.pavimento === selectedFloor || d?.floor === selectedFloor
+                                (d) =>
+                                    d?.pavimento === selectedFloor || d?.floor === selectedFloor
                             )?.floor || selectedFloor
                         }
                     </h2>
