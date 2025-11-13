@@ -41,12 +41,16 @@ export default function Eletrica() {
             const data = await res.json();
             console.log("📡 Retorno da API /dados/EL:", data);
 
-            // Extrai estrutura e detalhes corretamente
+            // Ajusta para o formato que você mostrou no JSON
             const estrutura = data?.EL?.Principal || {};
             const detalhes = data?.structureDetails || {};
 
-            if (Object.keys(estrutura).length === 0) {
-                setErro("Sem dados disponíveis de Elétrica.");
+            // Se vier vazio mesmo com dados, evitar erro de checagem
+            const hasData =
+                estrutura && Object.keys(estrutura).some((pav) => Object.keys(estrutura[pav]).length > 0);
+
+            if (!hasData) {
+                setErro("Sem dados de Elétrica até o momento.");
             } else {
                 setErro("");
             }
@@ -60,7 +64,6 @@ export default function Eletrica() {
         }
     }, [API_BASE, token]);
 
-    // Atualização automática
     useEffect(() => {
         fetchEletrica();
         const interval = setInterval(fetchEletrica, refreshTime);
@@ -69,20 +72,20 @@ export default function Eletrica() {
 
     const { estrutura, detalhes } = dados;
 
-    // ---------------- Renderização ----------------
-    if (loading)
-        return (
-            <div className="flex items-center justify-center h-screen text-gray-500">
-                Carregando dados da Elétrica...
-            </div>
-        );
-
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
 
     const renderEquipamentos = () => {
-        if (erro && Object.keys(estrutura).length === 0) {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center h-full text-gray-400 italic">
+                    Carregando dados da Elétrica...
+                </div>
+            );
+        }
+
+        if (erro && (!estrutura || Object.keys(estrutura).length === 0)) {
             return (
                 <div className="flex items-center justify-center h-full text-gray-400 italic">
                     {erro}
@@ -90,7 +93,7 @@ export default function Eletrica() {
             );
         }
 
-        if (!selectedBuilding && !selectedFloor) {
+        if (!selectedBuilding || !selectedFloor) {
             return (
                 <div className="flex items-center justify-center h-full text-gray-400 italic">
                     Selecione um pavimento ao lado.
@@ -98,48 +101,40 @@ export default function Eletrica() {
             );
         }
 
-        if (selectedFloor) {
-            const equipamentos = estrutura[selectedFloor] || {};
+        const equipamentos = estrutura[selectedFloor] || {};
 
-            const detalhesEquip = Object.keys(equipamentos).map((equipKey) => {
-                const path = `EL/${selectedBuilding}/${selectedFloor}/${equipKey}`;
-                const det = detalhes[path] || {};
-                return {
-                    tag: equipKey,
-                    name: det.name || equipKey,
-                    description: det.description || "Sem descrição",
-                    communication: det.communication || det.statusComunicacao || "FAIL!",
-                };
-            });
+        const detalhesEquip = Object.keys(equipamentos).map((equipKey) => {
+            const path = `EL/${selectedBuilding}/${selectedFloor}/${equipKey}`;
+            const det = detalhes[path] || {};
+            return {
+                tag: equipKey,
+                name: det.name || equipKey,
+                description: det.description || "Sem descrição",
+                communication: det.communication || det.statusComunicacao || "FAIL!",
+            };
+        });
 
-            const pavimentoNome =
-                Object.values(detalhes).find(
-                    (d) => d.pavimento === selectedFloor || d.floor === selectedFloor
-                )?.floor || selectedFloor;
-
-            return (
-                <div className="bg-white rounded-2xl shadow-md p-4">
-                    <h2 className="text-xl font-semibold mb-4">
-                        {selectedBuilding} — {pavimentoNome}
-                    </h2>
-                    <EquipmentGrid
-                        equipamentos={detalhesEquip}
-                        selectedBuilding={selectedBuilding}
-                        selectedFloor={selectedFloor}
-                        detalhes={detalhes}
-                        onClick={(equipTag) =>
-                            handleEquipamentoClick(
-                                `EL/${selectedBuilding}/${selectedFloor}/${equipTag}`
-                            )
-                        }
-                    />
-                </div>
-            );
-        }
+        const pavimentoNome =
+            Object.values(detalhes).find(
+                (d) => d.pavimento === selectedFloor || d.floor === selectedFloor
+            )?.floor || selectedFloor;
 
         return (
-            <div className="flex items-center justify-center h-full text-gray-400 italic">
-                Selecione um pavimento ao lado.
+            <div className="bg-white rounded-2xl shadow-md p-4">
+                <h2 className="text-xl font-semibold mb-4">
+                    {selectedBuilding} — {pavimentoNome}
+                </h2>
+                <EquipmentGrid
+                    equipamentos={detalhesEquip}
+                    selectedBuilding={selectedBuilding}
+                    selectedFloor={selectedFloor}
+                    detalhes={detalhes}
+                    onClick={(equipTag) =>
+                        handleEquipamentoClick(
+                            `EL/${selectedBuilding}/${selectedFloor}/${equipTag}`
+                        )
+                    }
+                />
             </div>
         );
     };
