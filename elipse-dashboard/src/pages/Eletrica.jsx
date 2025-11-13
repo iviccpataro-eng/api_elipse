@@ -9,53 +9,36 @@ export default function Eletrica() {
     const [dados, setDados] = useState({ estrutura: {}, detalhes: {} });
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
-    const [selectedBuilding, setSelectedBuilding] = useState("Principal");
+    const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
     const navigate = useNavigate();
 
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+
     const token = localStorage.getItem("authToken");
     const user = token ? jwtDecode(token) : null;
-    const refreshTime = (user?.refreshtime || 10) * 1000;
+    const refreshTime = (user?.refreshTime || 10) * 1000;
 
     // 🔹 Buscar dados da disciplina Elétrica
     const fetchEletrica = useCallback(async () => {
-        if (!token) {
-            setErro("Token não encontrado. Faça login novamente.");
-            setLoading(false);
-            return;
-        }
-
         try {
             const res = await fetch(`${API_BASE}/dados/EL`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
-            if (!res.ok) {
-                setErro(`Erro ${res.status}: falha ao carregar dados.`);
-                setLoading(false);
-                return;
-            }
-
             const data = await res.json();
             console.log("📡 Retorno da API /dados/EL:", data);
 
-            // Ajusta para o formato que você mostrou no JSON
-            const estrutura = data?.EL?.Principal || {};
-            const detalhes = data?.structureDetails || {};
+            // --- Ajuste para o formato atual da API ---
+            const estrutura = data?.EL?.Principal || {}; // raiz dos pavimentos e equipamentos
+            const detalhes = data?.structureDetails || {}; // detalhes com nomes, descrições etc.
 
-            // Se vier vazio mesmo com dados, evitar erro de checagem
-            const hasData =
-                estrutura && Object.keys(estrutura).some((pav) => Object.keys(estrutura[pav]).length > 0);
-
-            if (!hasData) {
-                setErro("Sem dados de Elétrica até o momento.");
-            } else {
+            if (estrutura && Object.keys(estrutura).length > 0) {
+                setDados({ estrutura, detalhes });
                 setErro("");
+            } else {
+                setErro("Sem dados de Elétrica até o momento.");
             }
-
-            setDados({ estrutura, detalhes });
         } catch (err) {
             console.error("Erro no fetch:", err);
             setErro("Falha na comunicação com a API.");
@@ -64,79 +47,119 @@ export default function Eletrica() {
         }
     }, [API_BASE, token]);
 
+    // 🔁 Atualização automática
     useEffect(() => {
+        if (!token) {
+            setErro("Token não encontrado. Faça login novamente.");
+            setLoading(false);
+            return;
+        }
+
         fetchEletrica();
-        const interval = setInterval(fetchEletrica, refreshTime);
-        return () => clearInterval(interval);
+        const refreshInterval = setInterval(fetchEletrica, refreshTime);
+        return () => clearInterval(refreshInterval);
     }, [fetchEletrica, refreshTime]);
+
+    // ---------------- Renderização ----------------
+    if (loading)
+        return (
+            <div className="flex items-center justify-center h-screen text-gray-500">
+                Carregando dados da Elétrica...
+            </div>
+        );
 
     const { estrutura, detalhes } = dados;
 
     const handleEquipamentoClick = (tag) => {
+        // exemplo: EL/Principal/PAV01/MM_01_01
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
 
     const renderEquipamentos = () => {
-        if (loading) {
+        if (!selectedBuilding && !selectedFloor) {
             return (
-                <div className="flex items-center justify-center h-full text-gray-400 italic">
-                    Carregando dados da Elétrica...
+                <div className="flex items-center justify-center h-full text-gray-300 select-none">
+                    <span className="text-lg italic">
+                        Selecione o prédio ou pavimento ao lado
+                    </span>
                 </div>
             );
         }
 
-        if (erro && (!estrutura || Object.keys(estrutura).length === 0)) {
+        if (selectedBuilding && !selectedFloor) {
+            const pavimentos = estrutura[selectedBuilding] || estrutura;
+            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
+                const ordA =
+                    Object.values(detalhes).find(
+                        (d) => d?.pavimento === a || d?.floor === a
+                    )?.ordPav ?? 0;
+                const ordB =
+                    Object.values(detalhes).find(
+                        (d) => d?.pavimento === b || d?.floor === b
+                    )?.ordPav ?? 0;
+                return ordB - ordA;
+            });
+
             return (
-                <div className="flex items-center justify-center h-full text-gray-400 italic">
-                    {erro}
+                <div className="space-y-6">
+                    {pavimentosOrdenados.map(([pav, equipamentos]) => (
+                        <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
+                            <h2 className="text-xl font-semibold mb-4">
+                                {
+                                    Object.values(detalhes).find(
+                                        (d) => d?.pavimento === pav || d?.floor === pav
+                                    )?.floor || pav
+                                }
+                            </h2>
+                            <EquipmentGrid
+                                equipamentos={Object.keys(equipamentos)}
+                                selectedBuilding={selectedBuilding}
+                                selectedFloor={pav}
+                                detalhes={detalhes}
+                                onClick={(equipTag) =>
+                                    handleEquipamentoClick(
+                                        `EL/${selectedBuilding}/${pav}/${equipTag}`
+                                    )
+                                }
+                            />
+                        </div>
+                    ))}
                 </div>
             );
         }
 
-        if (!selectedBuilding || !selectedFloor) {
+        if (selectedBuilding && selectedFloor) {
+            const equipamentos =
+                estrutura[selectedBuilding]?.[selectedFloor] ||
+                estrutura[selectedFloor] ||
+                [];
+
             return (
-                <div className="flex items-center justify-center h-full text-gray-400 italic">
-                    Selecione um pavimento ao lado.
+                <div className="bg-white rounded-2xl shadow-md p-4">
+                    <h2 className="text-xl font-semibold mb-4">
+                        {selectedBuilding} —{" "}
+                        {
+                            Object.values(detalhes).find(
+                                (d) =>
+                                    d?.pavimento === selectedFloor ||
+                                    d?.floor === selectedFloor
+                            )?.floor || selectedFloor
+                        }
+                    </h2>
+                    <EquipmentGrid
+                        equipamentos={Object.keys(equipamentos)}
+                        selectedBuilding={selectedBuilding}
+                        selectedFloor={selectedFloor}
+                        detalhes={detalhes}
+                        onClick={(equipTag) =>
+                            handleEquipamentoClick(
+                                `EL/${selectedBuilding}/${selectedFloor}/${equipTag}`
+                            )
+                        }
+                    />
                 </div>
             );
         }
-
-        const equipamentos = estrutura[selectedFloor] || {};
-
-        const detalhesEquip = Object.keys(equipamentos).map((equipKey) => {
-            const path = `EL/${selectedBuilding}/${selectedFloor}/${equipKey}`;
-            const det = detalhes[path] || {};
-            return {
-                tag: equipKey,
-                name: det.name || equipKey,
-                description: det.description || "Sem descrição",
-                communication: det.communication || det.statusComunicacao || "FAIL!",
-            };
-        });
-
-        const pavimentoNome =
-            Object.values(detalhes).find(
-                (d) => d.pavimento === selectedFloor || d.floor === selectedFloor
-            )?.floor || selectedFloor;
-
-        return (
-            <div className="bg-white rounded-2xl shadow-md p-4">
-                <h2 className="text-xl font-semibold mb-4">
-                    {selectedBuilding} — {pavimentoNome}
-                </h2>
-                <EquipmentGrid
-                    equipamentos={detalhesEquip}
-                    selectedBuilding={selectedBuilding}
-                    selectedFloor={selectedFloor}
-                    detalhes={detalhes}
-                    onClick={(equipTag) =>
-                        handleEquipamentoClick(
-                            `EL/${selectedBuilding}/${selectedFloor}/${equipTag}`
-                        )
-                    }
-                />
-            </div>
-        );
     };
 
     return (
@@ -150,11 +173,11 @@ export default function Eletrica() {
                 {estrutura && Object.keys(estrutura).length > 0 ? (
                     <DisciplineSidebar
                         estrutura={estrutura}
-                        onSelectBuilding={(b) => setSelectedBuilding(b)}
-                        onSelectFloor={(f) => {
-                            setSelectedBuilding("Principal");
-                            setSelectedFloor(f);
+                        onSelectBuilding={(b) => {
+                            setSelectedBuilding(b);
+                            setSelectedFloor(null);
                         }}
+                        onSelectFloor={(f) => setSelectedFloor(f)}
                     />
                 ) : (
                     <p className="text-gray-400 italic text-sm">
@@ -163,7 +186,13 @@ export default function Eletrica() {
                 )}
             </aside>
 
-            <main className="flex-1 pt-20 p-6 overflow-y-auto">{renderEquipamentos()}</main>
+            <main className="flex-1 pt-20 p-6 overflow-y-auto">
+                {erro && Object.keys(estrutura).length === 0 ? (
+                    <div className="text-center text-gray-400 italic">{erro}</div>
+                ) : (
+                    renderEquipamentos()
+                )}
+            </main>
         </div>
     );
 }
