@@ -6,147 +6,96 @@ import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 
 export default function Eletrica() {
-    const [dados, setDados] = useState({ estrutura: {}, detalhes: {} });
+
+    const [estrutura, setEstrutura] = useState({});
+    const [detalhes, setDetalhes] = useState({});
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
     const navigate = useNavigate();
 
-    const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
     const token = localStorage.getItem("authToken");
     const user = token ? jwtDecode(token) : null;
-    const refreshTime = ((user?.refreshtime || 10) * 1000);
+    const refreshTime = (user?.refreshTime || 10) * 1000;
+
+    // 🔹 Constrói detalhes automaticamente com base na estrutura real
+    const buildDetails = (rawStructure) => {
+        const out = {};
+
+        if (!rawStructure) return out;
+
+        Object.entries(rawStructure).forEach(([building, floors]) => {
+            Object.entries(floors).forEach(([floorKey, equips]) => {
+                Object.entries(equips).forEach(([tag, info]) => {
+                    out[tag] = {
+                        tag,
+                        name: info?.name || tag,
+                        description: info?.description || "Sem descrição",
+                        communication: info?.communication || "FAIL!",
+                        floor: info?.floor || floorKey,
+                        building
+                    };
+                });
+            });
+        });
+
+        return out;
+    };
 
     // 🔹 Buscar dados da disciplina Elétrica
     const fetchEletrica = useCallback(async () => {
+        console.group("🔄 [Eletrica] Iniciando fetch...");
+        try {
+            const res = await fetch(`${API_BASE}/dados/EL`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            console.log("📡 Status:", res.status);
+
+            const data = await res.json();
+            console.log("📡 Dados recebidos:", data);
+
+            // ✔️ Agora lendo o caminho correto SEM AMBIGUIDADES
+            const estruturaPronta = data?.EL?.Principal || {};
+
+            console.log("🏗 Estrutura final:", estruturaPronta);
+
+            const detalhesGerados = buildDetails(estruturaPronta);
+
+            console.log("📘 Detalhes reconstruídos:", detalhesGerados);
+
+            if (Object.keys(estruturaPronta).length === 0) {
+                setErro("Sem dados de Elétrica até o momento.");
+            }
+
+            setEstrutura(estruturaPronta);
+            setDetalhes(detalhesGerados);
+
+        } catch (err) {
+            console.error("❌ Erro no fetch:", err);
+            setErro("Falha na comunicação com a API.");
+        } finally {
+            console.groupEnd();
+            setLoading(false);
+        }
+    }, [API_BASE, token]);
+
+    useEffect(() => {
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
             setLoading(false);
             return;
         }
 
-        try {
-            const res = await fetch(`${API_BASE}/dados/EL`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (res.status === 401 || res.status === 403) {
-                setErro("Acesso negado. Faça login novamente.");
-                setLoading(false);
-                return;
-            }
-
-            const data = await res.json();
-            console.log("📡 Retorno da API /dados/EL:", data);
-
-            let estrutura = {};
-            let detalhes = {};
-
-            if (data.estrutura) {
-                estrutura = data.estrutura;
-                detalhes = data.detalhes || {};
-            } else if (data.structure) {
-                estrutura = data.structure;
-                detalhes = data.structureDetails || {};
-            } else {
-                estrutura = data;
-                detalhes = data.structureDetails || {};
-            }
-
-            setDados({ estrutura, detalhes });
-            setErro("");
-        } catch (err) {
-            console.error("Erro no fetch:", err);
-            setErro("Falha na comunicação com a API.");
-        } finally {
-            setLoading(false);
-        }
-    }, [API_BASE, token]);
-
-    // 🔁 Atualização automática
-    useEffect(() => {
         fetchEletrica();
         const interval = setInterval(fetchEletrica, refreshTime);
         return () => clearInterval(interval);
     }, [fetchEletrica, refreshTime]);
 
-    const { estrutura, detalhes } = dados;
-
-    const handleEquipamentoClick = (tag) => {
-        navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
-    };
-
-    const renderEquipamentos = () => {
-        if (!selectedBuilding && !selectedFloor) {
-            return (
-                <div className="flex items-center justify-center h-full text-gray-300 select-none">
-                    <span className="text-lg italic">
-                        Selecione o prédio ou pavimento ao lado
-                    </span>
-                </div>
-            );
-        }
-
-        if (selectedBuilding && !selectedFloor) {
-            const pavimentos = estrutura[selectedBuilding] || {};
-            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-                const ordA =
-                    Object.values(detalhes).find((d) => d?.pavimento === a)?.ordPav ?? 0;
-                const ordB =
-                    Object.values(detalhes).find((d) => d?.pavimento === b)?.ordPav ?? 0;
-                return ordB - ordA;
-            });
-
-            return (
-                <div className="space-y-6">
-                    {pavimentosOrdenados.map(([pav, equipamentos]) => (
-                        <div key={pav} className="bg-white rounded-2xl shadow-md p-4">
-                            <h2 className="text-xl font-semibold mb-4">
-                                {Object.values(equipamentos)?.[0]?.info?.[0]?.floor || pav}
-                            </h2>
-                            <EquipmentGrid
-                                equipamentos={Object.entries(equipamentos).map(([tag, info]) => ({
-                                    tag,
-                                    name: detalhes[tag]?.name || tag,
-                                    description: detalhes[tag]?.description || "Sem descrição",
-                                    communication: detalhes[tag]?.communication || "FAIL!",
-                                }))}
-                                selectedBuilding={selectedBuilding}
-                                selectedFloor={pav}
-                                detalhes={detalhes}
-                                onClick={handleEquipamentoClick}
-                            />
-                        </div>
-                    ))}
-                </div>
-            );
-        }
-
-        if (selectedBuilding && selectedFloor) {
-            const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || {};
-            return (
-                <div className="bg-white rounded-2xl shadow-md p-4">
-                    <h2 className="text-xl font-semibold mb-4">
-                        {selectedBuilding} —{" "}
-                        {Object.values(equipamentos)?.[0]?.info?.[0]?.floor || selectedFloor}
-                    </h2>
-                    <EquipmentGrid
-                        equipamentos={Object.entries(equipamentos).map(([tag, info]) => ({
-                            tag,
-                            name: detalhes[tag]?.name || tag,
-                            description: detalhes[tag]?.description || "Sem descrição",
-                            communication: detalhes[tag]?.communication || "FAIL!",
-                        }))}
-                        selectedBuilding={selectedBuilding}
-                        selectedFloor={selectedFloor}
-                        detalhes={detalhes}
-                        onClick={handleEquipamentoClick}
-                    />
-                </div>
-            );
-        }
-    };
+    // ==================== RENDER ==================== //
 
     if (loading)
         return (
@@ -155,12 +104,41 @@ export default function Eletrica() {
             </div>
         );
 
-    if (erro)
+    const handleEquipamentoClick = (tag) => {
+        console.log("🖱️ Equipamento clicado:", tag);
+        navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
+    };
+
+    const renderEquipamentos = () => {
+        if (!selectedBuilding || !selectedFloor) {
+            return (
+                <div className="flex items-center justify-center h-full text-gray-300 italic">
+                    Selecione o pavimento ao lado
+                </div>
+            );
+        }
+
+        const equips = estrutura[selectedBuilding]?.[selectedFloor] || {};
+
+        const lista = Object.keys(equips).map((tag) => detalhes[tag]);
+
+        const nomePav =
+            lista[0]?.floor ||
+            selectedFloor;
+
         return (
-            <div className="p-6 text-center text-red-500 font-medium">
-                {erro}
+            <div className="bg-white rounded-2xl shadow-md p-4">
+                <h2 className="text-xl font-semibold mb-4">
+                    {selectedBuilding} — {nomePav}
+                </h2>
+
+                <EquipmentGrid
+                    equipamentos={lista}
+                    onClick={handleEquipamentoClick}
+                />
             </div>
         );
+    };
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -169,14 +147,12 @@ export default function Eletrica() {
                     <Zap className="w-5 h-5 text-yellow-500" />
                     Elétrica
                 </h2>
-                {estrutura && Object.keys(estrutura).length > 0 ? (
+
+                {Object.keys(estrutura).length > 0 ? (
                     <DisciplineSidebar
                         estrutura={estrutura}
-                        onSelectBuilding={(b) => {
-                            setSelectedBuilding(b);
-                            setSelectedFloor(null);
-                        }}
-                        onSelectFloor={(f) => setSelectedFloor(f)}
+                        onSelectBuilding={setSelectedBuilding}
+                        onSelectFloor={setSelectedFloor}
                     />
                 ) : (
                     <p className="text-gray-400 italic text-sm">
