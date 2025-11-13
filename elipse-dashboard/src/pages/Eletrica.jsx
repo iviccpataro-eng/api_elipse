@@ -22,27 +22,34 @@ export default function Eletrica() {
 
     // 🔹 Buscar dados da disciplina Elétrica
     const fetchEletrica = useCallback(async () => {
+        console.group("🔄 [Eletrica] Iniciando fetch...");
         try {
             const res = await fetch(`${API_BASE}/dados/EL`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const data = await res.json();
-            console.log("📡 Retorno da API /dados/EL:", data);
+            console.log("📡 Status da resposta:", res.status);
 
-            // --- Ajuste para o formato atual da API ---
-            const estrutura = data?.EL?.Principal || {}; // raiz dos pavimentos e equipamentos
-            const detalhes = data?.structureDetails || {}; // detalhes com nomes, descrições etc.
+            const data = await res.json();
+            console.log("📡 Retorno bruto da API /dados/EL:", data);
+
+            const estrutura = data?.EL?.Principal || data?.EL || {};
+            const detalhes = data?.structureDetails || {};
+
+            console.log("🧩 Estrutura identificada:", estrutura);
+            console.log("📋 Detalhes identificados:", detalhes);
 
             if (estrutura && Object.keys(estrutura).length > 0) {
                 setDados({ estrutura, detalhes });
                 setErro("");
             } else {
+                console.warn("⚠️ Nenhum dado encontrado na estrutura!");
                 setErro("Sem dados de Elétrica até o momento.");
             }
         } catch (err) {
-            console.error("Erro no fetch:", err);
+            console.error("❌ Erro no fetch:", err);
             setErro("Falha na comunicação com a API.");
         } finally {
+            console.groupEnd();
             setLoading(false);
         }
     }, [API_BASE, token]);
@@ -61,6 +68,7 @@ export default function Eletrica() {
     }, [fetchEletrica, refreshTime]);
 
     // ---------------- Renderização ----------------
+
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
@@ -70,8 +78,13 @@ export default function Eletrica() {
 
     const { estrutura, detalhes } = dados;
 
+    console.log("🎯 [Render] Estrutura atual:", estrutura);
+    console.log("🎯 [Render] Detalhes atuais:", detalhes);
+    console.log("🎯 [Render] Prédio selecionado:", selectedBuilding);
+    console.log("🎯 [Render] Pavimento selecionado:", selectedFloor);
+
     const handleEquipamentoClick = (tag) => {
-        // exemplo: EL/Principal/PAV01/MM_01_01
+        console.log("🖱️ Equipamento clicado:", tag);
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
 
@@ -87,7 +100,10 @@ export default function Eletrica() {
         }
 
         if (selectedBuilding && !selectedFloor) {
-            const pavimentos = estrutura[selectedBuilding] || estrutura;
+            const pavimentos =
+                estrutura[selectedBuilding] || estrutura || {};
+            console.log("🏢 Pavimentos disponíveis:", pavimentos);
+
             const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
                 const ordA =
                     Object.values(detalhes).find(
@@ -134,15 +150,15 @@ export default function Eletrica() {
                 estrutura[selectedFloor] ||
                 [];
 
+            console.log("⚙️ Equipamentos do pavimento:", equipamentos);
+
             return (
                 <div className="bg-white rounded-2xl shadow-md p-4">
                     <h2 className="text-xl font-semibold mb-4">
                         {selectedBuilding} —{" "}
                         {
                             Object.values(detalhes).find(
-                                (d) =>
-                                    d?.pavimento === selectedFloor ||
-                                    d?.floor === selectedFloor
+                                (d) => d?.pavimento === selectedFloor || d?.floor === selectedFloor
                             )?.floor || selectedFloor
                         }
                     </h2>
@@ -174,10 +190,14 @@ export default function Eletrica() {
                     <DisciplineSidebar
                         estrutura={estrutura}
                         onSelectBuilding={(b) => {
+                            console.log("🏢 Prédio selecionado:", b);
                             setSelectedBuilding(b);
                             setSelectedFloor(null);
                         }}
-                        onSelectFloor={(f) => setSelectedFloor(f)}
+                        onSelectFloor={(f) => {
+                            console.log("🏗️ Pavimento selecionado:", f);
+                            setSelectedFloor(f);
+                        }}
                     />
                 ) : (
                     <p className="text-gray-400 italic text-sm">
