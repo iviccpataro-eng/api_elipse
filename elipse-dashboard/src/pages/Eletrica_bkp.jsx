@@ -1,4 +1,4 @@
-// Eletrica.jsx — VERSÃO FINAL CORRIGIDA
+// Eletrica.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";

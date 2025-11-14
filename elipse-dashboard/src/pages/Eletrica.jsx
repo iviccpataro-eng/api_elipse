@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
@@ -8,7 +7,8 @@ import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 
 export default function Eletrica() {
-    const [dados, setDados] = useState({ estrutura: {}, detalhes: {} });
+    const [estrutura, setEstrutura] = useState({});
+    const [detalhes, setDetalhes] = useState({});
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
@@ -18,7 +18,7 @@ export default function Eletrica() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    useEffect(() => {
+    const fetchEletrica = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
@@ -26,43 +26,39 @@ export default function Eletrica() {
             return;
         }
 
+        setErro("");
+        fetch(`${API_BASE}/dados/EL`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setEstrutura(data.EL?.Principal || {});
+                setDetalhes(data.structureDetails || {});
+            })
+            .catch((e) => {
+                console.error("Fetch error:", e);
+                setErro("Falha na comunicação com a API.");
+            })
+            .finally(() => setLoading(false));
+    }, [API_BASE]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("authToken");
+        if (!token) return;
+
         const user = jwtDecode(token);
         const refreshTime = (user?.refreshtime || 15) * 1000;
 
-
-        const fetchData = () => {
-            setErro("");
-            fetch(`${API_BASE}/discipline/EL`, {
-                headers: { Authorization: `Bearer ${token}` },
-            })
-                .then((res) => {
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    return res.json();
-                })
-                .then((data) => {
-                    if (data.ok && data.dados?.ok) {
-                        setDados({
-                            estrutura: data.dados.estrutura || {},
-                            detalhes: data.dados.detalhes || {},
-                        });
-                    } else {
-                        setErro(data.erro || data.dados.erro || "Erro ao carregar dados da disciplina.");
-                    }
-                })
-                .catch((e) => {
-                    console.error("Fetch error:", e);
-                    setErro("Falha na comunicação com a API.");
-                })
-                .finally(() => setLoading(false));
-        };
-
-        fetchData();
-        const refreshInterval = setInterval(fetchData, Math.max(5000, refreshTime));
+        fetchEletrica();
+        const refreshInterval = setInterval(fetchEletrica, Math.max(5000, refreshTime));
 
         return () => clearInterval(refreshInterval);
-    }, [API_BASE]);
+    }, [fetchEletrica]);
 
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
@@ -78,13 +74,10 @@ export default function Eletrica() {
     if (erro)
         return <div className="p-6 pt-20 text-center text-red-500 font-medium">{erro}</div>;
 
-    const { estrutura, detalhes } = dados;
-
     let contentToRender;
 
     if (selectedBuilding && selectedFloor) {
-        // Case 1: Specific floor is selected
-        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
+        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ? Object.keys(estrutura[selectedBuilding][selectedFloor]) : [];
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
@@ -101,26 +94,25 @@ export default function Eletrica() {
             </div>
         );
     } else if (selectedBuilding) {
-        // Case 2: Only a building is selected
         const pavimentos = estrutura[selectedBuilding] || {};
-        const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-            const getOrder = (floor) => {
-                const firstEquipTag = Object.keys(detalhes).find(tag => tag.includes(`/${selectedBuilding}/${floor}/`));
+        const pavimentosOrdenados = Object.entries(pavimentos).sort(([keyA], [keyB]) => {
+            const getOrder = (floorKey) => {
+                const firstEquipTag = Object.keys(detalhes).find(tag => tag.includes(`/${selectedBuilding}/${floorKey}/`));
                 return firstEquipTag ? (detalhes[firstEquipTag]?.ordPav ?? 0) : 0;
             }
-            return getOrder(b) - getOrder(a);
+            return getOrder(keyB) - getOrder(keyA);
         });
 
         contentToRender = (
             <div className="space-y-6">
                 {pavimentosOrdenados.length > 0 ? (
-                    pavimentosOrdenados.map(([pav, equipamentos]) => (
-                        <div key={pav} className="bg-white rounded-2xl shadow p-4">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-800">{selectedBuilding} - {pav}</h2>
+                    pavimentosOrdenados.map(([pavKey, equipamentosObj]) => (
+                        <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
+                            <h2 className="text-xl font-semibold mb-4 text-gray-800">{selectedBuilding} - {pavKey}</h2>
                             <EquipmentGrid
-                                equipamentos={equipamentos}
+                                equipamentos={Object.keys(equipamentosObj)}
                                 selectedBuilding={selectedBuilding}
-                                selectedFloor={pav}
+                                selectedFloor={pavKey}
                                 detalhes={detalhes}
                                 onClick={handleEquipamentoClick}
                                 disciplineCode="EL"
@@ -135,7 +127,6 @@ export default function Eletrica() {
             </div>
         );
     } else {
-        // Case 3: Nothing is selected (default view)
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
                 <span className="text-lg italic">
