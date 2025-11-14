@@ -80,46 +80,10 @@ export default function Eletrica() {
     };
 
     const renderEquipamentos = () => {
-        if (!selectedBuilding && !selectedFloor) {
-            return (
-                <div className="flex items-center justify-center h-full text-gray-400 select-none">
-                    <span className="text-lg italic">
-                        Selecione um prédio ou pavimento ao lado
-                    </span>
-                </div>
-            );
-        }
+        const isFloorSelected = selectedBuilding && selectedFloor;
+        const isBuildingOnlySelected = selectedBuilding && !selectedFloor;
 
-        if (selectedBuilding && !selectedFloor) {
-            const pavimentos = estrutura[selectedBuilding] || {};
-            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-                const getOrder = (floor) => {
-                    const firstEquipTag = Object.keys(detalhes).find(tag => tag.includes(`/${selectedBuilding}/${floor}/`));
-                    return firstEquipTag ? (detalhes[firstEquipTag]?.ordPav ?? 0) : 0;
-                }
-                return getOrder(b) - getOrder(a);
-            });
-
-            return (
-                <div className="space-y-6">
-                    {pavimentosOrdenados.map(([pav, equipamentos]) => (
-                        <div key={pav} className="bg-white rounded-2xl shadow p-4">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-800">{pav}</h2>
-                            <EquipmentGrid
-                                equipamentos={equipamentos}
-                                selectedBuilding={selectedBuilding}
-                                selectedFloor={pav}
-                                detalhes={detalhes}
-                                onClick={handleEquipamentoClick}
-                                disciplineCode="EL"
-                            />
-                        </div>
-                    ))}
-                </div>
-            );
-        }
-
-        if (selectedBuilding && selectedFloor) {
+        if (isFloorSelected) {
             const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
             return (
                 <div className="bg-white rounded-2xl shadow p-4">
@@ -137,6 +101,44 @@ export default function Eletrica() {
                 </div>
             );
         }
+
+        if (isBuildingOnlySelected) {
+            const pavimentos = estrutura[selectedBuilding] || {};
+            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
+                const getOrder = (floor) => {
+                    const firstEquipTag = Object.keys(detalhes).find(tag => tag.includes(`/${selectedBuilding}/${floor}/`));
+                    return firstEquipTag ? (detalhes[firstEquipTag]?.ordPav ?? 0) : 0;
+                }
+                return getOrder(b) - getOrder(a);
+            });
+
+            return (
+                <div className="space-y-6">
+                    {pavimentosOrdenados.map(([pav, equipamentos]) => (
+                        <div key={pav} className="bg-white rounded-2xl shadow p-4">
+                            <h2 className="text-xl font-semibold mb-4 text-gray-800">{selectedBuilding} - {pav}</h2>
+                            <EquipmentGrid
+                                equipamentos={equipamentos}
+                                selectedBuilding={selectedBuilding}
+                                selectedFloor={pav}
+                                detalhes={detalhes}
+                                onClick={handleEquipamentoClick}
+                                disciplineCode="EL"
+                            />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // Default view when nothing is selected
+        return (
+            <div className="flex items-center justify-center h-full text-gray-400 select-none">
+                <span className="text-lg italic">
+                    Selecione um prédio ou pavimento ao lado
+                </span>
+            </div>
+        );
     };
 
     return (
