@@ -1,3 +1,4 @@
+// DisciplineSidebar.jsx — VERSÃO FINAL
 import React from "react";
 
 export default function DisciplineSidebar({ estrutura, onSelectBuilding, onSelectFloor }) {
@@ -10,7 +11,7 @@ export default function DisciplineSidebar({ estrutura, onSelectBuilding, onSelec
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {Object.entries(estrutura).map(([buildingName, floors]) => (
         <div key={buildingName}>
           <h3
@@ -20,33 +21,32 @@ export default function DisciplineSidebar({ estrutura, onSelectBuilding, onSelec
             {buildingName}
           </h3>
 
-          <ul className="ml-3 border-l border-gray-200">
+          {/* Pavimentos */}
+          <ul className="ml-3 border-l border-gray-200 pl-2">
             {Object.entries(floors)
-              .sort(([a], [b]) => {
-                const ordA =
-                  Object.values(floors[a] || {}).find(
-                    (eq) => eq.info?.[0]?.ordPav
-                  )?.info?.[0]?.ordPav ?? 0;
-                const ordB =
-                  Object.values(floors[b] || {}).find(
-                    (eq) => eq.info?.[0]?.ordPav
-                  )?.info?.[0]?.ordPav ?? 0;
-                return ordB - ordA;
+              .sort(([, pavA], [, pavB]) => {
+                const eqA = Object.values(pavA)[0];
+                const eqB = Object.values(pavB)[0];
+
+                const ordA = Number(eqA?.info?.[0]?.ordPav || 0);
+                const ordB = Number(eqB?.info?.[0]?.ordPav || 0);
+
+                return ordB - ordA; // ordem decrescente
               })
               .map(([floorKey, floorData]) => {
-                const pavRealName =
-                  Object.values(floorData)?.[0]?.info?.[0]?.floor || floorKey;
+                const pavNome =
+                  Object.values(floorData)[0]?.info?.[0]?.floor || floorKey;
 
                 return (
                   <li
                     key={floorKey}
-                    className="cursor-pointer text-sm text-gray-700 hover:text-blue-600"
+                    className="cursor-pointer text-sm text-gray-700 hover:text-blue-600 py-0.5"
                     onClick={() => {
                       onSelectBuilding(buildingName);
                       onSelectFloor(floorKey);
                     }}
                   >
-                    {pavRealName}
+                    {pavNome}
                   </li>
                 );
               })}
