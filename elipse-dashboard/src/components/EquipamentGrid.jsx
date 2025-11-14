@@ -1,114 +1,170 @@
 
-// src/components/EquipmentGrid.jsx
-import React from "react";
-import { Doughnut } from "react-chartjs-2";
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Zap } from "lucide-react";
+import DisciplineSidebar from "../components/DisciplineSideBar";
+import EquipmentGrid from "../components/EquipamentGrid";
+import { jwtDecode } from "jwt-decode";
 
-export default function EquipmentGrid({
-    equipamentos = [],
-    selectedBuilding,
-    selectedFloor,
-    detalhes = {},
-    onClick,
-    disciplineCode,
-}) {
-    if (!equipamentos || equipamentos.length === 0) {
-        return (
-            <div className="text-gray-400 text-center py-6">
-                Nenhum equipamento encontrado neste pavimento.
-            </div>
-        );
-    }
+export default function Eletrica() {
+    const [dados, setDados] = useState({ estrutura: {}, detalhes: {} });
+    const [loading, setLoading] = useState(true);
+    const [erro, setErro] = useState("");
+    const [selectedBuilding, setSelectedBuilding] = useState(null);
+    const [selectedFloor, setSelectedFloor] = useState(null);
+    const navigate = useNavigate();
 
-    const renderArcGraph = (valor, nominal) => {
-        if (valor == null || nominal == null || isNaN(valor) || nominal <= 0) return null;
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-        const min = nominal * 0.8;
-        const max = nominal * 1.2;
-        const dentroDoRange = valor >= min && valor <= max;
+    useEffect(() => {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+            setErro("Token não encontrado. Faça login novamente.");
+            setLoading(false);
+            return;
+        }
 
-        const data = {
-            datasets: [
-                {
-                    data: [valor, max - valor],
-                    backgroundColor: [dentroDoRange ? "#16a34a" : "#dc2626", "#e5e7eb"],
-                    borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270,
-                    cutout: "75%",
-                },
-            ],
+        const user = jwtDecode(token);
+        const refreshTime = (user?.refreshtime || 15) * 1000;
+
+
+        const fetchData = () => {
+            setErro("");
+            fetch(`${API_BASE}/discipline/EL`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then((data) => {
+                    if (data.ok && data.dados?.ok) {
+                        setDados({
+                            estrutura: data.dados.estrutura || {},
+                            detalhes: data.dados.detalhes || {},
+                        });
+                    } else {
+                        setErro(data.erro || data.dados.erro || "Erro ao carregar dados da disciplina.");
+                    }
+                })
+                .catch((e) => {
+                    console.error("Fetch error:", e);
+                    setErro("Falha na comunicação com a API.");
+                })
+                .finally(() => setLoading(false));
         };
 
+        fetchData();
+        const refreshInterval = setInterval(fetchData, Math.max(5000, refreshTime));
+
+        return () => clearInterval(refreshInterval);
+    }, [API_BASE]);
+
+    if (loading)
         return (
-            <div className="relative w-24 h-12 mx-auto mt-2">
-                <Doughnut
-                    data={data}
-                    redraw
-                    options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    }}
-                />
+            <div className="flex items-center justify-center h-screen text-gray-500">
+                Carregando dados da Elétrica...
             </div>
         );
+
+    if (erro)
+        return <div className="p-6 pt-20 text-center text-red-500 font-medium">{erro}</div>;
+
+    const { estrutura, detalhes } = dados;
+
+    const handleEquipamentoClick = (tag) => {
+        navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
+    };
+
+    const renderEquipamentos = () => {
+        if (!selectedBuilding && !selectedFloor) {
+            return (
+                <div className="flex items-center justify-center h-full text-gray-400 select-none">
+                    <span className="text-lg italic">
+                        Selecione um prédio ou pavimento ao lado
+                    </span>
+                </div>
+            );
+        }
+
+        if (selectedBuilding && !selectedFloor) {
+            const pavimentos = estrutura[selectedBuilding] || {};
+            const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
+                const getOrder = (floor) => {
+                    const firstEquipTag = Object.keys(detalhes).find(tag => tag.includes(`/${selectedBuilding}/${floor}/`));
+                    return firstEquipTag ? (detalhes[firstEquipTag]?.ordPav ?? 0) : 0;
+                }
+                return getOrder(b) - getOrder(a);
+            });
+
+            return (
+                <div className="space-y-6">
+                    {pavimentosOrdenados.map(([pav, equipamentos]) => (
+                        <div key={pav} className="bg-white rounded-2xl shadow p-4">
+                            <h2 className="text-xl font-semibold mb-4 text-gray-800">{pav}</h2>
+                            <EquipmentGrid
+                                equipamentos={equipamentos}
+                                selectedBuilding={selectedBuilding}
+                                selectedFloor={pav}
+                                detalhes={detalhes}
+                                onClick={handleEquipamentoClick}
+                                disciplineCode="EL"
+                            />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        if (selectedBuilding && selectedFloor) {
+            const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
+            return (
+                <div className="bg-white rounded-2xl shadow p-4">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        {selectedBuilding} - {selectedFloor}
+                    </h2>
+                    <EquipmentGrid
+                        equipamentos={equipamentos}
+                        selectedBuilding={selectedBuilding}
+                        selectedFloor={selectedFloor}
+                        detalhes={detalhes}
+                        onClick={handleEquipamentoClick}
+                        disciplineCode="EL"
+                    />
+                </div>
+            );
+        }
     };
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {equipamentos.map((eq) => {
-                const tag = `${disciplineCode}/${selectedBuilding}/${selectedFloor}/${eq}`;
-                const info = detalhes[tag] || {};
-                const dataVars = info.data || [];
+        <div className="flex min-h-screen bg-gray-50 pt-16">
+            <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 -mt-4 z-10 border-b">
+                    <Zap className="w-5 h-5 text-yellow-500" />
+                    Elétrica
+                </h2>
+                <DisciplineSidebar
+                    estrutura={estrutura}
+                    detalhes={detalhes}
+                    selectedBuilding={selectedBuilding}
+                    selectedFloor={selectedFloor}
+                    onSelectBuilding={(b) => {
+                        setSelectedBuilding(b);
+                        setSelectedFloor(null);
+                    }}
+                    onSelectFloor={(b, f) => {
+                        setSelectedBuilding(b);
+                        setSelectedFloor(f);
+                    }}
+                />
+            </aside>
 
-                return (
-                    <button
-                        key={eq}
-                        onClick={() => onClick(tag)}
-                        className="flex flex-col border rounded-xl p-4 bg-gray-50 hover:bg-blue-50 hover:shadow-md transition text-left shadow-sm"
-                    >
-                        <span className="font-semibold text-gray-800">{info.name || eq}</span>
-                        {info.description && (
-                            <span className="text-xs text-gray-500 mt-1">{info.description}</span>
-                        )}
-                        <span className="text-sm text-gray-500 mt-1">
-                            {info.modelo || info.fabricante || ""}
-                        </span>
-
-                        <div className="flex-grow"></div>
-
-                        {info.statusComunicacao && (
-                            <span
-                                className={`text-xs font-medium mt-2 ${info.statusComunicacao === "OK"
-                                    ? "text-green-600"
-                                    : "text-red-500"
-                                    }`}
-                            >
-                                {info.statusComunicacao}
-                            </span>
-                        )}
-
-                        {/* Renderiza até 2 grandezas com gráfico */}
-                        {Array.isArray(dataVars) && dataVars.filter((d) => d[4] === true).length > 0 && (
-                            <div className="mt-3 border-t pt-2 grid grid-cols-2 gap-2">
-                                {dataVars
-                                    .filter((d) => d[4] === true) // O quinto elemento indica se deve mostrar no card
-                                    .slice(0, 2)
-                                    .map(([tipo, nome, valor, unidade, mostrar, nominal], i) => (
-                                        <div key={i} className="text-center">
-                                            <div className="font-medium text-sm text-gray-700 truncate">{nome}</div>
-                                            <div className="text-xs text-gray-500">
-                                                {valor} {unidade}
-                                            </div>
-                                            {renderArcGraph(valor, nominal)}
-                                        </div>
-                                    ))}
-                            </div>
-                        )}
-                    </button>
-                );
-            })}
+            <main className="flex-1 p-6 ml-64">
+                {renderEquipamentos()}
+            </main>
         </div>
     );
 }
