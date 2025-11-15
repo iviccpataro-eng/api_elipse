@@ -5,6 +5,7 @@ import { getDisciplineData, generateFrontendData } from "./structureBuilder.js";
 import { setByPath, getByPath, normalizeBody } from "./utils.js";
 import { regenerateStructure } from "./updater.js";
 import { registerAlarm, clearAlarm } from "./alarmManager.js";
+import { gerarEstruturaDisciplinas } from "../services/structureMapper.js";
 
 console.log("[IMPORT] Todos os módulos carregados com sucesso.");
 
@@ -199,3 +200,13 @@ function gerarTagsListAutomaticamente(base) {
 
 // 🚀 Export isolado (garante que o ESM exporte a função corretamente)
 export default dataRouter;
+
+router.get("/estrutura", async (req, res) => {
+    try {
+        const estrutura = await gerarEstruturaDisciplinas();
+        res.json(estrutura);
+    } catch (err) {
+        console.error("Erro ao gerar estrutura:", err);
+        res.status(500).json({ erro: "Falha ao gerar estrutura" });
+    }
+});

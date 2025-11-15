@@ -27,7 +27,7 @@ export default function Eletrica() {
         }
 
         setErro("");
-        fetch(`${API_BASE}/dados/EL`, {
+        fetch(`${API_BASE}/estrutura`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then((res) => {
@@ -37,7 +37,7 @@ export default function Eletrica() {
                 return res.json();
             })
             .then((data) => {
-                setEstrutura(data.EL?.Principal || data.EL || {});
+                setEstrutura(data.EL || {});
                 setDetalhes(data.structureDetails || {});
             })
             .catch((e) => {
