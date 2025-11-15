@@ -37,7 +37,7 @@ export default function Eletrica() {
                 return res.json();
             })
             .then((data) => {
-                setEstrutura(data.EL?.Principal || {});
+                setEstrutura(data.EL?.Principal || data.EL || {});
                 setDetalhes(data.structureDetails || {});
             })
             .catch((e) => {
