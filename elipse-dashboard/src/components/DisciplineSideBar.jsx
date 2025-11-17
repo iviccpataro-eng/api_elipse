@@ -45,8 +45,8 @@ export default function DisciplineSidebar({
                         <button
                             onClick={() => onSelectBuilding(building)}
                             className={`flex items-center w-full text-left p-2 rounded-lg transition-colors ${isBuildingSelected
-                                    ? 'bg-blue-600 text-white shadow'
-                                    : 'text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white shadow'
+                                : 'text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             <BuildingOffice2Icon className="h-5 w-5 mr-3 flex-shrink-0" />
@@ -62,11 +62,10 @@ export default function DisciplineSidebar({
                                         key={floor}
                                         onClick={() => onSelectFloor(building, floor)}
                                         className={`flex items-center w-full text-left p-2 rounded-lg transition-colors text-sm mb-1 ${isFloorSelected
-                                                ? 'bg-blue-100 text-blue-800 font-semibold'
-                                                : 'text-gray-600 hover:bg-gray-200'
+                                            ? 'bg-blue-100 text-blue-800 font-semibold'
+                                            : 'text-gray-600 hover:bg-gray-200'
                                             }`}
                                     >
-                                        <Squares2X2Icon className="h-4 w-4 mr-3 flex-shrink-0" />
                                         <span>{floor}</span>
                                     </button>
                                 );
