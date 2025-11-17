@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { BuildingOffice2Icon } from '@heroicons/react/24/solid';
-import { Squares2X2Icon } from '@heroicons/react/24/outline';
+import { Building } from "lucide-react";
+import { Layers2 } from "lucide-react";
+import { getRealFloorName } from "../utils/getRealFloorName";
 
 
 // Helper to get a representative ordPav for a floor, to be used in sorting.
@@ -49,7 +50,7 @@ export default function DisciplineSidebar({
                                 : 'text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
-                            <BuildingOffice2Icon className="h-5 w-5 mr-3 flex-shrink-0" />
+                            <Building className="h-5 w-5 mr-3 flex-shrink-0" />
                             <span className="flex-grow font-medium">{building}</span>
                         </button>
 
@@ -66,7 +67,8 @@ export default function DisciplineSidebar({
                                             : 'text-gray-600 hover:bg-gray-200'
                                             }`}
                                     >
-                                        <span>{floor}</span>
+                                        <Layers2 className="h-4 w-4 mr-2 flex-shrink-0" />
+                                        <span>{getRealFloorName(building, floor, detalhes)}</span>
                                     </button>
                                 );
                             })}

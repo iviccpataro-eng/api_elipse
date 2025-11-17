@@ -5,6 +5,7 @@ import { Zap } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
+import { getRealFloorName } from "../utils/getRealFloorName";
 
 export default function Eletrica() {
     const [estrutura, setEstrutura] = useState({});
@@ -81,7 +82,7 @@ export default function Eletrica() {
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} - {selectedFloor}
+                    {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                 </h2>
                 <EquipmentGrid
                     equipamentos={equipamentos}
