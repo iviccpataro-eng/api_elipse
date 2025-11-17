@@ -168,3 +168,7 @@ export default function Eletrica() {
         </div>
     );
 }
+
+console.log("Estrutura carregada:", estrutura);
+console.log("Detalhes carregados:", detalhes);
+
