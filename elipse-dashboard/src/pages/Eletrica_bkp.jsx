@@ -5,6 +5,7 @@ import { Zap } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
+import { getRealFloorName } from "../utils/getRealFloorName";
 
 export default function Eletrica() {
     const [estrutura, setEstrutura] = useState({});
@@ -27,7 +28,7 @@ export default function Eletrica() {
         }
 
         setErro("");
-        fetch(`${API_BASE}/dados/EL`, {
+        fetch(`${API_BASE}/estrutura`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then((res) => {
@@ -37,7 +38,7 @@ export default function Eletrica() {
                 return res.json();
             })
             .then((data) => {
-                setEstrutura(data.EL?.Principal || data.EL || {});
+                setEstrutura(data.EL || {});
                 setDetalhes(data.structureDetails || {});
             })
             .catch((e) => {
@@ -81,7 +82,7 @@ export default function Eletrica() {
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} - {selectedFloor}
+                    {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                 </h2>
                 <EquipmentGrid
                     equipamentos={equipamentos}
@@ -108,7 +109,9 @@ export default function Eletrica() {
                 {pavimentosOrdenados.length > 0 ? (
                     pavimentosOrdenados.map(([pavKey, equipamentosObj]) => (
                         <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-800">{selectedBuilding} - {pavKey}</h2>
+                            <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                                {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
+                            </h2>
                             <EquipmentGrid
                                 equipamentos={Object.keys(equipamentosObj)}
                                 selectedBuilding={selectedBuilding}

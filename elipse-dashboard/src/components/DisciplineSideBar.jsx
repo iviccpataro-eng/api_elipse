@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Building } from "lucide-react";
-import { Layers2 } from "lucide-react";
+import { Building, Layers2 } from "lucide-react";
 import { getRealFloorName } from "../utils/getRealFloorName";
 
 
