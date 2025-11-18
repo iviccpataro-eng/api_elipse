@@ -51,6 +51,13 @@ export default function Eletrica() {
         return () => clearInterval(interval);
     }, [fetchEletrica]);
 
+    // ✅ LOGS NO LOCAL CORRETO
+    useEffect(() => {
+        console.log("Estrutura carregada:", estrutura);
+        console.log("Detalhes carregados:", detalhes);
+    }, [estrutura, detalhes]);
+
+
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
@@ -168,7 +175,3 @@ export default function Eletrica() {
         </div>
     );
 }
-
-console.log("Estrutura carregada:", estrutura);
-console.log("Detalhes carregados:", detalhes);
-
