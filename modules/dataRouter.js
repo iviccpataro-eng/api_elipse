@@ -5,7 +5,6 @@ import { getDisciplineData, generateFrontendData } from "./structureBuilder.js";
 import { setByPath, getByPath, normalizeBody } from "./utils.js";
 import { regenerateStructure } from "./updater.js";
 import { registerAlarm, clearAlarm } from "./alarmManager.js";
-import { gerarEstruturaDisciplinas } from "../services/structureMapper.js";
 
 console.log("[IMPORT] Todos os módulos carregados com sucesso.");
 
@@ -20,7 +19,7 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
   // 🧩 Middleware de autenticação
   // -------------------------
   router.use((req, res, next) => {
-    // Permitir acesso público
+    // Permitir acesso público à raiz da API (mensagem Render)
     if (req.method === "GET" && req.path === "/") {
       return res.json({ ok: true, msg: "API Elipse rodando no Render!" });
     }
@@ -29,7 +28,6 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
     if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
     const token = authHeader.split(" ")[1];
 
-    // Token fixo enviado pelo Elipse (POST)
     if (
       token === ELIPSE_FIXED_TOKEN &&
       req.method === "POST" &&
@@ -71,19 +69,20 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
       const path = req.params[0] || "";
       setByPath(dados, path, payload);
 
-      // 🧠 Se o Elipse enviar estrutura completa
+      // 🧠 Detecta se veio estrutura completa do Elipse (tagsList, structure ou structureDetails)
       if (payload.tagsList || payload.structure || payload.structureDetails) {
         dados.tagsList = payload.tagsList || dados.tagsList || [];
         dados.structure = payload.structure || dados.structure || {};
         dados.structureDetails = payload.structureDetails || dados.structureDetails || {};
 
+        // 🔧 Regerar estrutura para o front-end
         const generated = generateFrontendData(dados.tagsList || []);
         dados.structure = generated.structure || {};
         dados.structureDetails = generated.details || {};
         console.log(`✅ Estrutura reconstruída automaticamente (${dados.tagsList?.length || 0} tags)`);
       }
 
-      // 🧩 Atualização automática por disciplina
+      // 🧩 Atualização automática por disciplina (Elétrica, Climatização etc.)
       const disciplina = path.split("/")[0]?.toUpperCase();
       if (["EL", "IL", "AC", "HI", "DT", "CM"].includes(disciplina)) {
         const tagsList = gerarTagsListAutomaticamente(dados);
@@ -95,7 +94,7 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
       }
 
       // -------------------------
-      // 🚨 Alarmes
+      // 🚨 Tratamento do bloco alarm
       // -------------------------
       if (payload.alarm) {
         const alarmData = payload.alarm;
@@ -130,10 +129,8 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
     const code = req.params.code?.toUpperCase();
     if (!code)
       return res.status(400).json({ ok: false, erro: "Disciplina inválida." });
-
     const result = getDisciplineData(dados, code);
     if (!result.ok) return res.status(404).json(result);
-
     res.json({ ok: true, dados: result });
   });
 
@@ -144,7 +141,6 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
     try {
       const tagDecoded = decodeURIComponent(req.params.tag);
       const equipamento = dados.structureDetails?.[tagDecoded];
-
       if (!equipamento)
         return res
           .status(404)
@@ -158,26 +154,17 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
         fabricante: equipamento.fabricante,
         modelo: equipamento.modelo,
         statusComunicacao: equipamento.statusComunicacao || "OK",
-        ultimaAtualizacao: equipamento.ultimaAtualizacao || new Date().toISOString(),
+        ultimaAtualizacao:
+          equipamento.ultimaAtualizacao || new Date().toISOString(),
       };
 
-      res.json({ ok: true, dados: { info, data: equipamento.data || [], alarm: equipamento.alarm || null } });
+      const data = equipamento.data || [];
+      const alarm = equipamento.alarm || null;
+
+      res.json({ ok: true, dados: { info, data, alarm } });
     } catch (err) {
       console.error("[EQUIPAMENTO] Erro:", err);
       res.status(500).json({ ok: false, erro: "Erro ao obter equipamento." });
-    }
-  });
-
-  // -------------------------
-  // 🔥 NOVA ROTA /estrutura (no local correto)
-  // -------------------------
-  router.get("/estrutura", async (req, res) => {
-    try {
-      const estrutura = await gerarEstruturaDisciplinas();
-      res.json(estrutura);
-    } catch (err) {
-      console.error("Erro ao gerar estrutura:", err);
-      res.status(500).json({ erro: "Falha ao gerar estrutura" });
     }
   });
 
@@ -186,7 +173,7 @@ const dataRouter = (dados, pool, SECRET, ELIPSE_FIXED_TOKEN) => {
 };
 
 // -------------------------
-// 🔧 Funções auxiliares
+// 🔧 Função auxiliar
 // -------------------------
 function gerarTagsListAutomaticamente(base) {
   const lista = [];
@@ -195,23 +182,20 @@ function gerarTagsListAutomaticamente(base) {
       if (!Object.hasOwn(obj, chave)) continue;
       const valor = obj[chave];
       const novoCaminho = caminho ? `${caminho}/${chave}` : chave;
-
       if (
         valor &&
         typeof valor === "object" &&
         !Array.isArray(valor) &&
         !valor.info &&
         !valor.data
-      ) {
+      )
         percorrer(valor, novoCaminho);
-      } else if (valor?.info) {
-        lista.push(novoCaminho);
-      }
+      else if (valor?.info) lista.push(novoCaminho);
     }
   };
   percorrer(base);
   return lista;
 }
 
-// 🚀 Exporta corretamente
+// 🚀 Export isolado (garante que o ESM exporte a função corretamente)
 export default dataRouter;
