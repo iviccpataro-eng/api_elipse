@@ -21,21 +21,21 @@ export default function EquipmentGrid({
                         className="p-4 bg-white rounded-xl shadow hover:shadow-md transition text-left"
                     >
                         <h3 className="font-semibold">
-                            {detalhes[e]?.name || e}
+                            {detalhes[equip]?.name || e}
                         </h3>
 
                         <p className="text-sm text-gray-500">
-                            {detalhes[e]?.description || "Sem descrição"}
+                            {detalhes[equip]?.description || "Sem descrição"}
                         </p>
 
                         <div className="text-gray-400 text-xs mt-1">
-                            {info.producer || ""}
+                            {detalhes[equip]?.info.producer || ""}
                         </div>
 
-                        <p className={detalhes[e]?.communication === "OK"
+                        <p className={detalhes[equip]?.communication === "OK"
                             ? "text-green-600"
                             : "text-red-600"}>
-                            {detalhes[e]?.communication}
+                            {detalhes[equip]?.communication}
                         </p>
 
                     </button>
