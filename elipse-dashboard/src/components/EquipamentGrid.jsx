@@ -20,17 +20,24 @@ export default function EquipmentGrid({
                         onClick={() => onClick(tag)}
                         className="p-4 bg-white rounded-xl shadow hover:shadow-md transition text-left"
                     >
-                        <div className="font-semibold text-gray-800">
-                            {info.name || equip}
-                        </div>
+                        <h3 className="font-semibold">
+                            {detalhes[e]?.name || e}
+                        </h3>
 
-                        <div className="text-gray-500 text-sm mt-1">
-                            {info.modelo || "Modelo não informado"}
-                        </div>
+                        <p className="text-sm text-gray-500">
+                            {detalhes[e]?.description || "Sem descrição"}
+                        </p>
 
                         <div className="text-gray-400 text-xs mt-1">
-                            {info.fabricante || ""}
+                            {info.producer || ""}
                         </div>
+
+                        <p className={detalhes[e]?.communication === "OK"
+                            ? "text-green-600"
+                            : "text-red-600"}>
+                            {detalhes[e]?.communication}
+                        </p>
+
                     </button>
                 );
             })}

@@ -1,20 +1,10 @@
-export function getRealFloorName(building, floorCode, detalhes) {
-    if (!detalhes) return floorCode;
+export function getRealFloorName(building, floorKey, detalhes) {
 
-    // Encontra a primeira tag daquele pavimento
-    const tag = Object.keys(detalhes).find(t => {
-        const parts = t.split("/");
-        return parts[1] === building && parts[2] === floorCode;
-    });
-
-    if (!tag) return floorCode;
-
-    const info = detalhes[tag];
-
-    // Ordem de prioridade do nome
-    return (
-        info.pavimento ||
-        info.floor ||
-        floorCode
+    const tag = Object.keys(detalhes).find(
+        (t) => detalhes[t]?.pavimento === floorKey || detalhes[t]?.floorKey === floorKey
     );
+
+    if (!tag) return floorKey; // fallback seguro
+
+    return detalhes[tag].floor || detalhes[tag].pavimento || floorKey;
 }
