@@ -22,7 +22,7 @@ const __dirname = dirname(__filename);
 // ⚙️ Configuração principal
 // -------------------------
 const app = express();
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 
 const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
 const pool = new Pool({
@@ -186,3 +186,4 @@ app.listen(PORT, () => {
   console.log(`[BOOT] Servidor rodando na porta ${PORT}`);
   console.log(`🌐 API disponível em http://localhost:${PORT} ou Render URL`);
 });
+
