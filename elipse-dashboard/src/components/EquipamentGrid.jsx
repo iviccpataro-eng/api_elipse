@@ -21,7 +21,7 @@ export default function EquipmentGrid({
                         className="p-4 bg-white rounded-xl shadow hover:shadow-md transition text-left"
                     >
                         <h3 className="font-semibold">
-                            {detalhes[equip]?.name || e}
+                            {detalhes[equip]?.name || equip}
                         </h3>
 
                         <p className="text-sm text-gray-500">
