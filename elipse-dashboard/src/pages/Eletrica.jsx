@@ -56,7 +56,9 @@ export default function Eletrica() {
         console.log("Estrutura carregada:", estrutura);
         console.log("Detalhes carregados:", detalhes);
     }, [estrutura, detalhes]);
-
+    // expõe no window para depuração
+    window.__ESTRUTURA__ = estrutura;
+    window.__DETALHES__ = detalhes;
 
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
