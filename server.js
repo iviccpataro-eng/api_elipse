@@ -108,7 +108,8 @@ app.get("/", (req, res) => res.send("API Elipse rodando!"));
 // ✅ 2. Rotas principais
 app.use("/auth", authRouter(pool, SECRET));
 app.use("/config", configRouter(pool));
-app.use("/", dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN));
+//app.use("/", dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN));
+app.use("/", dataRouter)
 
 // -------------------------
 // 🚨 Rotas de Alarme
@@ -186,4 +187,3 @@ app.listen(PORT, () => {
   console.log(`[BOOT] Servidor rodando na porta ${PORT}`);
   console.log(`🌐 API disponível em http://localhost:${PORT} ou Render URL`);
 });
-
