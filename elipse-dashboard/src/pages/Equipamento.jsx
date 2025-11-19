@@ -90,8 +90,8 @@ export default function Equipamento() {
         "transition-all duration-500 ease-in-out transform opacity-100 translate-y-0";
 
     // 🕒 Formata última atualização, se existir
-    const ultimaAtualizacao = info.last - send
-        ? new Date(info.last - send).toLocaleString("pt-BR")
+    const ultimaAtualizacao = info["last-send"]
+        ? new Date(info["last-send"]).toLocaleString("pt-BR")
         : null;
 
     return (
