@@ -160,8 +160,8 @@ export default function Equipamento() {
                     </p>
 
                     <p className="text-sm text-gray-400 flex flex-wrap gap-x-2">
-                        {info.producer && <span>{info.fabricante}</span>}
-                        {info.model && <span>• {info.modelo}</span>}
+                        {info.producer && <span>{info.producer}</span>}
+                        {info.model && <span>• {info.model}</span>}
                         {info.communication && (
                             <span>• Comunicação: {info.communication}</span>
                         )}
