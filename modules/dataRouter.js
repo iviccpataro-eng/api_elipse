@@ -234,12 +234,21 @@ router.get("/disciplina/:disc", (req, res) => {
       return res.status(404).json({ ok: false, erro: `Nenhuma estrutura encontrada para ${disc}` });
     }
 
+    // ---- FILTRO CORRETO: somente detalhes da disciplina ----
+    const detalhesFiltrados = {};
+    for (const key of Object.keys(detalhesGlobal)) {
+      if (key.startsWith(disc + "/")) {
+        detalhesFiltrados[key] = detalhesGlobal[key];
+      }
+    }
+
     return res.json({
       ok: true,
       disciplina: disc,
       estrutura: estruturaGlobal[disc],
-      detalhes: detalhesGlobal
+      detalhes: detalhesFiltrados
     });
+
   } catch (err) {
     console.error("[GET /disciplina/:disc] ERRO:", err);
     res.status(500).json({ ok: false, erro: "Erro interno" });
