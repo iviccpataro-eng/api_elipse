@@ -48,15 +48,25 @@ export function generateFrontendData(tagsList = []) {
         structure[discCode][buildingCode][floorCode].push(equipCode);
       }
 
-      // Adiciona info individual do equipamento
-      const equipInfo = extractEquipmentInfo(tag);
-      details[tag] = {
-        disciplina: disciplineMap[discCode] || discCode,
-        edificio: buildingCode,
-        pavimento: floorCode,
-        equipamento: equipCode,
-        ...equipInfo,
-      };
+      // Busca diretamente no global.dados sem recriar info
+      const pathParts = tag.split("/");
+      let ref = global.dados;
+      for (const part of pathParts) {
+        if (ref && typeof ref === "object" && Object.hasOwn(ref, part)) {
+          ref = ref[part];
+        } else {
+          ref = null;
+          break;
+        }
+      }
+
+      if (ref && typeof ref === "object") {
+        details[tag] = ref; // usa exatamente o que veio do payload
+      } else {
+        console.warn(`[generateFrontendData] Detalhe não encontrado para ${tag}`);
+        details[tag] = {};
+      }
+
     } catch (err) {
       console.error(`[structureBuilder] Erro ao processar tag '${tag}':`, err.message);
     }
