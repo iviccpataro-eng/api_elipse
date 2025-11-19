@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
@@ -27,24 +26,15 @@ export default function Eletrica() {
             return;
         }
 
-        setErro("");
         fetch(`${API_BASE}/estrutura`, {
             headers: { Authorization: `Bearer ${token}` },
         })
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
-                return res.json();
-            })
+            .then((res) => res.json())
             .then((data) => {
                 setEstrutura(data.EL || {});
                 setDetalhes(data.structureDetails || {});
             })
-            .catch((e) => {
-                console.error("Fetch error:", e);
-                setErro("Falha na comunicação com a API.");
-            })
+            .catch(() => setErro("Falha na comunicação com a API."))
             .finally(() => setLoading(false));
     }, [API_BASE]);
 
@@ -56,10 +46,17 @@ export default function Eletrica() {
         const refreshTime = (user?.refreshtime || 15) * 1000;
 
         fetchEletrica();
-        const refreshInterval = setInterval(fetchEletrica, Math.max(5000, refreshTime));
+        const interval = setInterval(fetchEletrica, Math.max(5000, refreshTime));
 
-        return () => clearInterval(refreshInterval);
+        return () => clearInterval(interval);
     }, [fetchEletrica]);
+
+    // ✅ LOGS NO LOCAL CORRETO
+    useEffect(() => {
+        console.log("Estrutura carregada:", estrutura);
+        console.log("Detalhes carregados:", detalhes);
+    }, [estrutura, detalhes]);
+
 
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
@@ -77,13 +74,18 @@ export default function Eletrica() {
 
     let contentToRender;
 
+    // 🔹 Tela quando usuário clicou em Pavimento
     if (selectedBuilding && selectedFloor) {
-        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ? Object.keys(estrutura[selectedBuilding][selectedFloor]) : [];
+        const equipamentos = Object.keys(
+            estrutura[selectedBuilding]?.[selectedFloor] || {}
+        );
+
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
+                    {selectedBuilding} - {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
                 </h2>
+
                 <EquipmentGrid
                     equipamentos={equipamentos}
                     selectedBuilding={selectedBuilding}
@@ -94,42 +96,46 @@ export default function Eletrica() {
                 />
             </div>
         );
-    } else if (selectedBuilding) {
+    }
+
+    // 🔹 Tela quando usuário clicou apenas no prédio
+    else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
-        const pavimentosOrdenados = Object.entries(pavimentos).sort(([keyA], [keyB]) => {
-            const getOrder = (floorKey) => {
-                const firstEquipTag = Object.keys(detalhes).find(tag => tag.includes(`/${selectedBuilding}/${floorKey}/`));
-                return firstEquipTag ? (detalhes[firstEquipTag]?.ordPav ?? 0) : 0;
-            }
-            return getOrder(keyB) - getOrder(keyA);
+
+        const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
+            const ord = (floorKey) => {
+                const tag = Object.keys(detalhes).find((t) =>
+                    t.includes(`/${selectedBuilding}/${floorKey}/`)
+                );
+                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
+            };
+            return ord(b) - ord(a);
         });
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.length > 0 ? (
-                    pavimentosOrdenados.map(([pavKey, equipamentosObj]) => (
-                        <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                                {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
-                            </h2>
-                            <EquipmentGrid
-                                equipamentos={Object.keys(equipamentosObj)}
-                                selectedBuilding={selectedBuilding}
-                                selectedFloor={pavKey}
-                                detalhes={detalhes}
-                                onClick={handleEquipamentoClick}
-                                disciplineCode="EL"
-                            />
-                        </div>
-                    ))
-                ) : (
-                    <div className="text-gray-400 text-center py-6">
-                        Nenhum pavimento encontrado para este prédio.
+                {pavimentosOrdenados.map(([pavKey, equipamentosObj]) => (
+                    <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
+                        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                            {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
+                        </h2>
+
+                        <EquipmentGrid
+                            equipamentos={Object.keys(equipamentosObj)}
+                            selectedBuilding={selectedBuilding}
+                            selectedFloor={pavKey}
+                            detalhes={detalhes}
+                            onClick={handleEquipamentoClick}
+                            disciplineCode="EL"
+                        />
                     </div>
-                )}
+                ))}
             </div>
         );
-    } else {
+    }
+
+    // 🔹 Nenhuma seleção ainda
+    else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
                 <span className="text-lg italic">
@@ -146,6 +152,7 @@ export default function Eletrica() {
                     <Zap className="w-5 h-5 text-yellow-500" />
                     Elétrica
                 </h2>
+
                 <DisciplineSidebar
                     estrutura={estrutura}
                     detalhes={detalhes}
