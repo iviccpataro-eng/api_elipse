@@ -32,10 +32,10 @@ export default function EquipmentGrid({
                             {info.fabricante || ""}
                         </div>
 
-                        <p className={info.statusComunicacao === "OK"
+                        <p className={info.communication === "OK"
                             ? "text-green-600"
                             : "text-red-600"}>
-                            {info.statusComunicacao || "Sem comunicação"}
+                            {info.communication || "Sem comunicação"}
                         </p>
                     </button>
                 );

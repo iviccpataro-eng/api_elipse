@@ -271,4 +271,37 @@ router.get("/estrutura", (req, res) => {
   }
 });
 
+// -----------------------------------------------------------
+// GET /equipamento/:tag
+// Retorna info + data do equipamento pelo tag completo
+// -----------------------------------------------------------
+router.get("/equipamento/:tag", (req, res) => {
+  try {
+    const tag = decodeURIComponent(req.params.tag);
+    const detalhes = global.dados.structureDetails || {};
+
+    if (!detalhes[tag]) {
+      return res.status(404).json({
+        ok: false,
+        erro: `Equipamento não encontrado: ${tag}`
+      });
+    }
+
+    const info = detalhes[tag];
+    const data = info.data || [];
+
+    return res.json({
+      ok: true,
+      dados: {
+        info,
+        data
+      }
+    });
+
+  } catch (err) {
+    console.error("[GET /equipamento/:tag] ERRO:", err);
+    return res.status(500).json({ ok: false, erro: "Erro interno" });
+  }
+});
+
 export default router;
