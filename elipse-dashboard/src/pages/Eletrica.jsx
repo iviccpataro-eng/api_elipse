@@ -31,7 +31,7 @@ export default function Eletrica() {
         })
             .then((res) => res.json())
             .then((data) => {
-                setEstrutura(data.EL || {});
+                setEstrutura(data.structure?.EL || {});
                 setDetalhes(data.structureDetails || {});
             })
             .catch(() => setErro("Falha na comunicação com a API."))
