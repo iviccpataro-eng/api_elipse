@@ -1,3 +1,4 @@
+// src/pages/Eletrica.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
@@ -46,7 +47,7 @@ export default function Eletrica() {
         if (!token) return;
 
         const user = jwtDecode(token);
-        const refreshTime = (user?.refreshtime || 15) * 1000;
+        const refreshTime = (user?.refreshtime || 10) * 1000;
 
         fetchEletrica();
         const interval = setInterval(fetchEletrica, Math.max(5000, refreshTime));

@@ -14,11 +14,13 @@ export default function ArCondicionado() {
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
+
     const navigate = useNavigate();
 
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
+    // 🔹 Função responsável por buscar toda a estrutura
     const fetchAC = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
@@ -39,12 +41,13 @@ export default function ArCondicionado() {
             .finally(() => setLoading(false));
     }, [API_BASE]);
 
+    // 🔹 Configura intervalo de atualização
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
         const user = jwtDecode(token);
-        const refreshTime = (user?.refreshtime || 15) * 1000;
+        const refreshTime = (user?.refreshtime || 10) * 1000;
 
         fetchAC();
         const interval = setInterval(fetchAC, Math.max(5000, refreshTime));
@@ -52,9 +55,12 @@ export default function ArCondicionado() {
         return () => clearInterval(interval);
     }, [fetchAC]);
 
+    // 🔹 Logs organizados
     useEffect(() => {
+        console.group("📦 Dados Carregados");
         console.log("Estrutura AC carregada:", estrutura);
         console.log("Detalhes AC carregados:", detalhes);
+        console.groupEnd();
     }, [estrutura, detalhes]);
 
     const handleEquipClick = (tag) => {
@@ -73,7 +79,7 @@ export default function ArCondicionado() {
 
     let contentToRender;
 
-    // 🔹 Pavimento selecionado
+    // 🔹 Tela: Pavimento selecionado
     if (selectedBuilding && selectedFloor) {
         const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
@@ -95,7 +101,7 @@ export default function ArCondicionado() {
         );
     }
 
-    // 🔹 Prédio selecionado
+    // 🔹 Tela: Prédio selecionado
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
@@ -131,7 +137,7 @@ export default function ArCondicionado() {
         );
     }
 
-    // 🔹 Nada selecionado
+    // 🔹 Tela Inicial
     else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">

@@ -5,7 +5,10 @@ import { jwtDecode } from "jwt-decode";
 
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
+import ArCondicionado from "./pages/ArCondicionado";
+import Iluminacao from "./pages/Iluminacao";
 import Eletrica from "./pages/Eletrica";
+import Hidraulica from "./pages/Hidraulica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
 import RegisterPage from "./RegisterPage";
@@ -130,10 +133,10 @@ export default function App() {
         <Route index element={<Dashboard token={token} />} />
 
         {/* 🔌 Disciplinas */}
+        <Route path="/arcondicionado" element={<ArCondicionado />} />
+        <Route path="/iluminacao" element={<Iluminacao />} />
         <Route path="/eletrica" element={<Eletrica />} />
-        <Route path="/arcondicionado" element={<div className="p-6">Ar Condicionado</div>} />
-        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="/hidraulica" element={<Hidraulica />} />
         <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
         <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
 
