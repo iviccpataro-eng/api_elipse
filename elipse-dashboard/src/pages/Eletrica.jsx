@@ -113,14 +113,14 @@ export default function Eletrica() {
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.map(([pavKey, equipamentosObj]) => (
+                {pavimentosOrdenados.map(([pavKey, equipamentosArr]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={Array.isArray(equipamentosObj) ? equipamentosObj : []}
+                            equipamentos={equipamentosArr}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
