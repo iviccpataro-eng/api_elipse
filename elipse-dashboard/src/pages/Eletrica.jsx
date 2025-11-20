@@ -56,9 +56,6 @@ export default function Eletrica() {
         console.log("Estrutura carregada:", estrutura);
         console.log("Detalhes carregados:", detalhes);
     }, [estrutura, detalhes]);
-    // expõe no window para depuração
-    window.__ESTRUTURA__ = estrutura;
-    window.__DETALHES__ = detalhes;
 
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
@@ -123,7 +120,7 @@ export default function Eletrica() {
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={Object.keys(equipamentosObj)}
+                            equipamentos={Array.isArray(equipamentosObj) ? equipamentosObj : []}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
