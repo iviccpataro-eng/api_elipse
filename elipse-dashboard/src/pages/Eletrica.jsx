@@ -75,9 +75,7 @@ export default function Eletrica() {
 
     // 🔹 Tela quando usuário clicou em Pavimento
     if (selectedBuilding && selectedFloor) {
-        const equipamentos = Object.keys(
-            estrutura[selectedBuilding]?.[selectedFloor] ?? {}
-        );
+        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
