@@ -1,6 +1,7 @@
+// src/pages/ArCondicionado.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Fan } from "lucide-react";
+import { Snowflake } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
@@ -15,9 +16,10 @@ export default function ArCondicionado() {
     const [selectedFloor, setSelectedFloor] = useState(null);
     const navigate = useNavigate();
 
-    const API_BASE = import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    const fetchData = useCallback(() => {
+    const fetchAC = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
@@ -44,30 +46,36 @@ export default function ArCondicionado() {
         const user = jwtDecode(token);
         const refreshTime = (user?.refreshtime || 15) * 1000;
 
-        fetchData();
-        const interval = setInterval(fetchData, Math.max(5000, refreshTime));
+        fetchAC();
+        const interval = setInterval(fetchAC, Math.max(5000, refreshTime));
+
         return () => clearInterval(interval);
-    }, [fetchData]);
+    }, [fetchAC]);
 
     useEffect(() => {
         console.log("Estrutura AC carregada:", estrutura);
-        console.log("Detalhes carregados:", detalhes);
+        console.log("Detalhes AC carregados:", detalhes);
     }, [estrutura, detalhes]);
 
-    const handleEquipamentoClick = (tag) => {
-        navigate(`/ac/equipamento/${encodeURIComponent(tag)}`);
+    const handleEquipClick = (tag) => {
+        navigate(`/arcondicionado/equipamento/${encodeURIComponent(tag)}`);
     };
 
     if (loading)
-        return <div className="flex items-center justify-center h-screen text-gray-500">Carregando dados...</div>;
+        return (
+            <div className="flex items-center justify-center h-screen text-gray-500">
+                Carregando Ar Condicionado...
+            </div>
+        );
 
     if (erro)
         return <div className="p-6 pt-20 text-center text-red-500 font-medium">{erro}</div>;
 
     let contentToRender;
 
+    // 🔹 Pavimento selecionado
     if (selectedBuilding && selectedFloor) {
-        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
+        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
@@ -80,17 +88,22 @@ export default function ArCondicionado() {
                     selectedBuilding={selectedBuilding}
                     selectedFloor={selectedFloor}
                     detalhes={detalhes}
+                    onClick={handleEquipClick}
                     disciplineCode="AC"
-                    onClick={handleEquipamentoClick}
                 />
             </div>
         );
-    } else if (selectedBuilding) {
+    }
+
+    // 🔹 Prédio selecionado
+    else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
         const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-            const ord = (pav) => {
-                const tag = Object.keys(detalhes).find((t) => t.includes(`/AC/${selectedBuilding}/${pav}/`));
+            const ord = (floorKey) => {
+                const tag = Object.keys(detalhes).find((t) =>
+                    t.includes(`/Principal/${floorKey}/`)
+                );
                 return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
             };
             return ord(b) - ord(a);
@@ -98,37 +111,42 @@ export default function ArCondicionado() {
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.map(([pavKey, eqList]) => (
+                {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {selectedBuilding} – {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={eqList}
+                            equipamentos={equipamentos}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
+                            onClick={handleEquipClick}
                             disciplineCode="AC"
-                            onClick={handleEquipamentoClick}
                         />
                     </div>
                 ))}
             </div>
         );
-    } else {
+    }
+
+    // 🔹 Nada selecionado
+    else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
-                <span className="text-lg italic">Selecione um prédio ou pavimento ao lado</span>
+                <span className="text-lg italic">
+                    Selecione um prédio ou pavimento ao lado
+                </span>
             </div>
         );
     }
 
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
-            <aside className="w-64 bg-white border-r p-4 shadow-sm fixed top-16 left-0 h-[calc(100vh-4rem)] overflow-y-auto">
-                <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 z-10 border-b">
-                    <Fan className="w-5 h-5 text-blue-400" />
+            <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 -mt-4 z-10 border-b">
+                    <Snowflake className="w-5 h-5 text-blue-400" />
                     Ar Condicionado
                 </h2>
 
@@ -137,12 +155,20 @@ export default function ArCondicionado() {
                     detalhes={detalhes}
                     selectedBuilding={selectedBuilding}
                     selectedFloor={selectedFloor}
-                    onSelectBuilding={(b) => { setSelectedBuilding(b); setSelectedFloor(null); }}
-                    onSelectFloor={(b, f) => { setSelectedBuilding(b); setSelectedFloor(f); }}
+                    onSelectBuilding={(building) => {
+                        setSelectedBuilding(building);
+                        setSelectedFloor(null);
+                    }}
+                    onSelectFloor={(building, floor) => {
+                        setSelectedBuilding(building);
+                        setSelectedFloor(floor);
+                    }}
                 />
             </aside>
 
-            <main className="flex-1 p-6 ml-64">{contentToRender}</main>
+            <main className="flex-1 p-6 ml-64">
+                {contentToRender}
+            </main>
         </div>
     );
 }

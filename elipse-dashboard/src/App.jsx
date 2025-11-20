@@ -131,10 +131,7 @@ export default function App() {
 
         {/* 🔌 Disciplinas */}
         <Route path="/eletrica" element={<Eletrica />} />
-        <Route
-          path="/arcondicionado"
-          element={<div className="p-6">Ar Condicionado</div>}
-        />
+        <Route path="/arcondicionado" element={<div className="p-6">Ar Condicionado</div>} />
         <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
         <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
         <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
