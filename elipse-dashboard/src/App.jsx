@@ -142,6 +142,7 @@ export default function App() {
 
         {/* Página de equipamento genérica */}
         <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
+        <Route path="/arcondicionado/equipamento/:tag" element={<Equipamento />} />
 
         {/* Ferramentas e admin */}
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
