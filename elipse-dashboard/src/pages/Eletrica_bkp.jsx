@@ -31,7 +31,7 @@ export default function Eletrica() {
         })
             .then((res) => res.json())
             .then((data) => {
-                setEstrutura(data.EL || {});
+                setEstrutura(data.structure?.EL || {});
                 setDetalhes(data.structureDetails || {});
             })
             .catch(() => setErro("Falha na comunicação com a API."))
@@ -57,7 +57,6 @@ export default function Eletrica() {
         console.log("Detalhes carregados:", detalhes);
     }, [estrutura, detalhes]);
 
-
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
@@ -76,9 +75,7 @@ export default function Eletrica() {
 
     // 🔹 Tela quando usuário clicou em Pavimento
     if (selectedBuilding && selectedFloor) {
-        const equipamentos = Object.keys(
-            estrutura[selectedBuilding]?.[selectedFloor] || {}
-        );
+        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
@@ -114,14 +111,14 @@ export default function Eletrica() {
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.map(([pavKey, equipamentosObj]) => (
+                {pavimentosOrdenados.map(([pavKey, equipamentosArr]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={Object.keys(equipamentosObj)}
+                            equipamentos={equipamentosArr}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
