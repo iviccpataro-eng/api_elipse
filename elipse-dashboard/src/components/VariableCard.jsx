@@ -172,9 +172,10 @@ export default function VariableCard({ variavel }) {
             return (
                 <div className="rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-2">{nome}</div>
-                    <div
-                        className={`text-lg font-semibold ${valor ? "text-green-600" : "text-gray-400"
-                            }`}
+                    <div className={`text-lg font-semibold ${valor
+                        ? "text-red-600"
+                        : "text-green-400"
+                        }`}
                     >
                         {status}
                     </div>
