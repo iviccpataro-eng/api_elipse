@@ -189,19 +189,25 @@ export default function Equipamento() {
                         {layoutMode === "list" && (
                             <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
                                 {variaveis.map((v, i) => {
-                                    const [tipo, nome, valor, unidade] = v;
+                                    const tipo = v[0] ?? "";
+                                    const nome = v[1] ?? "";
+                                    const valor = v[2] ?? "";
+                                    const unidade = v[3] ?? "";
+
                                     return (
                                         <div
                                             key={i}
                                             className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
                                         >
                                             <span className="font-medium text-gray-700">{nome}</span>
+
                                             <span className="text-gray-900">
-                                                {valor} {unidade}
+                                                {valor !== "" ? valor : "-"} {unidade || ""}
                                             </span>
                                         </div>
                                     );
                                 })}
+
                             </div>
                         )}
 
