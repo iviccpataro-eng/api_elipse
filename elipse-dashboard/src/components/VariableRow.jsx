@@ -1,6 +1,6 @@
 // src/components/VariableRow.jsx
 import React, { useState } from "react";
-import { toNumberMaybe } from "./VariableUtils"; // criaremos depois se quiser externalizar
+//import { toNumberMaybe } from "./VariableUtils"; // criaremos depois se quiser externalizar
 
 export default function VariableRow({ variavel }) {
     const [tipo, nome, valor, unidade, hasGraph, nominalRaw] = variavel;
