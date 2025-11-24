@@ -68,6 +68,7 @@ export default function VariableRow({ variavel }) {
         case "DI": {
             const [offLabel, onLabel] = (unidade || "").split("/");
             const status = valor ? onLabel ?? "ON" : offLabel ?? "OFF";
+            const nominalVal = nominalRaw || "-";
 
             return (
                 <>
@@ -76,7 +77,7 @@ export default function VariableRow({ variavel }) {
                     <div className={`font-semibold ${valor ? "text-green-600" : "text-red-600"}`}>
                         {status}
                     </div>
-                    <div>-</div>
+                    <div className="">{nominalVal}</div>
                 </>
             );
         }
