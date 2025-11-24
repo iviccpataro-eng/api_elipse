@@ -109,24 +109,24 @@ export default function Equipamento() {
                             <LayoutGrid
                                 onClick={() => setLayoutMode("cards")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400"
                                     }`}
                             />
 
                             <List
                                 onClick={() => setLayoutMode("list")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400"
                                     }`}
                             />
 
                             <FileText
                                 onClick={() => setLayoutMode("detailed")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400"
                                     }`}
                             />
                         </div>
@@ -196,7 +196,7 @@ export default function Equipamento() {
                         {/* modo detalhado */}
                         {layoutMode === "detailed" && (
                             <div className="bg-white rounded-xl shadow animate-fadeIn">
-                                {/* cabeçalho */}
+                                {/* Cabeçalho */}
                                 <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
                                     <div>Nome</div>
                                     <div>Tipo</div>
@@ -204,32 +204,14 @@ export default function Equipamento() {
                                     <div>Nominal</div>
                                 </div>
 
-                                {variaveis.map((v, i) => {
-                                    const obj = normalizeVariable(v);
-
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none transition"
-                                        >
-                                            <div className="font-medium text-gray-800">
-                                                {obj.nome}
-                                            </div>
-
-                                            <div className="text-gray-600">{obj.tipo}</div>
-
-                                            <div>
-                                                <VariableRow variable={obj} />
-                                            </div>
-
-                                            <div className="text-gray-500">
-                                                {obj.nominal
-                                                    ? `${obj.nominal} ${obj.unidade || ""}`
-                                                    : "-"}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                {variaveis.map((v, i) => (
+                                    <div
+                                        key={i}
+                                        className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none"
+                                    >
+                                        <VariableRow variavel={v} />
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </>
