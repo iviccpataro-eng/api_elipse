@@ -24,10 +24,10 @@ export default function VariableSimpleRow({ variavel }) {
         case "AI":
             return (
                 <>
-                    <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-900">
+                    <span className="font-medium text-gray-800">{nome}</span>
+                    <span className="text-gray-900">
                         {valor} {unidade}
-                    </div>
+                    </span>
                 </>
             );
 
@@ -38,8 +38,8 @@ export default function VariableSimpleRow({ variavel }) {
 
             return (
                 <>
-                    <div className="font-medium text-gray-800">{nome}</div>
-                    <div>
+                    <span className="font-medium text-gray-800">{nome}</span>
+                    <span>
                         <input
                             type="number"
                             className="border rounded-md p-1 w-24"
@@ -48,7 +48,7 @@ export default function VariableSimpleRow({ variavel }) {
                             max={max}
                             onChange={(e) => setValue(e.target.value)}
                         />
-                    </div>
+                    </span>
                 </>
             );
         }
@@ -60,10 +60,10 @@ export default function VariableSimpleRow({ variavel }) {
 
             return (
                 <>
-                    <div className="font-medium text-gray-800">{nome}</div>
-                    <div className={`font-semibold ${valor ? "text-green-600" : "text-red-600"}`}>
+                    <span className="font-medium text-gray-800">{nome}</span>
+                    <span className={`font-semibold ${valor ? "text-green-600" : "text-red-600"}`}>
                         {status}
-                    </div>
+                    </span>
                 </>
             );
         }
@@ -74,8 +74,8 @@ export default function VariableSimpleRow({ variavel }) {
 
             return (
                 <>
-                    <div className="font-medium text-gray-800">{nome}</div>
-                    <div>
+                    <span className="font-medium text-gray-800">{nome}</span>
+                    <span>
                         <select
                             value={valor ? 1 : 0}
                             onChange={(e) => setValue(parseInt(e.target.value))}
@@ -84,7 +84,7 @@ export default function VariableSimpleRow({ variavel }) {
                             <option value={0}>{offLabel || "OFF"}</option>
                             <option value={1}>{onLabel || "ON"}</option>
                         </select>
-                    </div>
+                    </span>
                 </>
             );
         }
@@ -96,8 +96,8 @@ export default function VariableSimpleRow({ variavel }) {
 
             return (
                 <>
-                    <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-900">{estadoAtual}</div>
+                    <span className="font-medium text-gray-800">{nome}</span>
+                    <span className="text-gray-900">{estadoAtual}</span>
                 </>
             );
         }
@@ -108,8 +108,8 @@ export default function VariableSimpleRow({ variavel }) {
 
             return (
                 <>
-                    <div className="font-medium text-gray-800">{nome}</div>
-                    <div>
+                    <span className="font-medium text-gray-800">{nome}</span>
+                    <span>
                         <select
                             value={valor}
                             onChange={(e) => setValue(parseInt(e.target.value))}
@@ -121,7 +121,7 @@ export default function VariableSimpleRow({ variavel }) {
                                 </option>
                             ))}
                         </select>
-                    </div>
+                    </span>
                 </>
             );
         }
@@ -130,11 +130,11 @@ export default function VariableSimpleRow({ variavel }) {
         default:
             return (
                 <>
-                    <div className="font-medium">{nome}</div>
-                    <div>
+                    <span className="font-medium">{nome}</span>
+                    <span>
                         {valor}
                         {unidade}
-                    </div>
+                    </span>
                 </>
             );
     }
