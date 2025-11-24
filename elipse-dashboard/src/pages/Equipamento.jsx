@@ -184,16 +184,17 @@ export default function Equipamento() {
 
                         {/* modo lista */}
                         {layoutMode === "list" && (
-                            <div className="bg-white rounded-xl shadow animate-fadeIn">
-
-                                {variaveis.map((v, i) => (
-                                    <div
-                                        key={i}
-                                        className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none"
-                                    >
-                                        <VariableSimpleRow variavel={v} />
-                                    </div>
-                                ))}
+                            <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
+                                <div className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition">
+                                    {variaveis.map((v, i) => (
+                                        <div
+                                            key={i}
+                                            className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none"
+                                        >
+                                            <VariableSimpleRow variavel={v} />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -225,6 +226,6 @@ export default function Equipamento() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
