@@ -184,12 +184,28 @@ export default function Equipamento() {
                         {/* modo lista */}
                         {layoutMode === "list" && (
                             <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
-                                {variaveis.map((v, i) => (
-                                    <VariableRow
-                                        key={i}
-                                        variable={normalizeVariable(v)}
-                                    />
-                                ))}
+                                {variaveis.map((v, i) => {
+                                    // 🔒 Garantir que "v" é array antes de usar [0],[1],[2]...
+                                    const arr = Array.isArray(v) ? v : [];
+
+                                    const tipo = arr[0] ?? "";
+                                    const nome = arr[1] ?? "";
+                                    const valor = arr[2] ?? "";
+                                    const unidade = arr[3] ?? "";
+
+                                    return (
+                                        <div
+                                            key={i}
+                                            className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
+                                        >
+                                            <span className="font-medium text-gray-700">{nome}</span>
+
+                                            <span className="text-gray-900">
+                                                {valor !== "" ? valor : "-"} {unidade || ""}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
 
