@@ -9,6 +9,7 @@ import {
     FileText,
 } from "lucide-react";
 import VariableCard from "../components/VariableCard.jsx";
+import VariableRow from "../components/VariableRow.jsx";
 
 export default function Equipamento() {
     const { tag } = useParams();
@@ -188,32 +189,14 @@ export default function Equipamento() {
 
                         {layoutMode === "list" && (
                             <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
-                                {variaveis.map((v, i) => {
-                                    const tipo = v[0] ?? "";
-                                    const nome = v[1] ?? "";
-                                    const valor = v[2] ?? "";
-                                    const unidade = v[3] ?? "";
-
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
-                                        >
-                                            <span className="font-medium text-gray-700">{nome}</span>
-
-                                            <span className="text-gray-900">
-                                                {valor !== "" ? valor : "-"} {unidade || ""}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-
+                                {variaveis.map((v, i) => (
+                                    <VariableRow key={i} variable={normalizeVariable(v)} />
+                                ))}
                             </div>
                         )}
 
                         {layoutMode === "detailed" && (
                             <div className="bg-white rounded-xl shadow animate-fadeIn">
-                                {/* Cabeçalho fixo */}
                                 <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
                                     <div>Nome</div>
                                     <div>Tipo</div>
@@ -222,7 +205,8 @@ export default function Equipamento() {
                                 </div>
 
                                 {variaveis.map((v, i) => {
-                                    const [tipo, nome, valor, unidade, , nominal] = v;
+                                    const { tipo, nome, valor, unidade, nominal } = normalizeVariable(v);
+
                                     return (
                                         <div
                                             key={i}
@@ -230,9 +214,11 @@ export default function Equipamento() {
                                         >
                                             <div className="font-medium text-gray-800">{nome}</div>
                                             <div className="text-gray-600">{tipo}</div>
+
                                             <div className="text-gray-900">
-                                                {valor} {unidade}
+                                                <VariableRow variable={normalizeVariable(v)} />
                                             </div>
+
                                             <div className="text-gray-500">
                                                 {nominal ? `${nominal} ${unidade || ""}` : "-"}
                                             </div>
