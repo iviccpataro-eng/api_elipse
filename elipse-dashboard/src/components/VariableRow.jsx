@@ -68,7 +68,7 @@ export default function VariableRow({ variavel }) {
         case "DI": {
             const [offLabel, onLabel] = (unidade || "").split("/");
             const status = valor ? onLabel ?? "ON" : offLabel ?? "OFF";
-            const nominalVal = nominalRaw || "-";
+            const nominalVal = nominalRaw ? onLabel ?? "ON" : offLabel ?? "OFF";
 
             return (
                 <>
