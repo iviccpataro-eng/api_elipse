@@ -1,4 +1,3 @@
-// src/pages/Equipamento.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -8,26 +7,31 @@ import {
     List,
     FileText,
 } from "lucide-react";
-import VariableCard from "../components/VariableCard.jsx";
+
+import VariableCard from "../components/VariableCard";
+import VariableRow from "../components/VariableRow";
+import { normalizeVariable } from "../utils/normalizeVariable";
 
 export default function Equipamento() {
     const { tag } = useParams();
     const navigate = useNavigate();
+
     const [dados, setDados] = useState(null);
     const [erro, setErro] = useState("");
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
     const [layoutMode, setLayoutMode] = useState(
         localStorage.getItem("layoutMode") || "cards"
     );
 
     const API_BASE =
-        import.meta?.env?.VITE_API_BASE_URL ||
-        "https://api-elipse.onrender.com";
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔹 Função principal de carregamento
+    // ------------ Carregar dados ----------------
     const carregarDados = useCallback(() => {
         const token = localStorage.getItem("authToken");
+
         if (!token) {
             setErro("Token não encontrado. Faça login novamente.");
             setLoading(false);
@@ -35,40 +39,39 @@ export default function Equipamento() {
         }
 
         setIsRefreshing(true);
+
         fetch(`${API_BASE}/equipamento/${encodeURIComponent(tag)}`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then((res) => res.json())
             .then((data) => {
-                console.log("📡 Retorno da API Equipamento:", data);
                 if (data.ok) {
                     setDados(data.dados);
                     setErro("");
                 } else {
-                    setErro(data.erro || "Erro ao carregar dados do equipamento.");
+                    setErro(data.erro || "Erro ao carregar dados.");
                 }
             })
-            .catch(() => setErro("Falha na comunicação com a API."))
+            .catch(() => setErro("Falha na comunicação com a API"))
             .finally(() => {
                 setLoading(false);
                 setIsRefreshing(false);
             });
     }, [tag, API_BASE]);
 
-    // 🔄 Atualização automática
     useEffect(() => {
         carregarDados();
         const refreshTime = localStorage.getItem("refreshTime") || 15000;
-        const interval = setInterval(carregarDados, parseInt(refreshTime, 10));
+
+        const interval = setInterval(carregarDados, refreshTime);
+
         return () => clearInterval(interval);
     }, [carregarDados]);
 
-    // 💾 Persistir layout preferido
     useEffect(() => {
         localStorage.setItem("layoutMode", layoutMode);
     }, [layoutMode]);
 
-    // 🔸 Estados de carregamento e erro
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
@@ -81,15 +84,9 @@ export default function Equipamento() {
             <div className="p-6 text-center text-red-500 font-medium">{erro}</div>
         );
 
-    // 🔹 Dados gerais do equipamento
     const info = dados?.info || {};
     const variaveis = Array.isArray(dados?.data) ? dados.data : [];
 
-    // 🎞️ Classe de transição suave
-    const transitionClass =
-        "transition-all duration-500 ease-in-out transform opacity-100 translate-y-0";
-
-    // 🕒 Formata última atualização, se existir
     const ultimaAtualizacao = info["last-send"]
         ? new Date(info["last-send"]).toLocaleString("pt-BR")
         : null;
@@ -97,7 +94,7 @@ export default function Equipamento() {
     return (
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
             <div className="max-w-6xl mx-auto">
-                {/* 🔙 Botão Voltar + Atualizar + Seletor de Layout */}
+                {/* topo */}
                 <div className="flex items-center justify-between mb-4">
                     <button
                         onClick={() => navigate(-1)}
@@ -107,37 +104,36 @@ export default function Equipamento() {
                     </button>
 
                     <div className="flex items-center gap-4">
-                        {/* 🔘 Seletor de layout */}
+                        {/* layouts */}
                         <div className="flex items-center gap-3">
                             <LayoutGrid
                                 onClick={() => setLayoutMode("cards")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
                                     ? "text-blue-600 scale-110"
-                                    : "text-gray-400 hover:text-gray-600"
+                                    : "text-gray-400"
                                     }`}
                             />
+
                             <List
                                 onClick={() => setLayoutMode("list")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
                                     ? "text-blue-600 scale-110"
-                                    : "text-gray-400 hover:text-gray-600"
+                                    : "text-gray-400"
                                     }`}
                             />
+
                             <FileText
                                 onClick={() => setLayoutMode("detailed")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
                                     ? "text-blue-600 scale-110"
-                                    : "text-gray-400 hover:text-gray-600"
+                                    : "text-gray-400"
                                     }`}
                             />
                         </div>
 
-                        {/* 🔁 Botão Atualizar */}
                         <button
                             onClick={carregarDados}
-                            className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
-                                ? "opacity-50 pointer-events-none"
-                                : "hover:bg-blue-50"
+                            className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing ? "opacity-50 pointer-events-none" : ""
                                 }`}
                         >
                             <RefreshCcw
@@ -149,7 +145,7 @@ export default function Equipamento() {
                     </div>
                 </div>
 
-                {/* 🔹 Cabeçalho do equipamento */}
+                {/* cabeçalho */}
                 <div className="bg-white rounded-2xl shadow p-6 mb-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-2">
                         {info.name || tag}
@@ -165,34 +161,37 @@ export default function Equipamento() {
                         {info.communication && (
                             <span>• Comunicação: {info.communication}</span>
                         )}
-                        {ultimaAtualizacao && (
-                            <span>• Último envio: {ultimaAtualizacao}</span>
-                        )}
+                        {ultimaAtualizacao && <span>• Último envio: {ultimaAtualizacao}</span>}
                     </p>
                 </div>
 
-                {/* 🔹 Renderização das variáveis */}
+                {/* valores */}
                 {variaveis.length > 0 ? (
-                    <div className={`transition-all duration-500 ${transitionClass}`}>
+                    <>
+                        {/* modo cards */}
                         {layoutMode === "cards" && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
-                                {variaveis.map((variavel, i) => (
+                                {variaveis.map((v, i) => (
                                     <VariableCard
                                         key={i}
-                                        variavel={variavel}
+                                        variavel={v}
                                         equipamentoTag={tag}
                                     />
                                 ))}
                             </div>
                         )}
 
+                        {/* modo lista */}
                         {layoutMode === "list" && (
                             <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
                                 {variaveis.map((v, i) => {
-                                    const tipo = v[0] ?? "";
-                                    const nome = v[1] ?? "";
-                                    const valor = v[2] ?? "";
-                                    const unidade = v[3] ?? "";
+                                    // 🔒 Garantir que "v" é array antes de usar [0],[1],[2]...
+                                    const arr = Array.isArray(v) ? v : [];
+
+                                    const tipo = arr[0] ?? "";
+                                    const nome = arr[1] ?? "";
+                                    const valor = arr[2] ?? "";
+                                    const unidade = arr[3] ?? "";
 
                                     return (
                                         <div
@@ -207,44 +206,34 @@ export default function Equipamento() {
                                         </div>
                                     );
                                 })}
-
                             </div>
                         )}
 
+                        {/* modo detalhado */}
                         {layoutMode === "detailed" && (
                             <div className="bg-white rounded-xl shadow animate-fadeIn">
-                                {/* Cabeçalho fixo */}
+                                {/* Cabeçalho */}
                                 <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
                                     <div>Nome</div>
-                                    <div>Tipo</div>
+                                    <div className="hidden xl:flex">Tipo</div>
                                     <div>Valor</div>
                                     <div>Nominal</div>
                                 </div>
 
-                                {variaveis.map((v, i) => {
-                                    const [tipo, nome, valor, unidade, , nominal] = v;
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none transition"
-                                        >
-                                            <div className="font-medium text-gray-800">{nome}</div>
-                                            <div className="text-gray-600">{tipo}</div>
-                                            <div className="text-gray-900">
-                                                {valor} {unidade}
-                                            </div>
-                                            <div className="text-gray-500">
-                                                {nominal ? `${nominal} ${unidade || ""}` : "-"}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                {variaveis.map((v, i) => (
+                                    <div
+                                        key={i}
+                                        className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none"
+                                    >
+                                        <VariableRow variavel={v} />
+                                    </div>
+                                ))}
                             </div>
                         )}
-                    </div>
+                    </>
                 ) : (
                     <div className="text-gray-400 text-center py-10 animate-fadeIn">
-                        Nenhuma grandeza disponível para este equipamento.
+                        Nenhuma grandeza disponível.
                     </div>
                 )}
             </div>
