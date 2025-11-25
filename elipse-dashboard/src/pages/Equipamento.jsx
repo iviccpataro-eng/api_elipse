@@ -184,17 +184,24 @@ export default function Equipamento() {
 
                         {/* modo lista */}
                         {layoutMode === "list" && (
-                            <div className="bg-white rounded-xl shadow divide-y animate-fadeIn">
-                                <div className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition">
-                                    {variaveis.map((v, i) => (
-                                        <div
-                                            key={i}
-                                            className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none"
-                                        >
-                                            <VariableSimpleRow variavel={v} />
-                                        </div>
-                                    ))}
+                            <div className="bg-white rounded-xl shadow animate-fadeIn">
+
+                                {/* Cabeçalho da tabela */}
+                                <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
+                                    <div>Nome</div>
+                                    <div>Valor</div>
+                                    <div className="col-span-2">Ação</div>
                                 </div>
+
+                                {variaveis.map((v, i) => (
+                                    <div
+                                        key={i}
+                                        className="grid grid-cols-4 px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-none"
+                                    >
+                                        <VariableSimpleRow variavel={v} />
+                                    </div>
+                                ))}
+
                             </div>
                         )}
 
