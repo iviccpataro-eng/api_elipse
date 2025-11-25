@@ -1,4 +1,5 @@
 import React from "react";
+import { Network, NetworkOff } from "lucide-react";
 
 export default function EquipmentGrid({
     equipamentos = [],
@@ -13,6 +14,7 @@ export default function EquipmentGrid({
             {equipamentos.map((equip) => {
                 const tag = `${disciplineCode}/${selectedBuilding}/${selectedFloor}/${equip}`;
                 const info = detalhes[tag] || {};
+                const hasComm = info.communication === "OK";
 
                 return (
                     <button
@@ -20,23 +22,28 @@ export default function EquipmentGrid({
                         onClick={() => onClick(tag)}
                         className="p-4 bg-white rounded-xl shadow hover:shadow-md transition text-left"
                     >
-                        <h3 className="font-semibold">
-                            {info.name || equip}
-                        </h3>
+                        {/* Linha superior: Nome + Ícone */}
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-semibold">
+                                {info.name || equip}
+                            </h3>
 
+                            {hasComm ? (
+                                <Network className="w-5 h-5 text-green-600" />
+                            ) : (
+                                <NetworkOff className="w-5 h-5 text-red-600" />
+                            )}
+                        </div>
+
+                        {/* Descrição */}
                         <p className="text-sm text-gray-500">
                             {info.description || "Sem descrição"}
                         </p>
 
+                        {/* Fabricante / Modelo */}
                         <div className="text-gray-400 text-xs mt-1">
                             {info.producer || ""} • {info.model || ""}
                         </div>
-
-                        <p className={info.communication === "OK"
-                            ? "text-green-600"
-                            : "text-red-600"}>
-                            {info.communication || "Sem comunicação"}
-                        </p>
                     </button>
                 );
             })}
