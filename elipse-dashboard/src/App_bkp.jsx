@@ -1,13 +1,17 @@
 // App.jsx
-import React, { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
+import ArCondicionado from "./pages/ArCondicionado";
+import Iluminacao from "./pages/Iluminacao";
 import Eletrica from "./pages/Eletrica";
-import Dashboard from "./pages/Dashboard"; // 🔹 Dashboard movido para arquivo separado
+import Hidraulica from "./pages/Hidraulica";
+import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
+import RegisterPage from "./RegisterPage";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -81,11 +85,24 @@ function LoginPage({ onLogin }) {
 
 /* --- Root component --- */
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [token, setToken] = useState(localStorage.getItem("authToken"));
   const [user, setUser] = useState(() => {
     const t = localStorage.getItem("authToken");
     return t ? jwtDecode(t) : null;
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const invite = params.get("invite");
+
+    // ✅ Redireciona para a tela de registro se tiver convite
+    if (invite && location.pathname !== "/register") {
+      navigate(`/register?invite=${invite}`, { replace: true });
+    }
+  }, [location, navigate]);
 
   const handleLogin = (tk, decodedUser) => {
     localStorage.setItem("authToken", tk);
@@ -100,7 +117,13 @@ export default function App() {
     setUser(null);
   };
 
-  if (!token) return <LoginPage onLogin={handleLogin} />;
+  // Se não há token e não é um link de convite, mostra login
+  const params = new URLSearchParams(location.search);
+  const invite = params.get("invite");
+  if (!token && !invite) return <LoginPage onLogin={handleLogin} />;
+
+  // Se o link é de convite, mostra a tela de registro
+  if (invite) return <RegisterPage />;
 
   return (
     <>
@@ -110,19 +133,25 @@ export default function App() {
         <Route index element={<Dashboard token={token} />} />
 
         {/* 🔌 Disciplinas */}
+        <Route path="/arcondicionado" element={<ArCondicionado />} />
+        <Route path="/iluminacao" element={<Iluminacao />} />
         <Route path="/eletrica" element={<Eletrica />} />
-        <Route path="/arcondicionado" element={<div className="p-6">Ar Condicionado</div>} />
-        <Route path="/iluminacao" element={<div className="p-6">Iluminação</div>} />
-        <Route path="/hidraulica" element={<div className="p-6">Hidráulica</div>} />
+        <Route path="/hidraulica" element={<Hidraulica />} />
         <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
         <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
 
         {/* Página de equipamento genérica */}
         <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
+        <Route path="/arcondicionado/equipamento/:tag" element={<Equipamento />} />
 
+        {/* Ferramentas e admin */}
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
-        <Route path="*" element={<Dashboard token={token} />} />
 
+        {/* Tela de registro */}
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Rota fallback */}
+        <Route path="*" element={<Dashboard token={token} />} />
       </Routes>
     </>
   );

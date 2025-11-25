@@ -141,8 +141,10 @@ export default function App() {
         <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
 
         {/* Página de equipamento genérica */}
-        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
         <Route path="/arcondicionado/equipamento/:tag" element={<Equipamento />} />
+        <Route path="/iluminacao/equipamento/:tag" element={<Equipamento />} />
+        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
+        <Route path="/hidraulica/equipamento/:tag" element={<Equipamento />} />
 
         {/* Ferramentas e admin */}
         <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
