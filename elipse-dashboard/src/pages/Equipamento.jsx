@@ -190,7 +190,6 @@ export default function Equipamento() {
                                 <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
                                     <div>Nome</div>
                                     <div>Valor</div>
-                                    <div className="col-span-2">Ação</div>
                                 </div>
 
                                 {variaveis.map((v, i) => (
