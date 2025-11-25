@@ -29,7 +29,7 @@ export default function EquipmentGrid({
                         </p>
 
                         <div className="text-gray-400 text-xs mt-1">
-                            {info.producer || ""}
+                            {info.producer || ""} • {info.model || ""}
                         </div>
 
                         <p className={info.communication === "OK"
