@@ -1,5 +1,5 @@
 import React from "react";
-import { Network, NetworkOff } from "lucide-react";
+import { Wifi, WifiOff } from "lucide-react";
 
 export default function EquipmentGrid({
     equipamentos = [],
@@ -29,9 +29,9 @@ export default function EquipmentGrid({
                             </h3>
 
                             {hasComm ? (
-                                <Network className="w-5 h-5 text-green-600" />
+                                <Wifi className="w-5 h-5 text-green-600" />
                             ) : (
-                                <NetworkOff className="w-5 h-5 text-red-600" />
+                                <WifiOff className="w-5 h-5 text-red-600" />
                             )}
                         </div>
 
