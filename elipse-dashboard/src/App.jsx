@@ -12,6 +12,9 @@ import Hidraulica from "./pages/Hidraulica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
 import RegisterPage from "./RegisterPage";
+import AlarmFab from "./components/AlarmFAB";
+import AlarmPanel from "./components/AlarmPanel";
+import AlarmBanner from "./components/AlarmBanner";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
@@ -125,9 +128,65 @@ export default function App() {
   // Se o link é de convite, mostra a tela de registro
   if (invite) return <RegisterPage />;
 
+  const [alarms, setAlarms] = useState([]);
+  const [showPanel, setShowPanel] = useState(false);
+  const [hasNew, setHasNew] = useState(false);
+  const [bannerMsg, setBannerMsg] = useState("");
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+
+    async function fetchAlarms() {
+      try {
+        const res = await fetch(`${API_BASE}/alarms/active`);
+        const data = await res.json();
+
+        // Novo alarme detectado
+        if (data.length > alarms.length) {
+          const newAlarm = data[data.length - 1];
+          setBannerMsg(`Novo alarme: ${newAlarm.name}`);
+          setShowBanner(true);
+          setHasNew(true);
+        }
+
+        setAlarms(data);
+      } catch (e) {
+        console.error("Erro ao buscar alarmes", e);
+      }
+    }
+
+    fetchAlarms();
+    const interval = setInterval(fetchAlarms, 5000); // polling a cada 5s
+    return () => clearInterval(interval);
+
+  }, [token, alarms]);
+
   return (
     <>
       <Navbar onLogout={handleLogout} />
+
+      <AlarmBanner
+        message={bannerMsg}
+        visible={showBanner}
+        onClose={() => setShowBanner(false)}
+      />
+
+      <AlarmFab
+        count={alarms.length}
+        hasNew={hasNew}
+        onClick={() => {
+          setShowPanel(true);
+          setHasNew(false);
+        }}
+      />
+
+      <AlarmPanel
+        alarms={alarms}
+        open={showPanel}
+        onClose={() => setShowPanel(false)}
+      />
+
       <Routes>
         {/* Página inicial */}
         <Route index element={<Dashboard token={token} />} />
