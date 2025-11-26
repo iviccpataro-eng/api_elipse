@@ -15,6 +15,7 @@ import RegisterPage from "./RegisterPage";
 import AlarmFab from "./components/AlarmFAB";
 import AlarmPanel from "./components/AlarmPanel";
 import AlarmBanner from "./components/AlarmBanner";
+import AlarmHistory from "./pages/AlarmHistory";
 
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
