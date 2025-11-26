@@ -18,9 +18,11 @@ export default function VariableSimpleRow({ variavel }) {
         nominalMax = parseFloat(nominalRaw);
     }
 
-    // === RENDERIZAÇÃO POR TIPO === //
+    // === BLOCO: RENDER DE ACORDO COM TIPO === //
     switch (tipo?.toUpperCase()) {
-        // ============================================================
+        // =======================================================================
+        // 🔹 AI — Variáveis analógicas de Entrada
+        // =======================================================================
         case "AI":
             return (
                 <>
@@ -31,7 +33,9 @@ export default function VariableSimpleRow({ variavel }) {
                 </>
             );
 
-        // ============================================================
+        // =======================================================================
+        // 🔹 AO — Variáveis analógicas de Saída
+        // =======================================================================
         case "AO": {
             const min = nominalMin || 0;
             const max = nominalMax || 100;
@@ -53,7 +57,9 @@ export default function VariableSimpleRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 DI — Variáveis digitais de entrada
+        // =======================================================================
         case "DI": {
             const [offLabel, onLabel] = (unidade || "").split("/");
             const status = valor ? onLabel ?? "ON" : offLabel ?? "OFF";
@@ -68,7 +74,9 @@ export default function VariableSimpleRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 DO — Variáveis digitais de saída
+        // =======================================================================
         case "DO": {
             const [offLabel, onLabel] = (unidade || "").split("/");
 
@@ -89,7 +97,9 @@ export default function VariableSimpleRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 MI — Variáveis multiestados de entrada
+        // =======================================================================
         case "MI": {
             const estados = (unidade || "").split("/");
             const estadoAtual = estados[valor] || "-";
@@ -102,7 +112,9 @@ export default function VariableSimpleRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 MO — Variáveis multiestados de saída
+        // =======================================================================
         case "MO": {
             const estados = (unidade || "").split("/");
 
@@ -126,7 +138,9 @@ export default function VariableSimpleRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔹 DEFAULT/FALLBACK
+        // =======================================================================
         default:
             return (
                 <>

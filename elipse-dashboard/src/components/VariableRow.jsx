@@ -21,9 +21,11 @@ export default function VariableRow({ variavel }) {
     const valNum = parseFloat(valor);
     const nomNum = parseFloat(nominalMax);
 
-    // === RENDERIZAÇÃO POR TIPO === //
+    // === BLOCO: RENDER DE ACORDO COM TIPO === //
     switch (tipo?.toUpperCase()) {
-        // ============================================================
+        // =======================================================================
+        // 🔹 AI — Variáveis analógicas de Entrada
+        // =======================================================================
         case "AI":
             return (
                 <>
@@ -38,7 +40,9 @@ export default function VariableRow({ variavel }) {
                 </>
             );
 
-        // ============================================================
+        // =======================================================================
+        // 🔹 AO — Variáveis analógicas de Saída
+        // =======================================================================
         case "AO": {
             const min = nominalMin || 0;
             const max = nominalMax || 100;
@@ -64,7 +68,9 @@ export default function VariableRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 DI — Variáveis digitais de entrada
+        // =======================================================================
         case "DI": {
             const [offLabel, onLabel] = (unidade || "").split("/");
             const status = valor ? onLabel ?? "ON" : offLabel ?? "OFF";
@@ -82,7 +88,9 @@ export default function VariableRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 DO — Variáveis digitais de saída
+        // =======================================================================
         case "DO": {
             const [offLabel, onLabel] = (unidade || "").split("/");
 
@@ -105,24 +113,30 @@ export default function VariableRow({ variavel }) {
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 MI — Variáveis multiestados de entrada
+        // =======================================================================
         case "MI": {
             const estados = (unidade || "").split("/");
             const estadoAtual = estados[valor] || "-";
+            const nominalVal = estados[nominalRaw] || "-";
 
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
                     <div className="text-gray-600 hidden xl:flex">{tipo}</div>
                     <div className="text-gray-900">{estadoAtual}</div>
-                    <div>-</div>
+                    <div className="">{nominalVal}</div>
                 </>
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔸 MO — Variáveis multiestados de saída
+        // =======================================================================
         case "MO": {
             const estados = (unidade || "").split("/");
+            const nominalVal = estados[nominalRaw] || "-";
 
             return (
                 <>
@@ -141,12 +155,14 @@ export default function VariableRow({ variavel }) {
                             ))}
                         </select>
                     </div>
-                    <div>-</div>
+                    <div className="">{nominalVal}</div>
                 </>
             );
         }
 
-        // ============================================================
+        // =======================================================================
+        // 🔹 DEFAULT/FALLBACK
+        // =======================================================================
         default:
             return (
                 <>
