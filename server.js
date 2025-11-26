@@ -10,7 +10,7 @@ import authRouter from "./modules/authRouter.js";
 import dataRouter from "./modules/dataRouter.js";
 import configRouter from "./modules/configRouter.js";
 import { initUpdater } from "./modules/updater.js";
-import { getActiveAlarms, registerAlarm, clearAlarm } from "./modules/alarmManager.js";
+import alarmRouter from "./modules/alarmRouter.js";
 import { normalizeBody } from "./modules/utils.js";
 import { generateFrontendData } from "./modules/structureBuilder.js";
 
@@ -108,37 +108,12 @@ app.get("/", (req, res) => res.send("API Elipse rodando!"));
 // ✅ 2. Rotas principais
 app.use("/auth", authRouter(pool, SECRET));
 app.use("/config", configRouter(pool));
-//app.use("/", dataRouter(dados, pool, SECRET, ELIPSE_FIXED_TOKEN));
 app.use("/", dataRouter)
 
 // -------------------------
 // 🚨 Rotas de Alarme
 // -------------------------
-app.get("/alarms", (req, res) => {
-  res.json({ ok: true, alarms: getActiveAlarms() });
-});
-
-app.post("/alarms", (req, res) => {
-  try {
-    const payload = normalizeBody(req);
-    if (!payload || !payload.tag || !payload.alarm) {
-      return res.status(400).json({ ok: false, erro: "Formato inválido" });
-    }
-    registerAlarm(payload.tag, payload.alarm);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("[ALARMS] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao registrar alarme" });
-  }
-});
-
-app.post("/alarms/clear", (req, res) => {
-  const { tag, name } = req.body || {};
-  if (!tag || !name)
-    return res.status(400).json({ ok: false, erro: "Tag e nome obrigatórios." });
-  clearAlarm(tag, name);
-  res.json({ ok: true });
-});
+app.use("/alarms", alarmRouter);
 
 // -------------------------
 // 🧭 Sistema e Front-end

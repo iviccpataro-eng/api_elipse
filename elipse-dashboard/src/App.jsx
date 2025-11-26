@@ -137,30 +137,45 @@ export default function App() {
   useEffect(() => {
     if (!token) return;
 
+    let lastCount = 0;
+
     async function fetchAlarms() {
       try {
         const res = await fetch(`${API_BASE}/alarms/active`);
         const data = await res.json();
 
-        // Novo alarme detectado
-        if (data.length > alarms.length) {
+        // detecta novo alarme
+        if (data.length > lastCount) {
           const newAlarm = data[data.length - 1];
+
           setBannerMsg(`Novo alarme: ${newAlarm.name}`);
           setShowBanner(true);
           setHasNew(true);
         }
 
+        lastCount = data.length;
         setAlarms(data);
+
       } catch (e) {
         console.error("Erro ao buscar alarmes", e);
       }
     }
 
+    // primeira carga imediata
     fetchAlarms();
-    const interval = setInterval(fetchAlarms, 5000); // polling a cada 5s
+
+    // polling
+    const interval = setInterval(fetchAlarms, 5000);
     return () => clearInterval(interval);
 
-  }, [token, alarms]);
+  }, [token]); // ⛔ NÃO coloque "alarms" aqui!
+
+  useEffect(() => {
+    if (showBanner) {
+      const t = setTimeout(() => setShowBanner(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [showBanner]);
 
   return (
     <>
@@ -210,6 +225,9 @@ export default function App() {
 
         {/* Tela de registro */}
         <Route path="/register" element={<RegisterPage />} />
+
+        {/* Tela de Histório de Alarme */}
+        <Route path="/alarms/history" element={<AlarmHistory />} />
 
         {/* Rota fallback */}
         <Route path="*" element={<Dashboard token={token} />} />
