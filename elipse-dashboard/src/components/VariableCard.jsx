@@ -145,7 +145,7 @@ export default function VariableCard({ variavel }) {
             };
 
             return (
-                <div className="lex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-2">{nome}</div>
                     <input
                         type="number"
