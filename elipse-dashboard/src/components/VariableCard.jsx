@@ -180,7 +180,7 @@ export default function VariableCard({ variavel }) {
                     >
                         {status}
                     </div>
-                    <div className="text-sm text-gray-500">Referência: {nominalVal}</div>
+                    <div className="text-sm text-gray-500 mt-1">Referência: {nominalVal}</div>
                 </div>
             );
         }
@@ -211,7 +211,7 @@ export default function VariableCard({ variavel }) {
                         >
                             {onLabel || "ON"}
                         </button>
-                        <div className="text-sm text-gray-500">Referência: {nominalVal}</div>
+                        <div className="text-sm text-gray-500 mt-1">Referência: {nominalVal}</div>
                     </div>
                 </div>
             );
@@ -232,7 +232,7 @@ export default function VariableCard({ variavel }) {
                     <div className="text-lg font-semibold text-gray-700">
                         {estadoAtual}
                     </div>
-                    <div className="text-sm text-gray-500">Referência: {nominalVal}</div>
+                    <div className="text-sm text-gray-500 mt-1">Referência: {nominalVal}</div>
                 </div>
             );
         }
@@ -259,7 +259,7 @@ export default function VariableCard({ variavel }) {
                             </option>
                         ))}
                     </select>
-                    <div className="text-sm text-gray-500">Referência: {nominalVal}</div>
+                    <div className="text-sm text-gray-500 mt-1">Referência: {nominalVal}</div>
                 </div>
             );
         }
@@ -275,7 +275,7 @@ export default function VariableCard({ variavel }) {
                         {valor}
                         {unidade ? ` ${unidade}` : ""}
                     </div>
-                    <div className="text-sm text-gray-500">Referência: {nominalRaw} {unidade ? ` ${unidade}` : ""}</div>
+                    <div className="text-sm text-gray-500 mt-1">Referência: {nominalRaw} {unidade ? ` ${unidade}` : ""}</div>
                 </div>
             );
     }
