@@ -54,7 +54,7 @@ export default function VariableCard({ variavel }) {
 
             return (
                 <div className="rounded-xl border bg-white shadow p-4">
-                    <div className="font-medium mb-2 text-gray-800">{nome}</div>
+                    <div className="font-medium mb-2">{nome}</div>
 
                     {showGraph && (
                         <div className="flex justify-center relative w-[180px] h-[120px] mx-auto">
@@ -171,7 +171,7 @@ export default function VariableCard({ variavel }) {
             const nominalVal = nominalRaw ? onLabel || "ON" : offLabel || "OFF";
 
             return (
-                <div className="rounded-xl border bg-white shadow p-4 text-center">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-2">{nome}</div>
                     <div className={`text-lg font-semibold ${valor
                         ? "text-red-600"
@@ -192,7 +192,7 @@ export default function VariableCard({ variavel }) {
             const [offLabel, onLabel] = (unidade || "").split("/");
             const nominalVal = nominalRaw ? onLabel || "ON" : offLabel || "OFF";
             return (
-                <div className="rounded-xl border bg-white shadow p-4 text-center">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-3">{nome}</div>
                     <div className="flex justify-center gap-2">
                         <button
@@ -227,7 +227,7 @@ export default function VariableCard({ variavel }) {
             const nominalVal = estados[nominalRaw] || "-";
 
             return (
-                <div className="rounded-xl border bg-white shadow p-4 text-center">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-2">{nome}</div>
                     <div className="text-lg font-semibold text-gray-700">
                         {estadoAtual}
@@ -246,7 +246,7 @@ export default function VariableCard({ variavel }) {
             const nominalVal = estados[nominalRaw] || "-";
 
             return (
-                <div className="rounded-xl border bg-white shadow p-4 text-center">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-2">{nome}</div>
                     <select
                         value={index}
@@ -269,7 +269,7 @@ export default function VariableCard({ variavel }) {
         // =======================================================================
         default:
             return (
-                <div className="rounded-xl border bg-white shadow p-4 text-center">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium">{nome}</div>
                     <div className="text-xl font-semibold">
                         {valor}
