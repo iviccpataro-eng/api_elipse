@@ -168,6 +168,7 @@ export default function VariableCard({ variavel }) {
         case "DI": {
             const [offLabel, onLabel] = (unidade || "").split("/");
             const status = valor ? onLabel || "ON" : offLabel || "OFF";
+            const nominalVal = nominalRaw ? onLabel || "ON" : offLabel || "OFF";
 
             return (
                 <div className="rounded-xl border bg-white shadow p-4 text-center">
@@ -179,6 +180,7 @@ export default function VariableCard({ variavel }) {
                     >
                         {status}
                     </div>
+                    <div className="">Referência: {nominalVal}</div>
                 </div>
             );
         }
@@ -188,6 +190,7 @@ export default function VariableCard({ variavel }) {
         // =======================================================================
         case "DO": {
             const [offLabel, onLabel] = (unidade || "").split("/");
+            const nominalVal = nominalRaw ? onLabel || "ON" : offLabel || "OFF";
             return (
                 <div className="rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-3">{nome}</div>
@@ -208,6 +211,7 @@ export default function VariableCard({ variavel }) {
                         >
                             {onLabel || "ON"}
                         </button>
+                        <div className="">Referência: {nominalVal}</div>
                     </div>
                 </div>
             );
@@ -220,6 +224,7 @@ export default function VariableCard({ variavel }) {
             const estados = (unidade || "").split("/");
             const index = Math.max(0, Math.min(estados.length - 1, valor || 0));
             const estadoAtual = estados[index] || "DESCONHECIDO";
+            const nominalVal = estados[nominalRaw] || "-";
 
             return (
                 <div className="rounded-xl border bg-white shadow p-4 text-center">
@@ -227,6 +232,7 @@ export default function VariableCard({ variavel }) {
                     <div className="text-lg font-semibold text-gray-700">
                         {estadoAtual}
                     </div>
+                    <div className="">Referência: {nominalVal}</div>
                 </div>
             );
         }
@@ -237,6 +243,7 @@ export default function VariableCard({ variavel }) {
         case "MO": {
             const estados = (unidade || "").split("/");
             const index = Math.max(0, Math.min(estados.length - 1, valor || 0));
+            const nominalVal = estados[nominalRaw] || "-";
 
             return (
                 <div className="rounded-xl border bg-white shadow p-4 text-center">
@@ -252,6 +259,7 @@ export default function VariableCard({ variavel }) {
                             </option>
                         ))}
                     </select>
+                    <div className="">Referência: {nominalVal}</div>
                 </div>
             );
         }
@@ -267,6 +275,7 @@ export default function VariableCard({ variavel }) {
                         {valor}
                         {unidade ? ` ${unidade}` : ""}
                     </div>
+                    <div className="">Referência: {nominalRaw} {unidade ? ` ${unidade}` : ""}</div>
                 </div>
             );
     }

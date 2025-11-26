@@ -212,7 +212,7 @@ export default function Equipamento() {
                                     <div>Nome</div>
                                     <div className="hidden xl:flex">Tipo</div>
                                     <div>Valor</div>
-                                    <div>Nominal</div>
+                                    <div>Nominal/Referência</div>
                                 </div>
 
                                 {variaveis.map((v, i) => (
