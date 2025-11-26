@@ -53,7 +53,7 @@ export default function VariableCard({ variavel }) {
             const showGraph = hasGraph !== false;
 
             return (
-                <div className="rounded-xl border bg-white shadow p-4">
+                <div className="flex flex-col h-full justify-between rounded-xl border bg-white shadow p-4 text-center">
                     <div className="font-medium mb-2">{nome}</div>
 
                     {showGraph && (
