@@ -11,6 +11,13 @@ import dataRouter from "./modules/dataRouter.js";
 import configRouter from "./modules/configRouter.js";
 import { initUpdater } from "./modules/updater.js";
 import alarmRouter from "./modules/alarmRouter.js";
+import {
+  registerAlarm,
+  clearAlarm,
+  getActiveAlarms,
+  getAlarmHistory,
+  ackAlarm
+} from "./modules/alarmManager.js";
 import { normalizeBody } from "./modules/utils.js";
 import { generateFrontendData } from "./modules/structureBuilder.js";
 

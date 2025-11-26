@@ -7,73 +7,116 @@ import {
   getActiveAlarms,
   getAlarmHistory
 } from "./alarmManager.js";
-
 import { normalizeBody } from "./utils.js";
 
 const router = express.Router();
 
-/* -------------------------
-   🚨 Registrar novo alarme
-----------------------------*/
+/* -----------------------------------------
+   🚨 Registrar novo alarme (API opcional)
+   Útil para testes manuais ou integração externa
+------------------------------------------ */
 router.post("/", (req, res) => {
   try {
     const payload = normalizeBody(req);
 
     if (!payload || !payload.tag || !payload.alarm) {
-      return res.status(400).json({ ok: false, erro: "Formato inválido" });
+      return res.status(400).json({ ok: false, erro: "Formato inválido." });
+    }
+
+    // Exige um nome de alarme válido
+    if (!payload.alarm.name) {
+      return res.status(400).json({ ok: false, erro: "Campo 'alarm.name' é obrigatório." });
     }
 
     registerAlarm(payload.tag, payload.alarm);
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
-    console.error("[ALARMS] Erro:", err);
-    res.status(500).json({ ok: false, erro: "Erro ao registrar alarme" });
+    console.error("[ALARMS POST] Erro:", err);
+    return res.status(500).json({ ok: false, erro: "Erro ao registrar alarme." });
   }
 });
 
-/* -------------------------
-   🚨 Listar alarmes ativos
-----------------------------*/
+/* -----------------------------------------
+   🚨 Obter alarmes ativos
+------------------------------------------ */
 router.get("/active", (req, res) => {
-  res.json(getActiveAlarms());
+  try {
+    return res.json(getActiveAlarms());
+  } catch (err) {
+    console.error("[ALARMS /active] Erro:", err);
+    return res.status(500).json({ ok: false, erro: "Não foi possível obter alarmes ativos." });
+  }
 });
 
-/* -------------------------
-   📚 Histórico de alarmes
-----------------------------*/
+/* -----------------------------------------
+   📚 Obter histórico de alarmes
+------------------------------------------ */
 router.get("/history", (req, res) => {
-  res.json(getAlarmHistory());
+  try {
+    return res.json(getAlarmHistory());
+  } catch (err) {
+    console.error("[ALARMS /history] Erro:", err);
+    return res.status(500).json({ ok: false, erro: "Erro ao obter histórico." });
+  }
 });
 
-/* -------------------------
-   🟡 Reconhecer (ACK)
-----------------------------*/
+/* -----------------------------------------
+   🟡 ACK — Reconhecer alarme
+------------------------------------------ */
 router.post("/ack", (req, res) => {
-  const { tag, name } = req.body;
-  if (!tag || !name)
-    return res.status(400).json({ ok: false, erro: "Tag e nome obrigatórios." });
+  try {
+    const { tag, name } = req.body;
 
-  ackAlarm(tag, name);
-  res.json({ ok: true });
+    if (!tag || !name) {
+      return res.status(400).json({
+        ok: false,
+        erro: "Tag e nome são obrigatórios para ACK."
+      });
+    }
+
+    ackAlarm(tag, name);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[ALARMS ACK] Erro:", err);
+    return res.status(500).json({ ok: false, erro: "Erro ao reconhecer alarme." });
+  }
 });
 
-/* -------------------------
-   🧹 Finalizar (Clear)
-----------------------------*/
+/* -----------------------------------------
+   🧹 CLEAR — Finalizar alarme
+------------------------------------------ */
 router.post("/clear", (req, res) => {
-  const { tag, name } = req.body;
-  if (!tag || !name)
-    return res.status(400).json({ ok: false, erro: "Tag e nome obrigatórios." });
+  try {
+    const { tag, name } = req.body;
 
-  clearAlarm(tag, name);
-  res.json({ ok: true });
+    if (!tag || !name) {
+      return res.status(400).json({
+        ok: false,
+        erro: "Tag e nome são obrigatórios para limpar alarme."
+      });
+    }
+
+    clearAlarm(tag, name);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[ALARMS CLEAR] Erro:", err);
+    return res.status(500).json({ ok: false, erro: "Erro ao limpar alarme." });
+  }
 });
 
-/* -------------------------
-   🔎 Atalho /alarms
-----------------------------*/
+/* -----------------------------------------
+   🔎 GET /alarms — alias
+------------------------------------------ */
 router.get("/", (req, res) => {
-  res.json({ ok: true, alarms: getActiveAlarms() });
+  try {
+    return res.json({
+      ok: true,
+      alarms: getActiveAlarms()
+    });
+  } catch (err) {
+    console.error("[ALARMS /] Erro:", err);
+    return res.status(500).json({ ok: false, erro: "Erro ao obter alarmes." });
+  }
 });
 
 export default router;
