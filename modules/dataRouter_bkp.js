@@ -1,5 +1,4 @@
 // modules/dataRouter.js
-
 import express from "express";
 import { Buffer } from "buffer";
 import { generateFrontendData } from "./structureBuilder.js";
@@ -235,12 +234,21 @@ router.get("/disciplina/:disc", (req, res) => {
       return res.status(404).json({ ok: false, erro: `Nenhuma estrutura encontrada para ${disc}` });
     }
 
+    // ---- FILTRO CORRETO: somente detalhes da disciplina ----
+    const detalhesFiltrados = {};
+    for (const key of Object.keys(detalhesGlobal)) {
+      if (key.startsWith(disc + "/")) {
+        detalhesFiltrados[key] = detalhesGlobal[key];
+      }
+    }
+
     return res.json({
       ok: true,
       disciplina: disc,
       estrutura: estruturaGlobal[disc],
-      detalhes: detalhesGlobal
+      detalhes: detalhesFiltrados
     });
+
   } catch (err) {
     console.error("[GET /disciplina/:disc] ERRO:", err);
     res.status(500).json({ ok: false, erro: "Erro interno" });
@@ -259,6 +267,39 @@ router.get("/estrutura", (req, res) => {
     });
   } catch (err) {
     console.error("[GET /estrutura] ERRO:", err);
+    return res.status(500).json({ ok: false, erro: "Erro interno" });
+  }
+});
+
+// -----------------------------------------------------------
+// GET /equipamento/:tag
+// Retorna info + data do equipamento pelo tag completo
+// -----------------------------------------------------------
+router.get("/equipamento/:tag", (req, res) => {
+  try {
+    const tag = decodeURIComponent(req.params.tag);
+    const detalhes = global.dados.structureDetails || {};
+
+    if (!detalhes[tag]) {
+      return res.status(404).json({
+        ok: false,
+        erro: `Equipamento não encontrado: ${tag}`
+      });
+    }
+
+    const info = detalhes[tag];
+    const data = info.data || [];
+
+    return res.json({
+      ok: true,
+      dados: {
+        info,
+        data
+      }
+    });
+
+  } catch (err) {
+    console.error("[GET /equipamento/:tag] ERRO:", err);
     return res.status(500).json({ ok: false, erro: "Erro interno" });
   }
 });
