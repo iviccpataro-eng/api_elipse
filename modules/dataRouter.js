@@ -94,22 +94,43 @@ function montarTag(disciplina, predio, pavimento, equipamento) {
 
 /* -----------------------------------------------------------
    🔥 Suporte universal para alarmes do Elipse
+   Agora suporta arrays tipo:
+   ["Nome", true, 0, "dt_in", "dt_out"]
 ----------------------------------------------------------- */
+function normalizeAlarmArray(raw) {
+  if (!Array.isArray(raw)) return null;
+
+  const [name, active, severity, dt_in, dt_out] = raw;
+
+  if (!name) return null;
+
+  return {
+    name,
+    active: Boolean(active),
+    severity: severity ?? 0,
+    timestamp: dt_in || new Date().toISOString(),
+    message: name,
+  };
+}
+
 function processIncomingAlarms(tag, alarms) {
   if (!Array.isArray(alarms)) return;
 
   alarms.forEach((al) => {
-    if (!al || !al.name) return;
+    let alarmObj = al;
 
-    if (al.active) {
-      registerAlarm(tag, {
-        name: al.name,
-        message: al.message || "",
-        severity: al.severity ?? 0,
-        timestamp: al.timestamp || new Date().toISOString(),
-      });
+    // Se veio no formato array ["Nome", true, ...]
+    if (Array.isArray(al)) {
+      alarmObj = normalizeAlarmArray(al);
+      if (!alarmObj) return;
+    }
+
+    if (!alarmObj || !alarmObj.name) return;
+
+    if (alarmObj.active) {
+      registerAlarm(tag, alarmObj);
     } else {
-      clearAlarm(tag, al.name);
+      clearAlarm(tag, alarmObj.name);
     }
   });
 }
@@ -126,7 +147,7 @@ router.post("/dados", (req, res) => {
     }
 
     /* -----------------------------------------------------------
-       CASE A — Full payload (disciplinas EL/AC/IL/etc.)
+       CASE A — Full payload (disciplinas inteiras)
     ----------------------------------------------------------- */
     const topKeys = Object.keys(payload);
     const seemsFull = topKeys.some((k) => /^[A-Z]{2}$/.test(k) && typeof payload[k] === "object");
@@ -142,7 +163,6 @@ router.post("/dados", (req, res) => {
         mergeDeep(global.dados[discKey], discPayload);
       }
 
-      // NOVO: suporte a payload.alarms no topo
       if (Array.isArray(payload.alarms)) {
         console.log("⚠️ Full payload trouxe alarmes sem tag — ignorando.");
       }
@@ -188,7 +208,20 @@ router.post("/dados", (req, res) => {
       global.dados[disc][predio][pavimento][equipamento] = detail;
 
       /* -----------------------------------------------------------
-         🔥 NOVO: suporte a array payload.alarms
+         🔥 NOVO — SUPORTE TOTAL para o formato do Elipse
+         payload.alarm: [["Nome", true, ...], ...]
+      ----------------------------------------------------------- */
+      if (Array.isArray(payload.alarm)) {
+        const normalized = payload.alarm
+          .map(normalizeAlarmArray)
+          .filter((x) => x);
+
+        processIncomingAlarms(canonicalTag, normalized);
+        detail.alarm = normalized;
+      }
+
+      /* -----------------------------------------------------------
+         🔥 SUPORTE para payload.alarms (varios alarmes)
       ----------------------------------------------------------- */
       if (Array.isArray(payload.alarms)) {
         processIncomingAlarms(canonicalTag, payload.alarms);
@@ -196,16 +229,11 @@ router.post("/dados", (req, res) => {
       }
 
       /* -----------------------------------------------------------
-         Compatibilidade com payload.alarm (objeto único)
+         Compatibilidade com payload.alarm como OBJETO único
       ----------------------------------------------------------- */
-      if (payload.alarm && payload.alarm.name) {
+      if (payload.alarm && !Array.isArray(payload.alarm) && payload.alarm.name) {
         if (payload.alarm.active) {
-          registerAlarm(canonicalTag, {
-            name: payload.alarm.name,
-            message: payload.alarm.message || "",
-            severity: payload.alarm.severity ?? 0,
-            timestamp: payload.alarm.timestamp || new Date().toISOString(),
-          });
+          registerAlarm(canonicalTag, payload.alarm);
         } else {
           clearAlarm(canonicalTag, payload.alarm.name);
         }
@@ -233,7 +261,7 @@ router.post("/dados", (req, res) => {
 });
 
 /* -----------------------------------------------------------
-   GETs originais — preservados integralmente
+   GETs originais (preservados)
 ----------------------------------------------------------- */
 
 router.get("/disciplina/:disc", (req, res) => {
