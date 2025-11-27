@@ -54,7 +54,7 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                 <div className="col-span-1 flex items-center justify-center">
                     {alarm.active ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                 </div>
-                <div className="col-span-1 text-center">S{alarm.severity}</div>
+                <div className="col-span-1 text-center">{alarm.severity}</div>
                 <div className="col-span-2 text-sm">{formatShort(alarm.timestampIn)}</div>
                 <div className="col-span-2 text-sm">{formatShort(alarm.timestampOut)}</div>
                 <div className="col-span-1 flex items-center justify-center">
@@ -70,7 +70,7 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                     <div className="font-medium">{alarm.name}</div>
                     <div className="flex items-center gap-2">
                         {alarm.active ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
-                        <span className="text-sm">S{alarm.severity}</span>
+                        <span className="text-sm">{alarm.severity}</span>
                     </div>
                 </div>
 
