@@ -6,11 +6,10 @@ import { registerAlarm, clearAlarm } from "./alarmManager.js";
 
 const router = express.Router();
 
-// -----------------------------------------------------------
-// Utilidades internas
-// -----------------------------------------------------------
+/* -----------------------------------------------------------
+   Utilidades internas
+----------------------------------------------------------- */
 
-// Deep merge (mutating target) — arrays and non-objects overwritten
 function mergeDeep(target, source) {
   for (const key of Object.keys(source)) {
     const sv = source[key];
@@ -31,10 +30,9 @@ function mergeDeep(target, source) {
   }
 }
 
-// Tenta decodificar corpo "valor" (Base64) vindo do Elipse
 function decodePossiblyBase64Payload(body) {
   if (!body) return body;
-  // If body like { valor: "<base64>" }
+
   if (typeof body === "object" && body.valor && typeof body.valor === "string") {
     try {
       const decoded = Buffer.from(body.valor, "base64").toString("utf8");
@@ -46,7 +44,6 @@ function decodePossiblyBase64Payload(body) {
     }
   }
 
-  // If body is a string (rare), try parse
   if (typeof body === "string") {
     try {
       return JSON.parse(body);
@@ -58,7 +55,6 @@ function decodePossiblyBase64Payload(body) {
   return body;
 }
 
-// Gera a lista de tags (EL/Principal/PAV01/MM_01_01) a partir de global.dados
 function gerarTagsListFromStore(store) {
   const lista = [];
   if (!store) return lista;
@@ -80,13 +76,11 @@ function gerarTagsListFromStore(store) {
   return lista;
 }
 
-// Reconstrói structure e structureDetails usando generateFrontendData (usa global.dados)
 function rebuildFrontendStructures() {
   try {
     const tagsList = gerarTagsListFromStore(global.dados);
     global.dados.tagsList = tagsList;
     const generated = generateFrontendData(tagsList || []);
-    // generateFrontendData returns { structure, details } (structure = tree; details = flat)
     global.dados.structure = generated.structure || {};
     global.dados.structureDetails = generated.details || {};
   } catch (err) {
@@ -94,36 +88,72 @@ function rebuildFrontendStructures() {
   }
 }
 
-// Monta uma tag "DISC/BUILD/FLOOR/EQUIP" de forma segura
 function montarTag(disciplina, predio, pavimento, equipamento) {
   return `${disciplina}/${predio}/${pavimento}/${equipamento}`;
 }
 
-// -----------------------------------------------------------
-// POST /dados
-// - aceita payloads no formato:
-//   a) full payload com EL/AC/IL/... (merge em global.dados)
-//   b) single equipment payload com { disciplina, predio, pavimento, equipamento, info, data }
-//   c) payload envelopado: { valor: "<base64>" } onde o decoded JSON é (a) ou (b)
-// -----------------------------------------------------------
+/* -----------------------------------------------------------
+   🔥 Suporte universal para alarmes do Elipse
+   Agora suporta arrays tipo:
+   ["Nome", true, 0, "dt_in", "dt_out"]
+----------------------------------------------------------- */
+function normalizeAlarmArray(raw) {
+  if (!Array.isArray(raw)) return null;
+
+  const [name, active, severity, dt_in, dt_out] = raw;
+
+  if (!name) return null;
+
+  return {
+    name,
+    active: Boolean(active),
+    severity: severity ?? 0,
+    timestamp: dt_in || new Date().toISOString(),
+    message: name,
+  };
+}
+
+function processIncomingAlarms(tag, alarms) {
+  if (!Array.isArray(alarms)) return;
+
+  alarms.forEach((al) => {
+    let alarmObj = al;
+
+    // Se veio no formato array ["Nome", true, ...]
+    if (Array.isArray(al)) {
+      alarmObj = normalizeAlarmArray(al);
+      if (!alarmObj) return;
+    }
+
+    if (!alarmObj || !alarmObj.name) return;
+
+    if (alarmObj.active) {
+      registerAlarm(tag, alarmObj);
+    } else {
+      clearAlarm(tag, alarmObj.name);
+    }
+  });
+}
+
+/* -----------------------------------------------------------
+   POST /dados
+----------------------------------------------------------- */
 router.post("/dados", (req, res) => {
   try {
-    // Normaliza e decodifica possível base64
     let payload = decodePossiblyBase64Payload(req.body);
 
     if (!payload || typeof payload !== "object") {
       return res.status(400).json({ ok: false, erro: "Body inválido ou vazio." });
     }
 
-    // --------- CASE A: Full payload with top-level disciplines (EL, AC, etc.)
-    // Detecta se payload tem qualquer disciplina-like key (2 letras uppercase)
+    /* -----------------------------------------------------------
+       CASE A — Full payload (disciplinas inteiras)
+    ----------------------------------------------------------- */
     const topKeys = Object.keys(payload);
     const seemsFull = topKeys.some((k) => /^[A-Z]{2}$/.test(k) && typeof payload[k] === "object");
 
     if (seemsFull) {
-      // Merge each discipline into global.dados
       for (const discKey of topKeys) {
-        // Ignore metadata keys
         if (["tagsList", "structure", "structureDetails"].includes(discKey)) continue;
 
         const discPayload = payload[discKey];
@@ -133,20 +163,21 @@ router.post("/dados", (req, res) => {
         mergeDeep(global.dados[discKey], discPayload);
       }
 
-      // If there is an 'alarm' block at top-level (rare), attempt to register
-      if (payload.alarm) {
-        // can't derive tag from here; log
-        console.log("[dataRouter] Alarme recebido no payload top-level (ignorado por falta de tag).");
+      if (Array.isArray(payload.alarms)) {
+        console.log("⚠️ Full payload trouxe alarmes sem tag — ignorando.");
       }
 
-      // Rebuild structures
       rebuildFrontendStructures();
-
-      return res.json({ ok: true, modo: "bulk", disciplinas_recebidas: Object.keys(payload).filter(k => /^[A-Z]{2}$/.test(k)) });
+      return res.json({
+        ok: true,
+        modo: "bulk",
+        disciplinas_recebidas: Object.keys(payload).filter(k => /^[A-Z]{2}$/.test(k))
+      });
     }
 
-    // --------- CASE B: Single-equipment-like payload
-    // expected: { disciplina, predio, pavimento, equipamento, info, data, alarm? }
+    /* -----------------------------------------------------------
+       CASE B — Single equipment payload
+    ----------------------------------------------------------- */
     const disciplina = payload.disciplina || payload.disci || payload.discipline;
     const predio = payload.predio || payload.building || payload.edificio;
     const pavimento = payload.pavimento || payload.floor;
@@ -155,62 +186,73 @@ router.post("/dados", (req, res) => {
     if (disciplina && predio && pavimento && equipamento) {
       const disc = String(disciplina).toUpperCase();
 
-      // Ensure structures exist
       if (!global.dados[disc]) global.dados[disc] = {};
       if (!global.dados[disc][predio]) global.dados[disc][predio] = {};
       if (!global.dados[disc][predio][pavimento]) global.dados[disc][predio][pavimento] = {};
 
-      // Save presence marker (we will keep the full info in structureDetails)
-      global.dados[disc][predio][pavimento][equipamento] = global.dados[disc][predio][pavimento][equipamento] || {};
-
-      // Build canonical tag and detail object
       const canonicalTag = montarTag(disc, predio, pavimento, equipamento);
 
       const detail = {
-        // copy info block if present (allow both info as object or array[0])
         ...(payload.info && typeof payload.info === "object"
           ? (Array.isArray(payload.info) ? payload.info[0] : payload.info)
           : {}),
-        // fallback fields
         disciplina: disc,
         edificio: predio,
-        pavimento: pavimento,
-        equipamento: equipamento,
-        // copy other possibly present blocks
+        pavimento,
+        equipamento,
         data: payload.data || payload.dados || payload.values || [],
-        grandezas: payload.grandezas || payload.grandezas || {},
-        unidades: payload.unidades || payload.unidades || {},
+        grandezas: payload.grandezas || {},
+        unidades: payload.unidades || {},
       };
 
-      // persist into global.dados structureDetails helper area (we'll rebuild canonical details next)
-      // but also store raw object into the tree for compatibility (so both places have the info)
       global.dados[disc][predio][pavimento][equipamento] = detail;
 
-      // If alarm block present for this equipment, register or clear
-      if (payload.alarm) {
-        const alarmData = payload.alarm;
-        if (alarmData.active) {
-          registerAlarm(canonicalTag, {
-            message: alarmData.message || "Alarme ativo",
-            priority: alarmData.priority || "normal",
-            timestamp: alarmData.timestamp || new Date().toISOString(),
-          });
-        } else {
-          clearAlarm(canonicalTag);
-        }
-        // Attach alarm to details store (so frontend can read)
-        detail.alarm = alarmData;
-        global.dados[disc][predio][pavimento][equipamento] = detail;
+      /* -----------------------------------------------------------
+         🔥 NOVO — SUPORTE TOTAL para o formato do Elipse
+         payload.alarm: [["Nome", true, ...], ...]
+      ----------------------------------------------------------- */
+      if (Array.isArray(payload.alarm)) {
+        const normalized = payload.alarm
+          .map(normalizeAlarmArray)
+          .filter((x) => x);
+
+        processIncomingAlarms(canonicalTag, normalized);
+        detail.alarm = normalized;
       }
 
-      // Rebuild frontend structures
-      rebuildFrontendStructures();
+      /* -----------------------------------------------------------
+         🔥 SUPORTE para payload.alarms (varios alarmes)
+      ----------------------------------------------------------- */
+      if (Array.isArray(payload.alarms)) {
+        processIncomingAlarms(canonicalTag, payload.alarms);
+        detail.alarms = payload.alarms;
+      }
 
-      return res.json({ ok: true, modo: "single", recebido: canonicalTag, total_tags: global.dados.tagsList.length });
+      /* -----------------------------------------------------------
+         Compatibilidade com payload.alarm como OBJETO único
+      ----------------------------------------------------------- */
+      if (payload.alarm && !Array.isArray(payload.alarm) && payload.alarm.name) {
+        if (payload.alarm.active) {
+          registerAlarm(canonicalTag, payload.alarm);
+        } else {
+          clearAlarm(canonicalTag, payload.alarm.name);
+        }
+        detail.alarm = payload.alarm;
+      }
+
+      rebuildFrontendStructures();
+      return res.json({
+        ok: true,
+        modo: "single",
+        recebido: canonicalTag,
+        total_tags: global.dados.tagsList.length
+      });
     }
 
-    // If nothing matched
-    return res.status(400).json({ ok: false, erro: "Formato do body não reconhecido. Envie top-level disciplines ou disciplina/predio/pavimento/equipamento." });
+    return res.status(400).json({
+      ok: false,
+      erro: "Formato do body não reconhecido."
+    });
 
   } catch (err) {
     console.error("[POST /dados] ERRO:", err);
@@ -218,10 +260,10 @@ router.post("/dados", (req, res) => {
   }
 });
 
-// -----------------------------------------------------------
-// GET /disciplina/:disc
-// Retorna estrutura e detalhes para a disciplina (compatível com frontend)
-// -----------------------------------------------------------
+/* -----------------------------------------------------------
+   GETs originais (preservados)
+----------------------------------------------------------- */
+
 router.get("/disciplina/:disc", (req, res) => {
   try {
     const disc = (req.params.disc || "").toUpperCase();
@@ -234,7 +276,6 @@ router.get("/disciplina/:disc", (req, res) => {
       return res.status(404).json({ ok: false, erro: `Nenhuma estrutura encontrada para ${disc}` });
     }
 
-    // ---- FILTRO CORRETO: somente detalhes da disciplina ----
     const detalhesFiltrados = {};
     for (const key of Object.keys(detalhesGlobal)) {
       if (key.startsWith(disc + "/")) {
@@ -248,16 +289,12 @@ router.get("/disciplina/:disc", (req, res) => {
       estrutura: estruturaGlobal[disc],
       detalhes: detalhesFiltrados
     });
-
   } catch (err) {
     console.error("[GET /disciplina/:disc] ERRO:", err);
-    res.status(500).json({ ok: false, erro: "Erro interno" });
+    return res.status(500).json({ ok: false, erro: "Erro interno" });
   }
 });
 
-// -----------------------------------------------------------
-// GET /estrutura — retorna todas as disciplinas (estrutura + detalhes)
-// -----------------------------------------------------------
 router.get("/estrutura", (req, res) => {
   try {
     return res.json({
@@ -271,10 +308,6 @@ router.get("/estrutura", (req, res) => {
   }
 });
 
-// -----------------------------------------------------------
-// GET /equipamento/:tag
-// Retorna info + data do equipamento pelo tag completo
-// -----------------------------------------------------------
 router.get("/equipamento/:tag", (req, res) => {
   try {
     const tag = decodeURIComponent(req.params.tag);
@@ -292,12 +325,8 @@ router.get("/equipamento/:tag", (req, res) => {
 
     return res.json({
       ok: true,
-      dados: {
-        info,
-        data
-      }
+      dados: { info, data }
     });
-
   } catch (err) {
     console.error("[GET /equipamento/:tag] ERRO:", err);
     return res.status(500).json({ ok: false, erro: "Erro interno" });

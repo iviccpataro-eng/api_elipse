@@ -35,8 +35,10 @@ export default function AlarmPanel({ alarms, open, onClose }) {
                                 {a.tag}
                             </div>
                         </li>
+
                     ))}
                 </ul>
+
             )}
         </div>
     );

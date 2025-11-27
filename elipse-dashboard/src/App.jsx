@@ -12,9 +12,10 @@ import Hidraulica from "./pages/Hidraulica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
 import RegisterPage from "./RegisterPage";
-import AlarmFab from "./components/AlarmFAB";
-import AlarmPanel from "./components/AlarmPanel";
+import useAlarms from "./hooks/useAlarms";
 import AlarmBanner from "./components/AlarmBanner";
+import AlarmPanel from "./components/AlarmPanel";
+import AlarmFab from "./components/AlarmFAB";
 import AlarmHistory from "./pages/AlarmHistory";
 
 const API_BASE =
@@ -129,11 +130,8 @@ export default function App() {
   // Se o link é de convite, mostra a tela de registro
   if (invite) return <RegisterPage />;
 
-  const [alarms, setAlarms] = useState([]);
+  const { alarms, hasNew, banner, setBanner, ack, clear, clearRecognized } = useAlarms(3000);
   const [showPanel, setShowPanel] = useState(false);
-  const [hasNew, setHasNew] = useState(false);
-  const [bannerMsg, setBannerMsg] = useState("");
-  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -182,25 +180,15 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
 
-      <AlarmBanner
-        message={bannerMsg}
-        visible={showBanner}
-        onClose={() => setShowBanner(false)}
-      />
-
-      <AlarmFab
-        count={alarms.length}
-        hasNew={hasNew}
-        onClick={() => {
-          setShowPanel(true);
-          setHasNew(false);
-        }}
-      />
-
+      <AlarmBanner message={banner} visible={Boolean(banner)} onClose={() => setBanner(null)} />
+      <AlarmFab count={alarms.length} hasNew={hasNew} onClick={() => setShowPanel(true)} />
       <AlarmPanel
         alarms={alarms}
         open={showPanel}
         onClose={() => setShowPanel(false)}
+        onAck={ack}
+        onClear={clear}
+        onClearRecognized={clearRecognized}
       />
 
       <Routes>
