@@ -133,49 +133,6 @@ export default function App() {
   const { alarms, hasNew, banner, setBanner, ack, clear, clearRecognized } = useAlarms(3000);
   const [showPanel, setShowPanel] = useState(false);
 
-  useEffect(() => {
-    if (!token) return;
-
-    let lastCount = 0;
-
-    async function fetchAlarms() {
-      try {
-        const res = await fetch(`${API_BASE}/alarms/active`);
-        const data = await res.json();
-
-        // detecta novo alarme
-        if (data.length > lastCount) {
-          const newAlarm = data[data.length - 1];
-
-          setBannerMsg(`Novo alarme: ${newAlarm.name}`);
-          setShowBanner(true);
-          setHasNew(true);
-        }
-
-        lastCount = data.length;
-        setAlarms(data);
-
-      } catch (e) {
-        console.error("Erro ao buscar alarmes", e);
-      }
-    }
-
-    // primeira carga imediata
-    fetchAlarms();
-
-    // polling
-    const interval = setInterval(fetchAlarms, 5000);
-    return () => clearInterval(interval);
-
-  }, [token]); // ⛔ NÃO coloque "alarms" aqui!
-
-  useEffect(() => {
-    if (showBanner) {
-      const t = setTimeout(() => setShowBanner(false), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [showBanner]);
-
   return (
     <>
       <Navbar onLogout={handleLogout} />
