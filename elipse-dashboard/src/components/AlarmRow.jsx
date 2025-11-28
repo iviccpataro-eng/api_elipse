@@ -46,14 +46,13 @@ export function AlarmRowHeader() {
             font-semibold text-xs text-gray-600 
             px-2 py-1 border-b bg-white sticky top-0 z-20
         ">
-            <div className="col-span-3">Nome</div>
+            <div className="col-span-3 border-l-4 border-gray-500">Nome</div>
             <div className="col-span-1 text-center">Ativo</div>
             <div className="col-span-1">Severidade</div>
             <div className="col-span-2">Entrada</div>
             <div className="col-span-2">Saída</div>
-            <div className="col-span-1 text-center">ACK</div>
+            <div className="col-span-2 text-center">Reconhecimento</div>
             <div className="col-span-1">Ações</div>
-            <div className="col-span-1">ACK ts</div>
         </div>
     );
 }
@@ -82,6 +81,8 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                 <div className="col-span-1 flex items-center justify-center">
                     {alarm.ack ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
+
+                <div className="col-span-1">{formatShort(alarm.ackTimestamp)}</div>
 
                 {/* ACTIONS → dentro da grid */}
                 <div className="col-span-1 flex items-center gap-1 justify-center">
@@ -117,10 +118,6 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                     </button>
                 </div>
 
-                {/* ACK TIMESTAMP */}
-                <div className="col-span-1">
-                    {formatShort(alarm.ackTimestamp)}
-                </div>
             </div>
 
             {/* MOBILE (igual antes) */}
