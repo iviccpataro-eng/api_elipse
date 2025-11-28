@@ -45,8 +45,9 @@ export function AlarmRowHeader() {
             hidden md:grid grid-cols-12 
             font-semibold text-xs text-gray-600 
             px-2 py-1 border-b bg-white sticky top-0 z-20
+            divide-x-2 divide-gray-200
         ">
-            <div className="col-span-3 border-r-1 border-gray-500">Nome</div>
+            <div className="col-span-3">Nome</div>
             <div className="col-span-1 text-center">Ativo</div>
             <div className="col-span-1">Severidade</div>
             <div className="col-span-2">Entrada</div>
