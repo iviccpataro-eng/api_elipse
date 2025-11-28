@@ -41,14 +41,19 @@ function formatShort(dt) {
 
 export function AlarmRowHeader() {
     return (
-        <div className="hidden md:grid grid-cols-12 font-semibold text-xs text-gray-600 px-3 py-2">
+        <div className="
+            hidden md:grid grid-cols-12 
+            font-semibold text-xs text-gray-600 
+            px-2 py-1 border-b bg-white sticky top-0 z-20
+        ">
             <div className="col-span-3">Nome</div>
             <div className="col-span-1 text-center">Ativo</div>
-            <div className="col-span-2">Severidade</div>
+            <div className="col-span-1">Severidade</div>
             <div className="col-span-2">Entrada</div>
             <div className="col-span-2">Saída</div>
             <div className="col-span-1 text-center">ACK</div>
             <div className="col-span-1">Ações</div>
+            <div className="col-span-1">ACK ts</div>
         </div>
     );
 }
@@ -57,39 +62,41 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
     const { severityLabel, className } = getAlarmStyle(alarm);
 
     return (
-        <div className={`p-3 rounded-xl shadow-sm border border-transparent ${className}`}>
+        <div className={`px-2 py-1 rounded-lg border shadow-sm ${className}`}>
 
             {/* DESKTOP */}
-            <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+            <div className="hidden md:grid grid-cols-12 gap-2 items-center text-xs">
 
                 <div className="col-span-3 font-medium">{alarm.name}</div>
 
                 <div className="col-span-1 flex items-center justify-center">
-                    {alarm.active ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    {alarm.active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
 
-                <div className="col-span-2 text-sm">{severityLabel}</div>
+                <div className="col-span-1">{severityLabel}</div>
 
-                <div className="col-span-2 text-sm">{formatShort(alarm.timestampIn)}</div>
+                <div className="col-span-2">{formatShort(alarm.timestampIn)}</div>
 
-                <div className="col-span-2 text-sm">{formatShort(alarm.timestampOut)}</div>
+                <div className="col-span-2">{formatShort(alarm.timestampOut)}</div>
 
                 <div className="col-span-1 flex items-center justify-center">
-                    {alarm.ack ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    {alarm.ack ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
 
-                {/* ACTIONS */}
-                <div className="mt-3 flex gap-2 justify-end">
+                {/* ACTIONS → dentro da grid */}
+                <div className="col-span-1 flex items-center gap-1 justify-center">
 
                     {/* RECONHECER */}
                     <button
                         onClick={() => onAck(alarm.tag, alarm.name)}
-                        disabled={alarm.ack}  // já reconhecido → desativa
-                        title={alarm.ack ? "Já reconhecido" : "Reconhecer alarme"}
-                        className={`p-2 rounded ${alarm.ack
-                            ? "bg-white/10 text-gray-400 cursor-not-allowed"
-                            : "bg-white/20 hover:bg-white/30 text-gray-700"}`}>
-                        <Check className="w-5 h-5" />
+                        disabled={alarm.ack}
+                        title={alarm.ack ? "Já reconhecido" : "Reconhecer"}
+                        className={`
+                            p-1 rounded 
+                            ${alarm.ack ? "opacity-40 cursor-not-allowed" : "hover:bg-white/40"}
+                        `}
+                    >
+                        <Check className="w-4 h-4" />
                     </button>
 
                     {/* FINALIZAR */}
@@ -97,25 +104,27 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                         onClick={() => onClear(alarm.tag, alarm.name)}
                         disabled={!alarm.ack || alarm.active}
                         title={
-                            !alarm.ack
-                                ? "Reconheça antes de finalizar"
-                                : alarm.active
-                                    ? "Não é possível finalizar um alarme ativo"
-                                    : "Finalizar alarme"
+                            !alarm.ack ? "Reconheça antes"
+                                : alarm.active ? "Não pode finalizar ativo"
+                                    : "Finalizar"
                         }
-                        className={`p-2 rounded ${!alarm.ack || alarm.active
-                            ? "bg-white/10 text-gray-400 cursor-not-allowed"
-                            : "bg-white/20 hover:bg-white/30 text-gray-700"}`}>
-                        <Trash2 className="w-5 h-5" />
+                        className={`
+                            p-1 rounded 
+                            ${!alarm.ack || alarm.active ? "opacity-40 cursor-not-allowed" : "hover:bg-white/40"}
+                        `}
+                    >
+                        <Trash2 className="w-4 h-4" />
                     </button>
-
                 </div>
 
+                {/* ACK TIMESTAMP */}
+                <div className="col-span-1">
+                    {formatShort(alarm.ackTimestamp)}
+                </div>
             </div>
 
-            {/* MOBILE */}
-            <div className="md:hidden flex flex-col gap-2 text-sm">
-
+            {/* MOBILE (igual antes) */}
+            <div className="md:hidden flex flex-col gap-1 text-sm">
                 <div className="flex justify-between items-center">
                     <div className="font-medium">{alarm.name}</div>
 
@@ -132,26 +141,10 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                         <span className="opacity-60">/</span>
                         <span>{formatShort(alarm.timestampOut)}</span>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        {alarm.ack ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                    </div>
                 </div>
 
-                <div className="flex justify-end gap-2">
-                    <button
-                        onClick={() => onAck(alarm.tag, alarm.name)}
-                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
-                    >
-                        Reconhecer
-                    </button>
-
-                    <button
-                        onClick={() => onClear(alarm.tag, alarm.name)}
-                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
-                    >
-                        Finalizar
-                    </button>
+                <div className="text-xs flex justify-end opacity-70">
+                    ACK: {formatShort(alarm.ackTimestamp)}
                 </div>
             </div>
         </div>
