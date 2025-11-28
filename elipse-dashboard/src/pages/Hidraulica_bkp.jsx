@@ -50,8 +50,10 @@ export default function Hidraulica() {
     }, [fetchData]);
 
     useEffect(() => {
+        console.group("📦 Dados Carregados");
         console.log("Estrutura HI carregada:", estrutura);
-        console.log("Detalhes carregados:", detalhes);
+        console.log("Detalhes HI carregados:", detalhes);
+        console.groupEnd();
     }, [estrutura, detalhes]);
 
     const handleEquipamentoClick = (tag) => {

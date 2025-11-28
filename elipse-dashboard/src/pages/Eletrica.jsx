@@ -2,10 +2,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
+
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
+import { apiFetch } from "../utils/api"; // 🔥 padronização
 
 export default function Eletrica() {
     const [estrutura, setEstrutura] = useState({});
@@ -20,28 +22,22 @@ export default function Eletrica() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔹 Função responsável por buscar toda a estrutura
-    const fetchEletrica = useCallback(() => {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-            setErro("Token não encontrado. Faça login novamente.");
-            setLoading(false);
-            return;
-        }
+    // ============================================================
+    // 🔹 Buscar estrutura da elétrica
+    // ============================================================
+    const fetchEletrica = useCallback(async () => {
+        const data = await apiFetch(`${API_BASE}/estrutura`, {}, navigate);
 
-        fetch(`${API_BASE}/estrutura`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                setEstrutura(data.structure?.EL || {});
-                setDetalhes(data.structureDetails || {});
-            })
-            .catch(() => setErro("Falha na comunicação com a API."))
-            .finally(() => setLoading(false));
-    }, [API_BASE]);
+        if (!data) return; // token expirado → redirect já ocorreu
 
-    // 🔹 Configura intervalo de atualização
+        setEstrutura(data.structure?.EL || {});
+        setDetalhes(data.structureDetails || {});
+        setLoading(false);
+    }, [API_BASE, navigate]);
+
+    // ============================================================
+    // 🔹 Intervalo de atualização
+    // ============================================================
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
@@ -55,18 +51,26 @@ export default function Eletrica() {
         return () => clearInterval(interval);
     }, [fetchEletrica]);
 
-    // 🔹 Logs organizados
+    // ============================================================
+    // 🔹 Logs de depuração
+    // ============================================================
     useEffect(() => {
-        console.group("📦 Dados Carregados");
+        console.group("📦 Estrutura carregada (EL)");
         console.log("Estrutura:", estrutura);
         console.log("Detalhes:", detalhes);
         console.groupEnd();
     }, [estrutura, detalhes]);
 
+    // ============================================================
+    // 🔹 Navegar para tela de equipamento
+    // ============================================================
     const handleEquipamentoClick = (tag) => {
         navigate(`/eletrica/equipamento/${encodeURIComponent(tag)}`);
     };
 
+    // ============================================================
+    // 🔹 Loading e erro
+    // ============================================================
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
@@ -75,18 +79,26 @@ export default function Eletrica() {
         );
 
     if (erro)
-        return <div className="p-6 pt-20 text-center text-red-500 font-medium">{erro}</div>;
+        return (
+            <div className="p-6 pt-20 text-center text-red-500 font-medium">
+                {erro}
+            </div>
+        );
 
+    // ============================================================
+    // 🔹 Renderização dinâmica
+    // ============================================================
     let contentToRender;
 
-    // 🔹 Tela: Pavimento selecionado
+    // --- Pavimento selecionado ---
     if (selectedBuilding && selectedFloor) {
-        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
+        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] || [];
 
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} - {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
+                    {selectedBuilding} –{" "}
+                    {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
                 </h2>
 
                 <EquipmentGrid
@@ -101,30 +113,33 @@ export default function Eletrica() {
         );
     }
 
-    // 🔹 Tela: Apenas prédio selecionado
+    // --- Prédio selecionado ---
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
-        const pavimentosOrdenados = Object.entries(pavimentos).sort(([floorA], [floorB]) => {
-            const findOrd = (floor) => {
-                const tag = Object.keys(detalhes).find((t) =>
-                    t.includes(`/${selectedBuilding}/${floor}/`)
-                );
-                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
-            };
-            return findOrd(floorB) - findOrd(floorA);
-        });
+        const pavimentosOrdenados = Object.entries(pavimentos).sort(
+            ([pavA], [pavB]) => {
+                const ord = (pav) => {
+                    const tag = Object.keys(detalhes).find((t) =>
+                        t.includes(`/EL/${selectedBuilding}/${pav}/`)
+                    );
+                    return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
+                };
+                return ord(pavB) - ord(pavA);
+            }
+        );
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.map(([pavKey, equipamentosArr]) => (
+                {pavimentosOrdenados.map(([pavKey, eqList]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {selectedBuilding} - {getRealFloorName(selectedBuilding, pavKey, detalhes)}
+                            {selectedBuilding} –{" "}
+                            {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={equipamentosArr}
+                            equipamentos={eqList}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
@@ -137,7 +152,7 @@ export default function Eletrica() {
         );
     }
 
-    // 🔹 Tela inicial
+    // --- Tela inicial ---
     else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
@@ -148,6 +163,9 @@ export default function Eletrica() {
         );
     }
 
+    // ============================================================
+    // 🔹 Layout final
+    // ============================================================
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
             <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
@@ -172,9 +190,7 @@ export default function Eletrica() {
                 />
             </aside>
 
-            <main className="flex-1 p-6 ml-64">
-                {contentToRender}
-            </main>
+            <main className="flex-1 p-6 ml-64">{contentToRender}</main>
         </div>
     );
 }

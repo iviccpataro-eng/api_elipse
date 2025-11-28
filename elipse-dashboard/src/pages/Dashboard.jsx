@@ -1,14 +1,66 @@
 // src/pages/Dashboard.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/apiFetch";
 
 export default function Dashboard() {
-    const cards = [
+    const navigate = useNavigate();
+
+    const [loading, setLoading] = useState(true);
+    const [erro, setErro] = useState("");
+    const [dados, setDados] = useState(null);
+
+    // futuramente você pode alimentar estes cards com dados reais
+    const defaultCards = [
         { title: "Consumo de Energia", value: "—", unit: "kWh" },
         { title: "Consumo de Água", value: "—", unit: "m³" },
         { title: "Temperatura Média", value: "—", unit: "°C" },
         { title: "Alarmes Ativos", value: "—", unit: "" },
         { title: "Custo Total", value: "—", unit: "R$" },
     ];
+
+    useEffect(() => {
+        async function loadData() {
+            try {
+                setLoading(true);
+
+                // 👉 chama API já com tratamento de token
+                const resp = await apiFetch("/dashboard");
+
+                if (resp?.ok) {
+                    setDados(resp.data);
+                } else {
+                    setDados(null);
+                }
+
+            } catch (err) {
+                // token inválido → apiFetch já redirecionou
+                setErro(err.message || "Erro ao carregar Dashboard");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadData();
+    }, [navigate]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-gray-500">
+                Carregando Dashboard...
+            </div>
+        );
+    }
+
+    if (erro) {
+        return (
+            <div className="p-6 text-center text-red-500 font-medium">
+                {erro}
+            </div>
+        );
+    }
+
+    const cards = dados || defaultCards;
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">

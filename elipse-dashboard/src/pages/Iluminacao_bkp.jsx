@@ -50,8 +50,10 @@ export default function Iluminacao() {
     }, [fetchData]);
 
     useEffect(() => {
+        console.group("📦 Dados Carregados");
         console.log("Estrutura IL carregada:", estrutura);
-        console.log("Detalhes carregados:", detalhes);
+        console.log("Detalhes IL carregados:", detalhes);
+        console.groupEnd();
     }, [estrutura, detalhes]);
 
     const handleEquipamentoClick = (tag) => {

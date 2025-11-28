@@ -1,3 +1,4 @@
+// src/pages/Eletrica.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
@@ -13,11 +14,13 @@ export default function Eletrica() {
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
+
     const navigate = useNavigate();
 
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
+    // 🔹 Função responsável por buscar toda a estrutura
     const fetchEletrica = useCallback(() => {
         const token = localStorage.getItem("authToken");
         if (!token) {
@@ -38,12 +41,13 @@ export default function Eletrica() {
             .finally(() => setLoading(false));
     }, [API_BASE]);
 
+    // 🔹 Configura intervalo de atualização
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
         const user = jwtDecode(token);
-        const refreshTime = (user?.refreshtime || 15) * 1000;
+        const refreshTime = (user?.refreshtime || 10) * 1000;
 
         fetchEletrica();
         const interval = setInterval(fetchEletrica, Math.max(5000, refreshTime));
@@ -51,10 +55,12 @@ export default function Eletrica() {
         return () => clearInterval(interval);
     }, [fetchEletrica]);
 
-    // ✅ LOGS NO LOCAL CORRETO
+    // 🔹 Logs organizados
     useEffect(() => {
-        console.log("Estrutura carregada:", estrutura);
-        console.log("Detalhes carregados:", detalhes);
+        console.group("📦 Dados Carregados");
+        console.log("Estrutura:", estrutura);
+        console.log("Detalhes:", detalhes);
+        console.groupEnd();
     }, [estrutura, detalhes]);
 
     const handleEquipamentoClick = (tag) => {
@@ -73,7 +79,7 @@ export default function Eletrica() {
 
     let contentToRender;
 
-    // 🔹 Tela quando usuário clicou em Pavimento
+    // 🔹 Tela: Pavimento selecionado
     if (selectedBuilding && selectedFloor) {
         const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
@@ -95,18 +101,18 @@ export default function Eletrica() {
         );
     }
 
-    // 🔹 Tela quando usuário clicou apenas no prédio
+    // 🔹 Tela: Apenas prédio selecionado
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
-        const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-            const ord = (floorKey) => {
+        const pavimentosOrdenados = Object.entries(pavimentos).sort(([floorA], [floorB]) => {
+            const findOrd = (floor) => {
                 const tag = Object.keys(detalhes).find((t) =>
-                    t.includes(`/${selectedBuilding}/${floorKey}/`)
+                    t.includes(`/${selectedBuilding}/${floor}/`)
                 );
                 return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
             };
-            return ord(b) - ord(a);
+            return findOrd(floorB) - findOrd(floorA);
         });
 
         contentToRender = (
@@ -131,7 +137,7 @@ export default function Eletrica() {
         );
     }
 
-    // 🔹 Nenhuma seleção ainda
+    // 🔹 Tela inicial
     else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">

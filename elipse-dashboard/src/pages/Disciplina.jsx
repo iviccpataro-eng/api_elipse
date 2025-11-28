@@ -1,7 +1,9 @@
 // src/pages/Disciplina.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipmentGrid";
+import { apiFetch } from "../utils/api";
 
 export default function Disciplina({ disciplina }) {
     const [dados, setDados] = useState(null);
@@ -10,31 +12,32 @@ export default function Disciplina({ disciplina }) {
     const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
 
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                setLoading(true);
-                const token = localStorage.getItem("token");
-                const response = await fetch(
-                    `https://api-elipse.vercel.app/${disciplina}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
+    const navigate = useNavigate();
 
-                const result = await response.json();
-                if (!result.ok) throw new Error(result.erro || "Erro ao carregar dados.");
-                setDados(result.dados.estrutura);
-            } catch (err) {
-                setErro(err.message);
-            } finally {
-                setLoading(false);
-            }
+    const API_BASE =
+        import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+
+    const fetchData = useCallback(async () => {
+        const data = await apiFetch(`${API_BASE}/${disciplina}`, {}, navigate);
+
+        if (!data) {
+            // apiFetch já redirecionou, então apenas interrompe
+            return;
         }
+
+        if (!data.ok) {
+            setErro(data.erro || "Erro ao carregar dados.");
+            setLoading(false);
+            return;
+        }
+
+        setDados(data.dados?.estrutura || {});
+        setLoading(false);
+    }, [API_BASE, disciplina, navigate]);
+
+    useEffect(() => {
         fetchData();
-    }, [disciplina]);
+    }, [fetchData]);
 
     if (loading)
         return (
@@ -56,17 +59,26 @@ export default function Disciplina({ disciplina }) {
 
     return (
         <div className="flex h-screen">
+            {/* Sidebar */}
             <aside className="w-64 border-r border-gray-200 bg-gray-50 p-4 overflow-y-auto">
                 <h1 className="mb-4 text-xl font-semibold text-gray-700 capitalize">
                     {disciplina}
                 </h1>
+
                 <DisciplineSidebar
                     estrutura={dados}
-                    onSelectBuilding={setSelectedBuilding}
-                    onSelectFloor={setSelectedFloor}
+                    onSelectBuilding={(b) => {
+                        setSelectedBuilding(b);
+                        setSelectedFloor(null);
+                    }}
+                    onSelectFloor={(b, f) => {
+                        setSelectedBuilding(b);
+                        setSelectedFloor(f);
+                    }}
                 />
             </aside>
 
+            {/* Conteúdo */}
             <main className="flex-1 p-6 overflow-y-auto">
                 <EquipmentGrid
                     estrutura={dados}
