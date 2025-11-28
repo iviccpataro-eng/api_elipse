@@ -5,7 +5,7 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
-import { apiFetch } from "../utils/api"; // 🔥 novo
+import { apiFetch } from "../utils/apiFetch"; // 🔥 novo
 
 export default function Hidraulica() {
     const [estrutura, setEstrutura] = useState({});

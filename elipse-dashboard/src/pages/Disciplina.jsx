@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipmentGrid";
-import { apiFetch } from "../utils/api";
+import { apiFetch } from "../utils/apiFetch";
 
 export default function Disciplina({ disciplina }) {
     const [dados, setDados] = useState(null);

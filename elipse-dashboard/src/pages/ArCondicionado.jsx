@@ -6,7 +6,7 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
-import { apiFetch } from "../utils/api"; // 🔥 corrigido
+import { apiFetch } from "../utils/apiFetch"; // 🔥 corrigido
 
 export default function ArCondicionado() {
     const [estrutura, setEstrutura] = useState({});

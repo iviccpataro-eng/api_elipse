@@ -12,7 +12,7 @@ import VariableCard from "../components/VariableCard";
 import VariableRow from "../components/VariableRow";
 import VariableSimpleRow from "../components/VariableSimpleRow";
 
-import { apiFetch } from "../utils/api"; // 🔥 Padronização
+import { apiFetch } from "../utils/apiFetch"; // 🔥 Padronização
 
 export default function Equipamento() {
     const { tag } = useParams();
@@ -130,24 +130,24 @@ export default function Equipamento() {
                             <LayoutGrid
                                 onClick={() => setLayoutMode("cards")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "cards"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400"
                                     }`}
                             />
 
                             <List
                                 onClick={() => setLayoutMode("list")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "list"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400"
                                     }`}
                             />
 
                             <FileText
                                 onClick={() => setLayoutMode("detailed")}
                                 className={`w-5 h-5 cursor-pointer transition ${layoutMode === "detailed"
-                                        ? "text-blue-600 scale-110"
-                                        : "text-gray-400"
+                                    ? "text-blue-600 scale-110"
+                                    : "text-gray-400"
                                     }`}
                             />
                         </div>
@@ -156,14 +156,14 @@ export default function Equipamento() {
                         <button
                             onClick={carregarDados}
                             className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
-                                    ? "opacity-50 pointer-events-none"
-                                    : ""
+                                ? "opacity-50 pointer-events-none"
+                                : ""
                                 }`}
                         >
                             <RefreshCcw
                                 className={`w-4 h-4 ${isRefreshing
-                                        ? "animate-spin text-blue-500"
-                                        : ""
+                                    ? "animate-spin text-blue-500"
+                                    : ""
                                     }`}
                             />
                             Atualizar
