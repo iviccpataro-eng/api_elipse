@@ -1,6 +1,6 @@
 // src/components/AlarmPanel.jsx
 import React from "react";
-import { AlarmRow, AlarmRowHeader } from "./AlarmRow";
+import AlarmRow, { AlarmRowHeader } from "./AlarmRow";
 
 export default function AlarmPanel({ alarms = [], open, onClose, onAck, onClear, onClearRecognized }) {
     if (!open) return null;
@@ -8,8 +8,10 @@ export default function AlarmPanel({ alarms = [], open, onClose, onAck, onClear,
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t
                     rounded-t-2xl shadow-2xl p-4 h-80 overflow-y-auto z-50">
+
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-semibold">Alarmes Ativos</h2>
+
                 <div className="flex items-center gap-2">
                     <button
                         onClick={onClearRecognized}
@@ -17,18 +19,31 @@ export default function AlarmPanel({ alarms = [], open, onClose, onAck, onClear,
                     >
                         Limpar reconhecidos
                     </button>
-                    <button onClick={onClose} className="px-3 py-1 bg-red-50 rounded hover:bg-red-100 text-sm">
+
+                    <button
+                        onClick={onClose}
+                        className="px-3 py-1 bg-red-50 rounded hover:bg-red-100 text-sm"
+                    >
                         Fechar
                     </button>
                 </div>
             </div>
-            <AlarmRowHeader className="flex items-center justify-between mb-3" />
+
+            <AlarmRowHeader />
+
             {alarms.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">Nenhum alarme ativo.</div>
+                <div className="text-gray-500 text-center py-8">
+                    Nenhum alarme ativo.
+                </div>
             ) : (
                 <div className="space-y-3">
                     {alarms.map((a) => (
-                        <AlarmRow key={`${a.tag}::${a.name}`} alarm={a} onAck={onAck} onClear={onClear} />
+                        <AlarmRow
+                            key={`${a.tag}::${a.name}`}
+                            alarm={a}
+                            onAck={onAck}
+                            onClear={onClear}
+                        />
                     ))}
                 </div>
             )}
