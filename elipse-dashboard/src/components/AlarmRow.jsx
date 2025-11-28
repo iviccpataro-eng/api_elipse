@@ -1,4 +1,3 @@
-// src/components/AlarmRow.jsx
 import React from "react";
 import { Check, X, Clock } from "lucide-react";
 
@@ -10,7 +9,6 @@ function getAlarmStyle(alarm) {
     let severityLabel = "";
     let className = "";
 
-    // ✔ Definição do nome da severidade
     switch (sev) {
         case 0: severityLabel = "Alarme Info."; break;
         case 1: severityLabel = "Alarme Baixo"; break;
@@ -19,37 +17,17 @@ function getAlarmStyle(alarm) {
         default: severityLabel = "Desconhecido";
     }
 
-    // ✔ Se reconhecido, aplica paleta verde/cinza
     if (ack) {
-        className = active
-            ? "bg-green-100 text-green-800"
-            : "bg-gray-100 text-green-900";
+        className = active ? "bg-green-100 text-green-800" : "bg-gray-100 text-green-900";
         return { severityLabel, className };
     }
 
-    // ✔ Cores por severidade + ativo/inativo
     switch (sev) {
-        case 0:
-            className = active ? "bg-blue-100 text-blue-900" : "bg-gray-100 text-blue-900";
-            break;
-
-        case 1:
-            className = active ? "bg-yellow-100 text-[#D4A202]" : "bg-gray-100 text-[#D4A202]";
-            break;
-
-        case 2:
-            className = active ? "bg-red-100 text-red-800" : "bg-gray-100 text-red-800";
-            break;
-
-        case 3:
-            className = active
-                ? "bg-red-600 text-[#EFB807] animate-pulse"
-                : "bg-red-100 text-[#D4A202]";
-            break;
-
-        default:
-            className = "bg-gray-100 text-gray-800";
-            break;
+        case 0: className = active ? "bg-blue-100 text-blue-900" : "bg-gray-100 text-blue-900"; break;
+        case 1: className = active ? "bg-yellow-100 text-[#D4A202]" : "bg-gray-100 text-[#D4A202]"; break;
+        case 2: className = active ? "bg-red-100 text-red-800" : "bg-gray-100 text-red-800"; break;
+        case 3: className = active ? "bg-red-600 text-[#EFB807] animate-pulse" : "bg-red-100 text-[#D4A202]"; break;
+        default: className = "bg-gray-100 text-gray-800";
     }
 
     return { severityLabel, className };
@@ -57,11 +35,22 @@ function getAlarmStyle(alarm) {
 
 function formatShort(dt) {
     if (!dt) return "-";
-    try {
-        return new Date(dt).toLocaleString();
-    } catch {
-        return dt;
-    }
+    try { return new Date(dt).toLocaleString(); }
+    catch { return dt; }
+}
+
+export function AlarmRowHeader() {
+    return (
+        <div className="hidden md:grid grid-cols-12 font-semibold text-xs text-gray-600 px-3 py-2">
+            <div className="col-span-3">Nome</div>
+            <div className="col-span-1 text-center">Ativo</div>
+            <div className="col-span-2">Severidade</div>
+            <div className="col-span-2">Entrada</div>
+            <div className="col-span-2">Saída</div>
+            <div className="col-span-1 text-center">ACK</div>
+            <div className="col-span-1">Ações</div>
+        </div>
+    );
 }
 
 export default function AlarmRow({ alarm, onAck, onClear }) {
@@ -70,8 +59,9 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
     return (
         <div className={`p-3 rounded-xl shadow-sm border border-transparent ${className}`}>
 
-            {/* DESKTOP / TABLET */}
+            {/* DESKTOP */}
             <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+
                 <div className="col-span-3 font-medium">{alarm.name}</div>
 
                 <div className="col-span-1 flex items-center justify-center">
@@ -88,9 +78,21 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                     {alarm.ack ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                 </div>
 
-                <div className="col-span-1 text-sm">{alarm.ackUser || "-"}</div>
-
-                <div className="col-span-1 text-sm">{formatShort(alarm.ackTimestamp)}</div>
+                {/* ACTIONS — agora dentro do grid (uma única linha!) */}
+                <div className="col-span-1 flex flex-col gap-1">
+                    <button
+                        onClick={() => onAck(alarm.tag, alarm.name)}
+                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
+                    >
+                        Reconhecer
+                    </button>
+                    <button
+                        onClick={() => onClear(alarm.tag, alarm.name)}
+                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
+                    >
+                        Finalizar
+                    </button>
+                </div>
             </div>
 
             {/* MOBILE */}
@@ -115,27 +117,24 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
 
                     <div className="flex items-center gap-2">
                         {alarm.ack ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                        <span>{alarm.ackUser || "-"}</span>
-                        <span className="opacity-60">{formatShort(alarm.ackTimestamp)}</span>
                     </div>
                 </div>
-            </div>
 
-            {/* ACTIONS */}
-            <div className="mt-3 flex gap-2 justify-end">
-                <button
-                    onClick={() => onAck(alarm.tag, alarm.name)}
-                    className="px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-sm font-medium"
-                >
-                    Reconhecer
-                </button>
+                <div className="flex justify-end gap-2">
+                    <button
+                        onClick={() => onAck(alarm.tag, alarm.name)}
+                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
+                    >
+                        Reconhecer
+                    </button>
 
-                <button
-                    onClick={() => onClear(alarm.tag, alarm.name)}
-                    className="px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-sm font-medium"
-                >
-                    Finalizar
-                </button>
+                    <button
+                        onClick={() => onClear(alarm.tag, alarm.name)}
+                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
+                    >
+                        Finalizar
+                    </button>
+                </div>
             </div>
         </div>
     );
