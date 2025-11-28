@@ -78,21 +78,39 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                     {alarm.ack ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                 </div>
 
-                {/* ACTIONS — agora dentro do grid (uma única linha!) */}
-                <div className="col-span-1 flex flex-col gap-1">
+                {/* ACTIONS */}
+                <div className="mt-3 flex gap-2 justify-end">
+
+                    {/* RECONHECER */}
                     <button
                         onClick={() => onAck(alarm.tag, alarm.name)}
-                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
-                    >
-                        Reconhecer
+                        disabled={alarm.ack}  // já reconhecido → desativa
+                        title={alarm.ack ? "Já reconhecido" : "Reconhecer alarme"}
+                        className={`p-2 rounded ${alarm.ack
+                            ? "bg-white/10 text-gray-400 cursor-not-allowed"
+                            : "bg-white/20 hover:bg-white/30 text-gray-700"}`}>
+                        <Check className="w-5 h-5" />
                     </button>
+
+                    {/* FINALIZAR */}
                     <button
                         onClick={() => onClear(alarm.tag, alarm.name)}
-                        className="px-2 py-1 rounded bg-white/30 hover:bg-white/40 text-xs font-medium"
-                    >
-                        Finalizar
+                        disabled={!alarm.ack || alarm.active}
+                        title={
+                            !alarm.ack
+                                ? "Reconheça antes de finalizar"
+                                : alarm.active
+                                    ? "Não é possível finalizar um alarme ativo"
+                                    : "Finalizar alarme"
+                        }
+                        className={`p-2 rounded ${!alarm.ack || alarm.active
+                            ? "bg-white/10 text-gray-400 cursor-not-allowed"
+                            : "bg-white/20 hover:bg-white/30 text-gray-700"}`}>
+                        <Trash className="w-5 h-5" />
                     </button>
+
                 </div>
+
             </div>
 
             {/* MOBILE */}
