@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, Trash2 } from "lucide-react";
 
 function getAlarmStyle(alarm) {
     const active = alarm.active;
@@ -106,7 +106,7 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                         className={`p-2 rounded ${!alarm.ack || alarm.active
                             ? "bg-white/10 text-gray-400 cursor-not-allowed"
                             : "bg-white/20 hover:bg-white/30 text-gray-700"}`}>
-                        <Trash className="w-5 h-5" />
+                        <Trash2 className="w-5 h-5" />
                     </button>
 
                 </div>
