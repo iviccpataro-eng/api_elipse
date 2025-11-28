@@ -1,6 +1,6 @@
 // src/components/AlarmPanel.jsx
 import React from "react";
-import AlarmRow from "./AlarmRow";
+import { AlarmRow, AlarmRowHeader } from "./AlarmRow";
 
 export default function AlarmPanel({ alarms = [], open, onClose, onAck, onClear, onClearRecognized }) {
     if (!open) return null;
@@ -22,7 +22,7 @@ export default function AlarmPanel({ alarms = [], open, onClose, onAck, onClear,
                     </button>
                 </div>
             </div>
-
+            <AlarmRowHeader className="flex items-center justify-between mb-3" />
             {alarms.length === 0 ? (
                 <div className="text-gray-500 text-center py-8">Nenhum alarme ativo.</div>
             ) : (
