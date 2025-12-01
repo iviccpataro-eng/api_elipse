@@ -122,7 +122,7 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
             </div>
 
             {/* MOBILE (igual antes) */}
-            <div className="md:hidden flex flex-col gap-1 text-sm">
+            <div className="lg:hidden flex flex-col gap-1 text-sm">
                 <div className="flex justify-between items-center">
                     <div className="font-medium">{alarm.name}</div>
 
