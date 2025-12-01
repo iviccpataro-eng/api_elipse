@@ -145,7 +145,7 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                 </div>
 
                 <div className="text-xs flex justify-end opacity-70">
-                    ACK: {formatShort(alarm.ackTimestamp)}
+                    Rec.: {formatShort(alarm.ackTimestamp)}
                 </div>
             </div>
         </div>
