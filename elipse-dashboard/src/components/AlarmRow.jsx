@@ -65,7 +65,7 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
         <div className={`px-2 py-1 rounded-lg border shadow-sm ${className}`}>
 
             {/* DESKTOP */}
-            <div className="hidden md:grid grid-cols-12 gap-2 items-center text-xs">
+            <div className="hidden lg:grid grid-cols-12 gap-2 items-center text-xs">
 
                 <div className="col-span-3 font-medium">{alarm.name}</div>
 
