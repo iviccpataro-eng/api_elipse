@@ -42,7 +42,7 @@ function formatShort(dt) {
 export function AlarmRowHeader() {
     return (
         <div className="
-            hidden md:grid grid-cols-12 
+            hidden lg:grid grid-cols-12 
             font-semibold text-xs text-gray-600 
             px-2 py-1 border-b bg-white sticky top-0 z-20
             divide-x-2 divide-gray-200
