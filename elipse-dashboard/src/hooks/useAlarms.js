@@ -1,7 +1,9 @@
 // src/hooks/useAlarms.js
 import { useEffect, useState, useRef } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+const API_BASE =
+    import.meta.env.VITE_API_BASE_URL ||
+    "https://api-elipse.onrender.com";
 
 export default function useAlarms(pollInterval = 5000) {
 
@@ -12,32 +14,29 @@ export default function useAlarms(pollInterval = 5000) {
     const [bannerQueue, setBannerQueue] = useState([]);
     const [activeBanner, setActiveBanner] = useState(null);
 
-    // Controle de som (evita tocar repetidamente)
+    // Evita repetição de som
     const lastPlayedId = useRef(null);
 
-    // ================================
-    // 🔊 FUNÇÃO PARA TOCAR SOM
-    // ================================
+    // 🔊 Sons
     function playAlarmSound(severity, id) {
-        if (lastPlayedId.current === id) return; // evita duplicação
+        if (lastPlayedId.current === id) return;
         lastPlayedId.current = id;
 
-        let soundPath = "";
+        let file = null;
 
-        if (severity === 1) soundPath = "/sounds/info.mp3";
-        else if (severity === 2) soundPath = "/sounds/alarm.mp3";
-        else if (severity === 3) soundPath = "/sounds/critical.mp3";
-        else return;
+        if (severity === 1) file = "/sounds/info.mp3";
+        if (severity === 2) file = "/sounds/alarm.mp3";
+        if (severity === 3) file = "/sounds/critical.mp3";
 
-        const audio = new Audio(soundPath);
+        if (!file) return;
+
+        const audio = new Audio(file);
         audio.volume = severity === 3 ? 1.0 : 0.5;
 
         audio.play().catch(() => {});
     }
 
-    // ================================
-    // ⬇ Processo do próximo banner
-    // ================================
+    // PROCESSA O PRÓXIMO BANNER
     useEffect(() => {
         if (!activeBanner && bannerQueue.length > 0) {
             const next = bannerQueue[0];
@@ -45,30 +44,29 @@ export default function useAlarms(pollInterval = 5000) {
 
             const timer = setTimeout(() => {
                 setActiveBanner(null);
-                setBannerQueue((q) => q.slice(1));
+                setBannerQueue(q => q.slice(1));
             }, 5000);
 
             return () => clearTimeout(timer);
         }
     }, [activeBanner, bannerQueue]);
 
-    // ================================
-    // 🔎 FETCH DE ALARMES
-    // ================================
+    // BUSCA ALARMES
     useEffect(() => {
         async function fetchAlarms() {
             try {
                 const res = await fetch(`${API_BASE}/alarms/active`);
                 const list = await res.json();
 
-                // detecta novos alarmes
+                // detecta novos
                 list.forEach(a => {
-                    if (!alarms.find(x => x.id === a.id)) {
+                    const exists = alarms.some(x => x.id === a.id);
+                    if (!exists) {
 
-                        // toca som
+                        // som
                         playAlarmSound(a.severity, a.id);
 
-                        // adiciona à fila de banners
+                        // adiciona na fila
                         setBannerQueue(q => [
                             ...q,
                             {
@@ -94,9 +92,7 @@ export default function useAlarms(pollInterval = 5000) {
 
     }, [pollInterval, alarms]);
 
-    // ================================
-    // 🟡 ACIONADORES
-    // ================================
+    // AÇÕES
     async function ack(tag, name) {
         await fetch(`${API_BASE}/alarms/ack`, {
             method: "POST",
@@ -114,9 +110,7 @@ export default function useAlarms(pollInterval = 5000) {
     }
 
     async function clearRecognized() {
-        await fetch(`${API_BASE}/alarms/clear-recognized`, {
-            method: "POST"
-        });
+        await fetch(`${API_BASE}/alarms/clear-recognized`, { method: "POST" });
     }
 
     return {
@@ -124,6 +118,7 @@ export default function useAlarms(pollInterval = 5000) {
         hasNew,
         setHasNew,
         banner: activeBanner,
+        setBanner: setActiveBanner,   // 👈 AGORA EXISTE!
         bannerQueue,
         ack,
         clear,
