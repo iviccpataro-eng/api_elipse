@@ -50,9 +50,10 @@ export function AlarmRowHeader() {
             <div className="col-span-3">Nome</div>
             <div className="col-span-1 text-center">Ativo</div>
             <div className="col-span-1 text-center">Severidade</div>
-            <div className="col-span-2 text-center">Entrada</div>
-            <div className="col-span-2 text-center">Saída</div>
+            <div className="col-span-1 text-center">Entrada</div>
+            <div className="col-span-1 text-center">Saída</div>
             <div className="col-span-2 text-center">Reconhecimento</div>
+            <div className="col-span-2 text-center">Fonte</div>
             <div className="col-span-1 text-center">Ações</div>
         </div>
     );
