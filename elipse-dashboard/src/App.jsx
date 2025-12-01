@@ -137,7 +137,7 @@ export default function App() {
     <>
       <Navbar onLogout={handleLogout} />
 
-      <AlarmBanner message={banner} visible={Boolean(banner)} onClose={() => setBanner(null)} />
+      <AlarmBanner banner={banner} onClose={() => setBanner(null)} />
       <AlarmFab count={alarms.length} hasNew={hasNew} onClick={() => setShowPanel(true)} />
       <AlarmPanel
         alarms={alarms}
