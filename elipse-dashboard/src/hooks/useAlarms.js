@@ -5,6 +5,7 @@ const API_BASE =
     import.meta.env.VITE_API_BASE_URL ||
     "https://api-elipse.onrender.com";
 
+
 export default function useAlarms(pollInterval = 5000) {
 
     const [alarms, setAlarms] = useState([]);
@@ -113,15 +114,21 @@ export default function useAlarms(pollInterval = 5000) {
         await fetch(`${API_BASE}/alarms/clear-recognized`, { method: "POST" });
     }
 
+    function closeBanner() {
+    setActiveBanner(null);
+    setBannerQueue(q => q.slice(1));
+}
+
     return {
         alarms,
         hasNew,
         setHasNew,
         banner: activeBanner,
-        setBanner: setActiveBanner,   // 👈 AGORA EXISTE!
+        setBanner: setActiveBanner,
         bannerQueue,
         ack,
         clear,
-        clearRecognized
+        clearRecognized,
+        closeBanner
     };
 }
