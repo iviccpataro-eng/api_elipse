@@ -72,14 +72,14 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
                 <div className="col-span-1 flex items-center justify-center">
                     {alarm.active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
-                <div className="col-span-1">{severityLabel}</div>
-                <div className="col-span-1">{formatShort(alarm.timestampIn)}</div>
-                <div className="col-span-1">{formatShort(alarm.timestampOut)}</div>
+                <div className="col-span-1 text-center">{severityLabel}</div>
+                <div className="col-span-1 text-center">{formatShort(alarm.timestampIn)}</div>
+                <div className="col-span-1 text-center">{formatShort(alarm.timestampOut)}</div>
                 <div className="col-span-1 flex items-center justify-center">
                     {alarm.ack ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
-                <div className="col-span-1">{alarm.ackUser || "-"}</div>
-                <div className="col-span-1">{formatShort(alarm.ackTimestamp)}</div>
+                <div className="col-span-1 text-center">{alarm.ackUser || "-"}</div>
+                <div className="col-span-1 text-center">{formatShort(alarm.ackTimestamp)}</div>
 
                 {/* ACTIONS → dentro da grid */}
                 <div className="col-span-1 flex items-center gap-1 justify-center">
