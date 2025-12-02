@@ -12,6 +12,7 @@ import Hidraulica from "./pages/Hidraulica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
 import RegisterPage from "./RegisterPage";
+
 import useAlarms from "./hooks/useAlarms";
 import AlarmBanner from "./components/AlarmBanner";
 import AlarmPanel from "./components/AlarmPanel";
@@ -103,7 +104,7 @@ export default function App() {
     const params = new URLSearchParams(location.search);
     const invite = params.get("invite");
 
-    // ✅ Redireciona para a tela de registro se tiver convite
+    // Redireciona para registro caso tenha convite
     if (invite && location.pathname !== "/register") {
       navigate(`/register?invite=${invite}`, { replace: true });
     }
@@ -122,62 +123,89 @@ export default function App() {
     setUser(null);
   };
 
-  // Se não há token e não é um link de convite, mostra login
   const params = new URLSearchParams(location.search);
   const invite = params.get("invite");
-  if (!token && !invite) return <LoginPage onLogin={handleLogin} />;
 
-  // Se o link é de convite, mostra a tela de registro
-  if (invite) return <RegisterPage />;
+  // HOOKS DE ALARME (sempre dentro do componente, nunca condicionais)
+  const {
+    alarms,
+    hasNew,
+    banner,
+    closeBanner,
+    ack,
+    clear,
+    clearRecognized
+  } = useAlarms(3000);
 
-  const { alarms, hasNew, banner, setBanner, ack, clear, clearRecognized, closeBanner } = useAlarms(3000);
   const [showPanel, setShowPanel] = useState(false);
 
   return (
     <>
-      <Navbar onLogout={handleLogout} />
+      {/* ====================== LOGIN ====================== */}
+      {!token && !invite && (
+        <LoginPage onLogin={handleLogin} />
+      )}
 
-      <AlarmBanner banner={banner} onClose={closeBanner} />
-      <AlarmFab count={alarms.length} hasNew={hasNew} onClick={() => setShowPanel(true)} />
-      <AlarmPanel
-        alarms={alarms}
-        open={showPanel}
-        onClose={() => setShowPanel(false)}
-        onAck={ack}
-        onClear={clear}
-        onClearRecognized={clearRecognized}
-      />
+      {/* ====================== REGISTER ====================== */}
+      {invite && (
+        <RegisterPage />
+      )}
 
-      <Routes>
-        {/* Página inicial */}
-        <Route index element={<Dashboard token={token} />} />
+      {/* ====================== APLICAÇÃO AUTENTICADA ====================== */}
+      {token && !invite && (
+        <>
+          <Navbar onLogout={handleLogout} />
 
-        {/* 🔌 Disciplinas */}
-        <Route path="/arcondicionado" element={<ArCondicionado />} />
-        <Route path="/iluminacao" element={<Iluminacao />} />
-        <Route path="/eletrica" element={<Eletrica />} />
-        <Route path="/hidraulica" element={<Hidraulica />} />
-        <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
-        <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
+          <AlarmBanner banner={banner} onClose={closeBanner} />
+          <AlarmFab
+            count={alarms.length}
+            hasNew={hasNew}
+            onClick={() => setShowPanel(true)}
+          />
 
-        {/* Página de equipamento genérica */}
-        <Route path="/arcondicionado/equipamento/:tag" element={<Equipamento />} />
-        <Route path="/iluminacao/equipamento/:tag" element={<Equipamento />} />
-        <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
-        <Route path="/hidraulica/equipamento/:tag" element={<Equipamento />} />
+          <AlarmPanel
+            alarms={alarms}
+            open={showPanel}
+            onClose={() => setShowPanel(false)}
+            onAck={ack}
+            onClear={clear}
+            onClearRecognized={clearRecognized}
+          />
 
-        {/* Ferramentas e admin */}
-        <Route path="/tools" element={<ToolsPage token={token} user={user} />} />
+          <Routes>
+            <Route index element={<Dashboard token={token} />} />
 
-        {/* Tela de registro */}
-        <Route path="/register" element={<RegisterPage />} />
+            {/* Disciplinas */}
+            <Route path="/arcondicionado" element={<ArCondicionado />} />
+            <Route path="/iluminacao" element={<Iluminacao />} />
+            <Route path="/eletrica" element={<Eletrica />} />
+            <Route path="/hidraulica" element={<Hidraulica />} />
+            <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
+            <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
 
-        {/* Tela de Histório de Alarme */}
-        <Route path="/alarms/history" element={<AlarmHistory />} />
+            {/* Equipamentos */}
+            <Route path="/arcondicionado/equipamento/:tag" element={<Equipamento />} />
+            <Route path="/iluminacao/equipamento/:tag" element={<Equipamento />} />
+            <Route path="/eletrica/equipamento/:tag" element={<Equipamento />} />
+            <Route path="/hidraulica/equipamento/:tag" element={<Equipamento />} />
 
-        {/* Rota fallback */}
-        <Route path="*" element={<Dashboard token={token} />} />
-      </Routes>
+            {/* Ferramentas */}
+            <Route
+              path="/tools"
+              element={<ToolsPage token={token} user={user} />}
+            />
+
+            {/* Registro */}
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Histórico */}
+            <Route path="/alarms/history" element={<AlarmHistory />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Dashboard token={token} />} />
+          </Routes>
+        </>
+      )}
     </>
   );
 }
