@@ -2,9 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 
 const API_BASE =
-    import.meta.env.VITE_API_BASE_URL ||
-    "https://api-elipse.onrender.com";
-
+    import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function useAlarms(pollInterval = 5000) {
 

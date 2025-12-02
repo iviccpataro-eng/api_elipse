@@ -19,7 +19,12 @@ export default function useAlarms(interval = 3000) {
             const res = await fetch(`${API_BASE}/alarms/active`);
             const data = await res.json();
 
-            if (!data.alarms) return;
+            console.log("🔍 API retornou:", data);
+
+             if (!data || !Array.isArray(data)) {
+            console.warn("❗ A API não retornou uma lista de alarmes.");
+            return;
+        }
 
             setAlarms(data.alarms);
 
