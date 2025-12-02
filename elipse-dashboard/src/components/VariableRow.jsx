@@ -30,7 +30,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-600 hidden xl:flex">{tipo}</div>
+                    <div className="text-gray-600 hidden lg:flex">{tipo}</div>
                     <div className="text-gray-900">
                         {valor} {unidade}
                     </div>
@@ -50,7 +50,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-600 hidden xl:flex">{tipo}</div>
+                    <div className="text-gray-600 hidden lg:flex">{tipo}</div>
                     <div>
                         <input
                             type="number"
@@ -79,7 +79,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-600 hidden xl:flex">{tipo}</div>
+                    <div className="text-gray-600 hidden lg:flex">{tipo}</div>
                     <div className={`font-semibold ${valor ? "text-green-600" : "text-red-600"}`}>
                         {status}
                     </div>
@@ -97,7 +97,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-600 hidden xl:flex">{tipo}</div>
+                    <div className="text-gray-600 hidden lg:flex">{tipo}</div>
                     <div>
                         <select
                             value={valor ? 1 : 0}
@@ -124,7 +124,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-600 hidden xl:flex">{tipo}</div>
+                    <div className="text-gray-600 hidden lg:flex">{tipo}</div>
                     <div className="text-gray-900">{estadoAtual}</div>
                     <div className="">{nominalVal}</div>
                 </>
@@ -141,7 +141,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium text-gray-800">{nome}</div>
-                    <div className="text-gray-600 hidden xl:flex">{tipo}</div>
+                    <div className="text-gray-600 hidden lg:flex">{tipo}</div>
                     <div>
                         <select
                             value={valor}
@@ -167,7 +167,7 @@ export default function VariableRow({ variavel }) {
             return (
                 <>
                     <div className="font-medium">{nome}</div>
-                    <div className="hidden xl:flex">{tipo}</div>
+                    <div className="hidden lg:flex">{tipo}</div>
                     <div>
                         {valor}
                         {unidade}

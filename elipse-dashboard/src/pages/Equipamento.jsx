@@ -233,7 +233,7 @@ export default function Equipamento() {
                             <div className="bg-white rounded-xl shadow animate-fadeIn">
                                 <div className="grid grid-cols-4 px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm border-b">
                                     <div>Nome</div>
-                                    <div className="hidden xl:flex">Tipo</div>
+                                    <div className="hidden lg:flex">Tipo</div>
                                     <div>Valor</div>
                                     <div>Nominal/Referência</div>
                                 </div>

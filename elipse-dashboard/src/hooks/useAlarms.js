@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function useAlarms(interval = 3000) {
+
+    const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+
     const [alarms, setAlarms] = useState([]);
     const [hasNew, setHasNew] = useState(false);
 
-    const [bannerQueue, setBannerQueue] = useState([]); // FILA
-    const [banner, setBanner] = useState(null);         // Banner atual
+    const [bannerQueue, setBannerQueue] = useState([]); 
+    const [banner, setBanner] = useState(null);        
 
     const lastAlarmRef = useRef({});
 
     // ======= FETCH DOS ALARMES =======
     async function fetchAlarms() {
         try {
-            const res = await fetch("/alarms/active");
+            const res = await fetch(`${API_BASE}/alarms/active`);
             const data = await res.json();
 
             if (!data.alarms) return;
