@@ -1,134 +1,90 @@
-// src/hooks/useAlarms.js
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-const API_BASE =
-    import.meta.env.VITE_API_BASE_URL ||
-    "https://api-elipse.onrender.com";
-
-
-export default function useAlarms(pollInterval = 5000) {
-
+export default function useAlarms(interval = 3000) {
     const [alarms, setAlarms] = useState([]);
     const [hasNew, setHasNew] = useState(false);
 
-    // FILA DE NOTIFICAÇÕES
-    const [bannerQueue, setBannerQueue] = useState([]);
-    const [activeBanner, setActiveBanner] = useState(null);
+    const [bannerQueue, setBannerQueue] = useState([]); // FILA
+    const [banner, setBanner] = useState(null);         // Banner atual
 
-    // Evita repetição de som
-    const lastPlayedId = useRef(null);
+    const lastAlarmRef = useRef({});
 
-    // 🔊 Sons
-    function playAlarmSound(severity, id) {
-        if (lastPlayedId.current === id) return;
-        lastPlayedId.current = id;
+    // ======= FETCH DOS ALARMES =======
+    async function fetchAlarms() {
+        try {
+            const res = await fetch("/alarms/active");
+            const data = await res.json();
 
-        let file = null;
+            if (!data.alarms) return;
 
-        if (severity === 1) file = "/sounds/info.mp3";
-        if (severity === 2) file = "/sounds/alarm.mp3";
-        if (severity === 3) file = "/sounds/critical.mp3";
+            setAlarms(data.alarms);
 
-        if (!file) return;
+            // Detectar novos alarmes
+            data.alarms.forEach((a) => {
+                if (!lastAlarmRef.current[a.id]) {
+                    lastAlarmRef.current[a.id] = true;
 
-        const audio = new Audio(file);
-        audio.volume = severity === 3 ? 1.0 : 0.5;
+                    // Adiciona à FILA de banners
+                    setBannerQueue((q) => [
+                        ...q,
+                        {
+                            message: `Novo alarme: ${a.name}`,
+                            severity: a.severity,
+                        },
+                    ]);
 
-        audio.play().catch(() => {});
+                    setHasNew(true);
+                }
+            });
+        } catch (err) {
+            console.error("Erro carregando alarmes", err);
+        }
     }
 
-    // PROCESSA O PRÓXIMO BANNER
+    // Loop automático
     useEffect(() => {
-        if (!activeBanner && bannerQueue.length > 0) {
-            const next = bannerQueue[0];
-            setActiveBanner(next);
-
-            const timer = setTimeout(() => {
-                setActiveBanner(null);
-                setBannerQueue(q => q.slice(1));
-            }, 5000);
-
-            return () => clearTimeout(timer);
-        }
-    }, [activeBanner, bannerQueue]);
-
-    // BUSCA ALARMES
-    useEffect(() => {
-        async function fetchAlarms() {
-            try {
-                const res = await fetch(`${API_BASE}/alarms/active`);
-                const list = await res.json();
-
-                // detecta novos
-                list.forEach(a => {
-                    const exists = alarms.some(x => x.id === a.id);
-                    if (!exists) {
-
-                        // som
-                        playAlarmSound(a.severity, a.id);
-
-                        // adiciona na fila
-                        setBannerQueue(q => [
-                            ...q,
-                            {
-                                message: `Novo alarme: ${a.name}`,
-                                severity: a.severity
-                            }
-                        ]);
-
-                        setHasNew(true);
-                    }
-                });
-
-                setAlarms(list);
-
-            } catch (err) {
-                console.error("Erro ao buscar alarmes", err);
-            }
-        }
-
         fetchAlarms();
-        const t = setInterval(fetchAlarms, pollInterval);
-        return () => clearInterval(t);
+        const timer = setInterval(fetchAlarms, interval);
+        return () => clearInterval(timer);
+    }, []);
 
-    }, [pollInterval, alarms]);
+    // ======= PROCESSAR FILA DE BANNERS =======
+    useEffect(() => {
+        if (!banner && bannerQueue.length > 0) {
+            // Pega o próximo banner
+            setBanner(bannerQueue[0]);
 
-    // AÇÕES
-    async function ack(tag, name) {
-        await fetch(`${API_BASE}/alarms/ack`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tag, name })
-        });
-    }
+            // Remove o da fila
+            setBannerQueue((q) => q.slice(1));
+        }
+    }, [bannerQueue, banner]);
 
-    async function clear(tag, name) {
-        await fetch(`${API_BASE}/alarms/clear`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tag, name })
-        });
-    }
-
-    async function clearRecognized() {
-        await fetch(`${API_BASE}/alarms/clear-recognized`, { method: "POST" });
-    }
-
+    // Fechar banner
     function closeBanner() {
-    setActiveBanner(null);
-    setBannerQueue(q => q.slice(1));
-}
+        setBanner(null);
+    }
+
+    // Outros controles
+    function ack(id) {
+        console.log("Reconhecer", id);
+    }
+
+    function clear(id) {
+        console.log("Limpar", id);
+    }
+
+    function clearRecognized() {
+        console.log("Limpar reconhecidos");
+    }
 
     return {
         alarms,
         hasNew,
-        setHasNew,
-        banner: activeBanner,
-        setBanner: setActiveBanner,
-        bannerQueue,
+        banner,
+        setBanner,
+        closeBanner,
         ack,
         clear,
         clearRecognized,
-        closeBanner
     };
 }

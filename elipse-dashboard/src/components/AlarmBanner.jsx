@@ -1,14 +1,18 @@
-// src/components/AlarmBanner.jsx
-import React from "react";
+import React, { useEffect } from "react";
 import { TriangleAlert, X } from "lucide-react";
 
 export default function AlarmBanner({ banner, onClose }) {
-
     if (!banner) return null;
 
-    const { message, severity } = banner;
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 5000);
 
-    const classes = {
+        return () => clearTimeout(timer);
+    }, [banner]);
+
+    const colors = {
         0: "bg-blue-100 text-blue-900",
         1: "bg-yellow-100 text-[#D4A202]",
         2: "bg-red-100 text-red-800",
@@ -17,15 +21,19 @@ export default function AlarmBanner({ banner, onClose }) {
 
     return (
         <div
-            className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg 
-                flex items-center gap-3 z-50 animate-slideDown ${classes}`}
+            className={`
+                fixed top-4 left-1/2 -translate-x-1/2
+                px-4 py-2 rounded-lg shadow-lg z-50
+                flex items-center gap-3
+                animate-slideDown
+                ${colors[banner.severity] || "bg-red-600 text-white"}
+            `}
         >
-            <TriangleAlert className="w-5 h-5" />
-
-            <span className="font-medium">{message}</span>
+            <TriangleAlert className="w-6 h-6" />
+            <span>{banner.message}</span>
 
             <button onClick={onClose} className="ml-3">
-                <X className="w-4 h-4 opacity-80" />
+                <X className="w-5 h-5" />
             </button>
         </div>
     );
