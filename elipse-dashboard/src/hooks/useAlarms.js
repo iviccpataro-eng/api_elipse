@@ -3,17 +3,20 @@ import { useEffect, useRef, useState } from "react";
 export default function useAlarms(interval = 3000) {
 
     const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+        import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
     const [alarms, setAlarms] = useState([]);
     const [hasNew, setHasNew] = useState(false);
 
-    const [bannerQueue, setBannerQueue] = useState([]); 
-    const [banner, setBanner] = useState(null);        
+    const [bannerQueue, setBannerQueue] = useState([]);
+    const [banner, setBanner] = useState(null);
 
+    // Guarda quais alarmes já foram vistos
     const lastAlarmRef = useRef({});
 
-    // ======= FETCH DOS ALARMES =======
+    // ======================
+    // 🔎 FETCH DE ALARMES
+    // ======================
     async function fetchAlarms() {
         try {
             const res = await fetch(`${API_BASE}/alarms/active`);
@@ -21,19 +24,20 @@ export default function useAlarms(interval = 3000) {
 
             console.log("🔍 API retornou:", data);
 
-             if (!data || !Array.isArray(data)) {
-            console.warn("❗ A API não retornou uma lista de alarmes.");
-            return;
-        }
+            // Data precisa ser um array
+            if (!data || !Array.isArray(data)) {
+                console.warn("❗ A API não retornou lista de alarmes.");
+                return;
+            }
 
-            setAlarms(data.alarms);
+            // Atualiza lista
+            setAlarms(data);
 
-            // Detectar novos alarmes
-            data.alarms.forEach((a) => {
+            // Detecta novos alarmes
+            data.forEach((a) => {
                 if (!lastAlarmRef.current[a.id]) {
                     lastAlarmRef.current[a.id] = true;
 
-                    // Adiciona à FILA de banners
                     setBannerQueue((q) => [
                         ...q,
                         {
@@ -45,6 +49,7 @@ export default function useAlarms(interval = 3000) {
                     setHasNew(true);
                 }
             });
+
         } catch (err) {
             console.error("Erro carregando alarmes", err);
         }
@@ -57,43 +62,39 @@ export default function useAlarms(interval = 3000) {
         return () => clearInterval(timer);
     }, []);
 
-    // ======= PROCESSAR FILA DE BANNERS =======
+    // ======================
+    // 🟦 PROCESSA FILA DE BANNERS
+    // ======================
     useEffect(() => {
         if (!banner && bannerQueue.length > 0) {
-            // Pega o próximo banner
-            setBanner(bannerQueue[0]);
+            const next = bannerQueue[0];
 
-            // Remove o da fila
+            setBanner(next);
             setBannerQueue((q) => q.slice(1));
+
+            // Auto-fechar em 5s
+            const t = setTimeout(() => {
+                setBanner(null);
+            }, 5000);
+
+            return () => clearTimeout(t);
         }
     }, [bannerQueue, banner]);
 
-    // Fechar banner
+    // Botão fechar
     function closeBanner() {
         setBanner(null);
-    }
-
-    // Outros controles
-    function ack(id) {
-        console.log("Reconhecer", id);
-    }
-
-    function clear(id) {
-        console.log("Limpar", id);
-    }
-
-    function clearRecognized() {
-        console.log("Limpar reconhecidos");
     }
 
     return {
         alarms,
         hasNew,
         banner,
-        setBanner,
         closeBanner,
-        ack,
-        clear,
-        clearRecognized,
+        setBanner,
+        // ainda vamos conectar com backend depois:
+        ack: () => {},
+        clear: () => {},
+        clearRecognized: () => {},
     };
 }
