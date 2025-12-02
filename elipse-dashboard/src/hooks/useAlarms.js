@@ -1,100 +1,170 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function useAlarms(interval = 3000) {
+  const API_BASE =
+    import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    const API_BASE =
-        import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
+  const [alarms, setAlarms] = useState([]);
+  const [hasNew, setHasNew] = useState(false);
 
-    const [alarms, setAlarms] = useState([]);
-    const [hasNew, setHasNew] = useState(false);
+  const [bannerQueue, setBannerQueue] = useState([]); // fila de banners
+  const [banner, setBanner] = useState(null); // banner ativo
 
-    const [bannerQueue, setBannerQueue] = useState([]);
-    const [banner, setBanner] = useState(null);
+  const seenRef = useRef(new Set()); // alarm ids já vistos
+  const pollRef = useRef(null);
+  const bannerTimerRef = useRef(null);
+  const lastPlayedRef = useRef(null);
 
-    // Guarda quais alarmes já foram vistos
-    const lastAlarmRef = useRef({});
+  // função para tocar som (opcional — coloque arquivos em /public/sounds/)
+  function playAlarmSound(severity, id) {
+    try {
+      if (!severity) return;
+      if (lastPlayedRef.current === id) return;
+      lastPlayedRef.current = id;
 
-    // ======================
-    // 🔎 FETCH DE ALARMES
-    // ======================
-    async function fetchAlarms() {
-        try {
-            const res = await fetch(`${API_BASE}/alarms/active`);
-            const data = await res.json();
+      const path =
+        severity >= 3
+          ? "/sounds/critical.mp3"
+          : severity === 2
+          ? "/sounds/alarm.mp3"
+          : "/sounds/info.mp3";
 
-            console.log("🔍 API retornou:", data);
-
-            // Data precisa ser um array
-            if (!data || !Array.isArray(data)) {
-                console.warn("❗ A API não retornou lista de alarmes.");
-                return;
-            }
-
-            // Atualiza lista
-            setAlarms(data);
-
-            // Detecta novos alarmes
-            data.forEach((a) => {
-                if (!lastAlarmRef.current[a.id]) {
-                    lastAlarmRef.current[a.id] = true;
-
-                    setBannerQueue((q) => [
-                        ...q,
-                        {
-                            message: `Novo alarme: ${a.name}`,
-                            severity: a.severity,
-                        },
-                    ]);
-
-                    setHasNew(true);
-                }
-            });
-
-        } catch (err) {
-            console.error("Erro carregando alarmes", err);
-        }
+      const audio = new Audio(path);
+      audio.volume = severity >= 3 ? 1 : 0.6;
+      audio.play().catch(() => {
+        // ignora erro de autoplay
+      });
+    } catch (e) {
+      console.warn("Erro ao tocar som:", e);
     }
+  }
 
-    // Loop automático
-    useEffect(() => {
-        fetchAlarms();
-        const timer = setInterval(fetchAlarms, interval);
-        return () => clearInterval(timer);
-    }, []);
+  async function fetchAlarms() {
+    try {
+      const res = await fetch(`${API_BASE}/alarms/active`);
+      // endpoint retorna ARRAY (não um objeto { alarms: [...] })
+      const data = await res.json();
 
-    // ======================
-    // 🟦 PROCESSA FILA DE BANNERS
-    // ======================
-    useEffect(() => {
-        if (!banner && bannerQueue.length > 0) {
-            const next = bannerQueue[0];
+      if (!data || !Array.isArray(data)) {
+        console.warn("[useAlarms] resposta inesperada do backend:", data);
+        return;
+      }
 
-            setBanner(next);
-            setBannerQueue((q) => q.slice(1));
+      // atualiza lista exibida
+      setAlarms(data);
 
-            // Auto-fechar em 5s
-            const t = setTimeout(() => {
-                setBanner(null);
-            }, 5000);
+      // detecta novos alarmes (pelo id)
+      data.forEach((a) => {
+        const id = a?.id;
+        if (!id) return;
 
-            return () => clearTimeout(t);
+        if (!seenRef.current.has(id)) {
+          // novo
+          seenRef.current.add(id);
+
+          const sev = Number(a.severity ?? 0);
+
+          // opcional: tocar som
+          // playAlarmSound(sev, id);
+
+          // enfileira banner com dados mínimos
+          setBannerQueue((q) => [
+            ...q,
+            {
+              id,
+              message: `Novo alarme: ${a.name}`,
+              severity: sev,
+              name: a.name,
+            },
+          ]);
+
+          setHasNew(true);
         }
-    }, [bannerQueue, banner]);
-
-    // Botão fechar
-    function closeBanner() {
-        setBanner(null);
+      });
+    } catch (err) {
+      console.error("[useAlarms] Erro carregando alarmes", err);
     }
+  }
 
-    return {
-        alarms,
-        hasNew,
-        banner,
-        closeBanner,
-        setBanner,
-        // ainda vamos conectar com backend depois:
-        ack: () => {},
-        clear: () => {},
-        clearRecognized: () => {},
+  // polling
+  useEffect(() => {
+    fetchAlarms();
+    pollRef.current = setInterval(fetchAlarms, interval);
+    return () => {
+      clearInterval(pollRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interval]);
+
+  // processa fila de banners (um por vez)
+  useEffect(() => {
+    if (banner) return; // já tem ativo
+    if (bannerQueue.length === 0) return;
+
+    const next = bannerQueue[0];
+    setBanner(next);
+    setBannerQueue((q) => q.slice(1));
+
+    // timer para fechar automaticamente
+    bannerTimerRef.current = setTimeout(() => {
+      setBanner(null);
+    }, 5000);
+
+    return () => {
+      clearTimeout(bannerTimerRef.current);
+    };
+  }, [bannerQueue, banner]);
+
+  function closeBanner() {
+    // fecha imediatamente e limpa banner atual — próxima execução do effect mostrará o próximo da fila
+    setBanner(null);
+  }
+
+  // ações (placeholder — integrar backend)
+  async function ack(tag, name) {
+    try {
+      await fetch(`${API_BASE}/alarms/ack`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag, name }),
+      });
+      // opcional: atualizar localmente
+      fetchAlarms();
+    } catch (e) {
+      console.error("Erro ao ACK:", e);
+    }
+  }
+
+  async function clear(tag, name) {
+    try {
+      await fetch(`${API_BASE}/alarms/clear`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag, name }),
+      });
+      fetchAlarms();
+    } catch (e) {
+      console.error("Erro ao limpar:", e);
+    }
+  }
+
+  async function clearRecognized() {
+    try {
+      await fetch(`${API_BASE}/alarms/clear-recognized`, { method: "POST" });
+      fetchAlarms();
+    } catch (e) {
+      console.error("Erro clearRecognized:", e);
+    }
+  }
+
+  return {
+    alarms,
+    hasNew,
+    banner,
+    setBanner,
+    closeBanner,
+    ack,
+    clear,
+    clearRecognized,
+  };
 }
