@@ -47,13 +47,13 @@ export function AlarmRowHeader() {
             px-2 py-1 border-b bg-white sticky top-0 z-20
             divide-x-2 divide-gray-200
         ">
-            <div className="col-span-3">Nome</div>
+            <div className="col-span-2">Nome</div>
+            <div className="col-span-2 text-center">Fonte</div>
             <div className="col-span-1 text-center">Ativo</div>
             <div className="col-span-1 text-center">Severidade</div>
             <div className="col-span-1 text-center">Entrada</div>
             <div className="col-span-1 text-center">Saída</div>
-            <div className="col-span-2 text-center">Reconhecimento</div>
-            <div className="col-span-2 text-center">Fonte</div>
+            <div className="col-span-3 text-center">Reconhecimento</div>
             <div className="col-span-1 text-center">Ações</div>
         </div>
     );
@@ -67,26 +67,19 @@ export default function AlarmRow({ alarm, onAck, onClear }) {
 
             {/* DESKTOP */}
             <div className="hidden lg:grid grid-cols-12 gap-2 items-center text-xs">
-
-                <div className="col-span-3 font-medium">{alarm.name}</div>
-
+                <div className="col-span-2 font-medium">{alarm.name}</div>
+                <div className="col-span-2">{alarm.source}</div>
                 <div className="col-span-1 flex items-center justify-center">
                     {alarm.active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
-
                 <div className="col-span-1">{severityLabel}</div>
-
                 <div className="col-span-1">{formatShort(alarm.timestampIn)}</div>
-
                 <div className="col-span-1">{formatShort(alarm.timestampOut)}</div>
-
                 <div className="col-span-1 flex items-center justify-center">
                     {alarm.ack ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </div>
-
+                <div className="col-span-1">{alarm.ackUser || "-"}</div>
                 <div className="col-span-1">{formatShort(alarm.ackTimestamp)}</div>
-
-                <div className="col-span-2">{alarm.source}</div>
 
                 {/* ACTIONS → dentro da grid */}
                 <div className="col-span-1 flex items-center gap-1 justify-center">
