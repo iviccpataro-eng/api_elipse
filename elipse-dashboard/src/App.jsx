@@ -130,7 +130,7 @@ export default function App() {
   // Se o link é de convite, mostra a tela de registro
   if (invite) return <RegisterPage />;
 
-  const { alarms, hasNew, banner, setBanner, ack, clear, clearRecognized } = useAlarms(3000);
+  const { alarms, hasNew, banner, setBanner, ack, clear, clearRecognized, closeBanner } = useAlarms(3000);
   const [showPanel, setShowPanel] = useState(false);
 
   return (
