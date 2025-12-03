@@ -156,7 +156,13 @@ export default function App() {
         <>
           <Navbar onLogout={handleLogout} />
 
-          <AlarmBanner banner={banner} onClose={closeBanner} />
+          <AlarmBanner
+            message={banner?.message}
+            severity={banner?.severity}
+            visible={!!banner}
+            onClose={closeBanner}
+          />
+
           <AlarmFab
             count={alarms.length}
             hasNew={hasNew}
