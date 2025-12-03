@@ -4,6 +4,8 @@ export default function useAlarms(interval = 3000) {
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
+  const shownRef = useRef({});
+
   const [alarms, setAlarms] = useState([]);
   const [hasNew, setHasNew] = useState(false);
 
@@ -26,8 +28,8 @@ export default function useAlarms(interval = 3000) {
         severity >= 3
           ? "/sounds/critical.mp3"
           : severity === 2
-          ? "/sounds/alarm.mp3"
-          : "/sounds/info.mp3";
+          ? "/sounds/high.mp3"
+          : "/sounds/low.mp3";
 
       const audio = new Audio(path);
       audio.volume = severity >= 3 ? 1 : 0.6;
@@ -55,32 +57,32 @@ export default function useAlarms(interval = 3000) {
 
       // detecta novos alarmes (pelo id)
       data.forEach((a) => {
-        const id = a?.id;
-        if (!id) return;
+      
+    // Se o alarme ainda NÃO foi mostrado e está ativo
+    if (a.active && !shownRef.current[a.id]) {
 
-        if (!seenRef.current.has(id)) {
-          // novo
-          seenRef.current.add(id);
+        shownRef.current[a.id] = true; // marcar como exibido
 
-          const sev = Number(a.severity ?? 0);
-
-          // opcional: tocar som
-          // playAlarmSound(sev, id);
-
-          // enfileira banner com dados mínimos
-          setBannerQueue((q) => [
+        setBannerQueue((q) => [
             ...q,
             {
-              id,
-              message: `Novo alarme: ${a.name}`,
-              severity: sev,
-              name: a.name,
-            },
-          ]);
+                id: a.id,
+                message: `Novo alarme: ${a.name}`,
+                severity: a.severity || 0
+            }
+        ]);
 
-          setHasNew(true);
+        setHasNew(true);
+        console.log("🆕 Alarme novo detectado:", a.id, a.name);
+    }
+    // Limpar alarmes desativados
+    data.forEach((a) => {
+        if (!a.active && shownRef.current[a.id]) {
+            console.log("♻️ Alarme saiu, liberando para futuro:", a.id);
+            delete shownRef.current[a.id];
         }
-      });
+    });
+    });
     } catch (err) {
       console.error("[useAlarms] Erro carregando alarmes", err);
     }
