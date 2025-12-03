@@ -141,7 +141,8 @@ export default function Navbar({ onLogout }) {
 
                     {/* DROPDOWN */}
                     {userMenuOpen && (
-                        <div className="absolute right-0 mt-3 w-56 bg-white text-gray-800 rounded-xl shadow-xl p-4 z-50">
+                        <div className="absolute right-0 mt-3 w-56 bg-white text-gray-800 rounded-xl shadow-xl p-4 z-50"
+                            onClick={(e) => e.stopPropagation()}>
                             <div className="flex flex-col items-center pb-3 border-b">
                                 <div className="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center text-lg font-bold">
                                     {getInitials(user.name)}
@@ -152,13 +153,20 @@ export default function Navbar({ onLogout }) {
 
                             {/* MENU OPTIONS */}
                             <div className="flex flex-col pt-3">
-                                <Link to="/config" className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2">
+                                <Link
+                                    to="/tools"
+                                    onClick={() => setUserMenuOpen(false)} // 👈 fecha o menu corretamente
+                                    className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2"
+                                >
+
                                     <Settings className="w-4 h-4" /> Configurações
                                 </Link>
                                 <button
-                                    onClick={onLogout}
-                                    className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2 text-red-600"
-                                >
+                                    onClick={() => {
+                                        setUserMenuOpen(false); // 👈 fecha menu
+                                        onLogout(); // 👈 executa logout sem interferência
+                                    }}
+                                    className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2 text-red-600">
                                     <LogOut className="w-4 h-4" /> Logout
                                 </button>
                             </div>
@@ -186,7 +194,9 @@ export default function Navbar({ onLogout }) {
                     </button>
 
                     {userMenuOpen && (
-                        <div className="absolute right-0 mt-3 w-56 bg-white text-gray-800 rounded-xl shadow-xl p-4 z-50">
+                        <div className="absolute right-0 mt-3 w-56 bg-white text-gray-800 rounded-xl shadow-xl p-4 z-50"
+                            onClick={(e) => e.stopPropagation()}>
+
                             <div className="flex flex-col items-center pb-3 border-b">
                                 <div className="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center text-lg font-bold">
                                     {getInitials(user.name)}
@@ -196,13 +206,17 @@ export default function Navbar({ onLogout }) {
                             </div>
 
                             <div className="flex flex-col pt-3">
-                                <Link to="/config" className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2">
+                                <Link to="/tools"
+                                    onClick={() => setUserMenuOpen(false)} // 👈 fecha o menu corretamente
+                                    className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2">
                                     <Settings className="w-4 h-4" /> Configurações
                                 </Link>
                                 <button
-                                    onClick={onLogout}
-                                    className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2 text-red-600"
-                                >
+                                    onClick={() => {
+                                        setUserMenuOpen(false); // 👈 fecha menu
+                                        onLogout(); // 👈 executa logout sem interferência
+                                    }}
+                                    className="px-2 py-2 hover:bg-gray-100 rounded flex items-center gap-2 text-red-600">
                                     <LogOut className="w-4 h-4" /> Logout
                                 </button>
                             </div>

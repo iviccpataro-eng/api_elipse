@@ -96,25 +96,43 @@ export default function useAlarms(interval = 3000) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interval]);
 
-  // processa fila de banners (um por vez)
- useEffect(() => {
+  // ======= PROCESSAR FILA DE BANNERS (COM LOGS) =======
+useEffect(() => {
+  console.log("📢 useEffect disparou | banner =", banner, "| fila =", bannerQueue);
+
+  // Caso: não há banner ativo e existe algo na fila → mostrar próximo
   if (!banner && bannerQueue.length > 0) {
-
-    // pega primeiro da fila
     const nextBanner = bannerQueue[0];
-    setBanner(nextBanner);
+    console.log("➡️ Exibindo novo banner:", nextBanner);
 
-    // remove da fila
-    setBannerQueue((q) => q.slice(1));
+    setBanner(nextBanner); // ativa banner
+    setBannerQueue((q) => q.slice(1)); // remove da fila
 
-    // cria timeout para sumir após 5s
+    // cria timeout para remover após 5s
     const timer = setTimeout(() => {
-      setBanner(null); // <-- isso libera o espaço p/ próximo
+      console.log("⏳ Tempo expirou → removendo banner");
+      setBanner(null);
     }, 5000);
 
-    return () => clearTimeout(timer);
+    console.log("⏱️ Timer iniciado para remover banner em 5s");
+
+    return () => {
+      console.log("🧽 Limpando timer antigo (unmount/update)");
+      clearTimeout(timer);
+    };
   }
-  }, [bannerQueue, banner]);
+
+  // Caso: há banner ativo e fila vazia
+  if (banner && bannerQueue.length === 0) {
+    console.log("ℹ️ Banner ativo, mas fila está vazia.");
+  }
+
+  // Caso: nada para mostrar
+  if (!banner && bannerQueue.length === 0) {
+    console.log("✔ Fila vazia e nenhum banner ativo.");
+  }
+}, [bannerQueue, banner]);
+
 
   function closeBanner() {
     // fecha imediatamente e limpa banner atual — próxima execução do effect mostrará o próximo da fila
