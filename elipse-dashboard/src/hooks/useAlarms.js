@@ -97,22 +97,23 @@ export default function useAlarms(interval = 3000) {
   }, [interval]);
 
   // processa fila de banners (um por vez)
-  useEffect(() => {
-    if (banner) return; // já tem ativo
-    if (bannerQueue.length === 0) return;
+ useEffect(() => {
+  if (!banner && bannerQueue.length > 0) {
 
-    const next = bannerQueue[0];
-    setBanner(next);
+    // pega primeiro da fila
+    const nextBanner = bannerQueue[0];
+    setBanner(nextBanner);
+
+    // remove da fila
     setBannerQueue((q) => q.slice(1));
 
-    // timer para fechar automaticamente
-    bannerTimerRef.current = setTimeout(() => {
-      setBanner(null);
+    // cria timeout para sumir após 5s
+    const timer = setTimeout(() => {
+      setBanner(null); // <-- isso libera o espaço p/ próximo
     }, 5000);
 
-    return () => {
-      clearTimeout(bannerTimerRef.current);
-    };
+    return () => clearTimeout(timer);
+  }
   }, [bannerQueue, banner]);
 
   function closeBanner() {
