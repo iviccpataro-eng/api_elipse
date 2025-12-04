@@ -256,39 +256,61 @@ router.post("/clear-recognized", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const dados = global.dados || {};
-    const structureDetails = dados.structureDetails || {};
-
     const alarms = {};
 
-    for (const tag of Object.keys(structureDetails)) {
-      const equip = structureDetails[tag];
-      if (!equip) continue;
+    // Percorre TODA a estrutura de equipamentos do E3
+    for (const disc of Object.keys(dados)) {
+      const discObj = dados[disc];
+      if (!discObj || typeof discObj !== "object") continue;
 
-      const info = equip.info || {};
-      const alarmList = equip.alarm || [];
+      for (const predio of Object.keys(discObj)) {
+        const predObj = discObj[predio];
+        if (!predObj || typeof predObj !== "object") continue;
 
-      // 🔥 Building e Floor CORRETOS!
-      const edificioNome = info.building || info.edificio || info.predio || "";
-      const pavimentoNome = info.floor || info.pavimento || "";
+        for (const pav of Object.keys(predObj)) {
+          const pavObj = predObj[pav];
+          if (!pavObj || typeof pavObj !== "object") continue;
 
-      alarms[tag] = {
-        tag,
-        info: {
-          name: info.name || tag.split("/").pop(),
-          disciplina: info.discipline || tag.split("/")[0],
-          edificio: edificioNome,     // ✔ Nome real do prédio
-          pavimento: pavimentoNome    // ✔ Nome real do pavimento
-        },
-        alarms: alarmList.map(a => ({
-          name: a.name,
-          active: a.active,
-          severity: a.severity,
-          timestampIn: a.timestampIn || null,
-          timestampOut: a.timestampOut || null,
-          message: a.message || a.name,
-          raw: { ...a }
-        }))
-      };
+          for (const equip of Object.keys(pavObj)) {
+            const eqObj = pavObj[equip];
+            if (!eqObj || typeof eqObj !== "object") continue;
+
+            // TAG completa = DISC / PRÉDIO / PAVIMENTO / EQUIPAMENTO
+            const tag = `${disc}/${predio}/${pav}/${equip}`;
+
+            const info = Array.isArray(eqObj.info)
+              ? eqObj.info[0]
+              : eqObj.info || {};
+
+            const alarmList = eqObj.alarm || [];
+
+            // ---- IMPORTANTE ----
+            // Puxando nomes REAIS do Elipse
+            const edificioNome = info.building || predio;
+            const pavimentoNome = info.floor || pav;
+            const disciplinaNome = info.discipline || disc;
+
+            alarms[tag] = {
+              tag,
+              info: {
+                name: info.name || equip,
+                disciplina: disciplinaNome,   // nome real ou código
+                edificio: edificioNome,        // nome real do prédio
+                pavimento: pavimentoNome       // nome real do pavimento
+              },
+              alarms: alarmList.map(a => ({
+                name: a.name,
+                active: a.active,
+                severity: a.severity,
+                timestampIn: a.timestampIn || null,
+                timestampOut: a.timestampOut || null,
+                message: a.message || a.name,
+                raw: { ...a }
+              }))
+            };
+          }
+        }
+      }
     }
 
     return res.json({ ok: true, alarms });
