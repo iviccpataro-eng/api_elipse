@@ -237,7 +237,7 @@ router.post("/clear-recognized", async (req, res) => {
   }
 });
 
-/**
+/* ============================================================
  * GET /alarms
  * Retorna um objeto com as tags que possuem alarm[] no structureDetails
  * formato:
@@ -252,44 +252,46 @@ router.post("/clear-recognized", async (req, res) => {
  *     ...
  *   }
  * }
- **/
-router.get("/", (req, res) => {
+ * ============================================================ */
+router.get("/", async (req, res) => {
   try {
     const dados = global.dados || {};
-    const sd = dados.structureDetails || {};
+    const structureDetails = dados.structureDetails || {};
 
-    const out = {};
+    const alarms = {};
 
-    for (const tag of Object.keys(sd)) {
-      const node = sd[tag];
-      if (!node) continue;
-      const alarms = Array.isArray(node.alarm) ? node.alarm : (node.alarm ? [node.alarm] : []);
-      if (!alarms || alarms.length === 0) continue;
+    for (const tag of Object.keys(structureDetails)) {
+      const equip = structureDetails[tag];
+      if (!equip) continue;
 
-      // opcional: copiar parte da info do equipamento para ajudar frontend
-      const info = {
-        name: node.name || node.equipamento || null,
-        disciplina: node.disciplina || node.discipline || null,
-        edificio: node.edificio || node.building || null,
-        pavimento: node.pavimento || node.floor || null,
-      };
+      const info = equip.info || {};
+      const alarmList = equip.alarm || [];
 
-      out[tag] = {
+      // 🔥 Building e Floor CORRETOS!
+      const edificioNome = info.building || info.edificio || info.predio || "";
+      const pavimentoNome = info.floor || info.pavimento || "";
+
+      alarms[tag] = {
         tag,
-        info,
-        alarms: alarms.map(a => ({
+        info: {
+          name: info.name || tag.split("/").pop(),
+          disciplina: info.discipline || tag.split("/")[0],
+          edificio: edificioNome,     // ✔ Nome real do prédio
+          pavimento: pavimentoNome    // ✔ Nome real do pavimento
+        },
+        alarms: alarmList.map(a => ({
           name: a.name,
-          active: Boolean(a.active),
-          severity: typeof a.severity === "number" ? a.severity : (a.priority ?? 0),
-          timestampIn: a.timestampIn || a.timestamp || null,
+          active: a.active,
+          severity: a.severity,
+          timestampIn: a.timestampIn || null,
           timestampOut: a.timestampOut || null,
-          message: a.message || null,
-          raw: a
+          message: a.message || a.name,
+          raw: { ...a }
         }))
       };
     }
 
-    return res.json({ ok: true, alarms: out });
+    return res.json({ ok: true, alarms });
   } catch (err) {
     console.error("[ALARMS GET /alarms] Erro:", err);
     return res.status(500).json({ ok: false, erro: "Erro ao gerar /alarms" });
