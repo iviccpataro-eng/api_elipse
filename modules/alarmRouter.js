@@ -10,7 +10,6 @@ import {
   markNotified,
 } from "./alarmManager.js";
 import { normalizeBody } from "./utils.js";
-import fetch from "node-fetch";
 
 const router = express.Router();
 
