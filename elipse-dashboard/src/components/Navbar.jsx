@@ -45,12 +45,21 @@ export default function Navbar({ onLogout }) {
     const [buildingName, setBuildingName] = useState("Carregando...");
     const [user, setUser] = useState({ name: "Usuário", role: "operator", image: null });
 
-    const avatarRef = useRef(null);
+    const avatarDesktopRef = useRef(null);
+    const avatarTabletRef = useRef(null);
 
     // Fechar UserMenu ao clicar fora
     useEffect(() => {
         function handleClickOutside(e) {
-            if (avatarRef.current && !avatarRef.current.contains(e.target)) {
+            const clickedOutsideDesktop =
+                avatarDesktopRef.current &&
+                !avatarDesktopRef.current.contains(e.target);
+
+            const clickedOutsideTablet =
+                avatarTabletRef.current &&
+                !avatarTabletRef.current.contains(e.target);
+
+            if (clickedOutsideDesktop && clickedOutsideTablet) {
                 setUserMenuOpen(false);
             }
         }
@@ -123,7 +132,7 @@ export default function Navbar({ onLogout }) {
                 ))}
 
                 {/* AVATAR */}
-                <div ref={avatarRef} className="relative">
+                <div ref={avatarDesktopRef} className="relative">
                     <button
                         onClick={() => setUserMenuOpen(!userMenuOpen)}
                         className="w-10 h-10 rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center font-semibold"
@@ -185,7 +194,7 @@ export default function Navbar({ onLogout }) {
                 ))}
 
                 {/* AVATAR */}
-                <div ref={avatarRef} className="relative">
+                <div ref={avatarTabletRef} className="relative">
                     <button
                         onClick={() => setUserMenuOpen(!userMenuOpen)}
                         className="w-10 h-10 rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center font-semibold"
