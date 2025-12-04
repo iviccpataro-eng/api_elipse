@@ -4,185 +4,167 @@ export default function useAlarms(interval = 3000) {
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-  const shownRef = useRef({});
-
   const [alarms, setAlarms] = useState([]);
   const [hasNew, setHasNew] = useState(false);
 
-  const [bannerQueue, setBannerQueue] = useState([]); // fila de banners
-  const [banner, setBanner] = useState(null); // banner ativo
+  const [bannerQueue, setBannerQueue] = useState([]);
+  const [banner, setBanner] = useState(null);
 
-  const seenRef = useRef(new Set()); // alarm ids já vistos
+  const shownRef = useRef({}); // alarmes já notificados
   const pollRef = useRef(null);
-  const bannerTimerRef = useRef(null);
-  const lastPlayedRef = useRef(null);
+  const timerRef = useRef(null);
 
-  // função para tocar som (opcional — coloque arquivos em /public/sounds/)
-  function playAlarmSound(severity, id) {
+  /* ============================================================
+     🔊 Som do alarme
+  ============================================================ */
+  const lastSoundRef = useRef(null);
+
+  function playAlarmSound(sev, id) {
     try {
-      if (!severity) return;
-      if (lastPlayedRef.current === id) return;
-      lastPlayedRef.current = id;
+      if (lastSoundRef.current === id) return;
+      lastSoundRef.current = id;
 
-      const path =
-        severity >= 3
+      let path =
+        sev >= 3
           ? "/sounds/critical.mp3"
-          : severity === 2
+          : sev === 2
           ? "/sounds/high.mp3"
           : "/sounds/low.mp3";
 
       const audio = new Audio(path);
-      audio.volume = severity >= 3 ? 1 : 0.6;
-      audio.play().catch(() => {
-        // ignora erro de autoplay
-      });
-    } catch (e) {
-      console.warn("Erro ao tocar som:", e);
-    }
+      audio.volume = sev >= 3 ? 1 : 0.6;
+      audio.play().catch(() => {});
+    } catch {}
   }
 
+  /* ============================================================
+     📡 Fetch de alarmes
+  ============================================================ */
   async function fetchAlarms() {
     try {
       const res = await fetch(`${API_BASE}/alarms/active`);
-      // endpoint retorna ARRAY (não um objeto { alarms: [...] })
-      const data = await res.json();
+      const list = await res.json();
 
-      if (!data || !Array.isArray(data)) {
-        console.warn("[useAlarms] resposta inesperada do backend:", data);
+      if (!Array.isArray(list)) {
+        console.warn("Resposta inesperada:", list);
         return;
       }
 
-      // atualiza lista exibida
-      setAlarms(data);
+      setAlarms(list);
 
-      // detecta novos alarmes (pelo id)
-      data.forEach((a) => {
-      
-    // Se o alarme ainda NÃO foi mostrado e está ativo
-    if (a.active && !shownRef.current[a.id]) {
+      // Detectar novos alarmes
+      list.forEach((a) => {
+        if (a.active && !shownRef.current[a.id]) {
+          shownRef.current[a.id] = true;
 
-        shownRef.current[a.id] = true; // marcar como exibido
+          playAlarmSound(a.severity, a.id);
 
-        setBannerQueue((q) => [
+          setBannerQueue((q) => [
             ...q,
             {
-                id: a.id,
-                message: `Novo alarme: ${a.name}`,
-                severity: a.severity || 0
-            }
-        ]);
+              id: a.id,
+              message: `Novo alarme: ${a.name}`,
+              severity: a.severity || 0,
+            },
+          ]);
 
-        setHasNew(true);
-        console.log("🆕 Alarme novo detectado:", a.id, a.name);
-    }
-    // Limpar alarmes desativados
-    data.forEach((a) => {
-        if (!a.active && shownRef.current[a.id]) {
-            console.log("♻️ Alarme saiu, liberando para futuro:", a.id);
-            delete shownRef.current[a.id];
+          setHasNew(true);
         }
-    });
-    });
+      });
+
+      // Permitir alarme notificar de novo caso ele feche e volte
+      Object.keys(shownRef.current).forEach((id) => {
+        if (!list.find((a) => a.id == id)) {
+          delete shownRef.current[id];
+        }
+      });
     } catch (err) {
-      console.error("[useAlarms] Erro carregando alarmes", err);
+      console.error("Erro ao buscar alarmes:", err);
     }
   }
 
-  // polling
+  /* ============================================================
+     🔄 Polling
+  ============================================================ */
   useEffect(() => {
     fetchAlarms();
     pollRef.current = setInterval(fetchAlarms, interval);
-    return () => {
-      clearInterval(pollRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => clearInterval(pollRef.current);
   }, [interval]);
 
-  // ======= PROCESSAR FILA DE BANNERS (COM LOGS) =======
-useEffect(() => {
-  console.log("📢 useEffect disparou | banner =", banner, "| fila =", bannerQueue);
+  /* ============================================================
+     🎯 Sistema de fila real dos banners
+  ============================================================ */
+  useEffect(() => {
+    // Nada a fazer se já tem banner exibido
+    if (banner) return;
 
-  // Caso: não há banner ativo e existe algo na fila → mostrar próximo
-  if (!banner && bannerQueue.length > 0) {
-    const nextBanner = bannerQueue[0];
-    console.log("➡️ Exibindo novo banner:", nextBanner);
+    if (bannerQueue.length === 0) return;
 
-    setBanner(nextBanner); // ativa banner
-    setBannerQueue((q) => q.slice(1)); // remove da fila
+    // SEVERIDADE MAIS ALTA SEMPRE PRIMEIRO
+    const sorted = [...bannerQueue].sort(
+      (a, b) => b.severity - a.severity
+    );
 
-    // cria timeout para remover após 5s
-    const timer = setTimeout(() => {
-      console.log("⏳ Tempo expirou → removendo banner");
+    const next = sorted[0];
+
+    // Remove esse da fila
+    setBannerQueue((q) => q.filter((x) => x !== next));
+
+    // Exibe
+    setBanner(next);
+
+    // 🔥 se alarme é crítico, NÃO SOME
+    if (next.severity >= 3) return;
+
+    // ⏳ remove após 5 segundos
+    timerRef.current = setTimeout(() => {
       setBanner(null);
     }, 5000);
 
-    console.log("⏱️ Timer iniciado para remover banner em 5s");
+    return () => clearTimeout(timerRef.current);
+  }, [bannerQueue, banner]);
 
-    return () => {
-      console.log("🧽 Limpando timer antigo (unmount/update)");
-      clearTimeout(timer);
-    };
-  }
-
-  // Caso: há banner ativo e fila vazia
-  if (banner && bannerQueue.length === 0) {
-    console.log("ℹ️ Banner ativo, mas fila está vazia.");
-  }
-
-  // Caso: nada para mostrar
-  if (!banner && bannerQueue.length === 0) {
-    console.log("✔ Fila vazia e nenhum banner ativo.");
-  }
-}, [bannerQueue, banner]);
-
-
+  /* ============================================================
+     ❌ Fechar banner manualmente
+  ============================================================ */
   function closeBanner() {
-    // fecha imediatamente e limpa banner atual — próxima execução do effect mostrará o próximo da fila
+    clearTimeout(timerRef.current);
     setBanner(null);
   }
 
-  // ações (placeholder — integrar backend)
+  /* ============================================================
+     🔧 Ações ACK / CLEAR
+  ============================================================ */
   async function ack(tag, name) {
-    try {
-      await fetch(`${API_BASE}/alarms/ack`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag, name }),
-      });
-      // opcional: atualizar localmente
-      fetchAlarms();
-    } catch (e) {
-      console.error("Erro ao ACK:", e);
-    }
+    await fetch(`${API_BASE}/alarms/ack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag, name }),
+    });
+    fetchAlarms();
   }
 
   async function clear(tag, name) {
-    try {
-      await fetch(`${API_BASE}/alarms/clear`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag, name }),
-      });
-      fetchAlarms();
-    } catch (e) {
-      console.error("Erro ao limpar:", e);
-    }
+    await fetch(`${API_BASE}/alarms/clear`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag, name }),
+    });
+    fetchAlarms();
   }
 
   async function clearRecognized() {
-    try {
-      await fetch(`${API_BASE}/alarms/clear-recognized`, { method: "POST" });
-      fetchAlarms();
-    } catch (e) {
-      console.error("Erro clearRecognized:", e);
-    }
+    await fetch(`${API_BASE}/alarms/clear-recognized`, {
+      method: "POST",
+    });
+    fetchAlarms();
   }
 
   return {
     alarms,
     hasNew,
     banner,
-    setBanner,
     closeBanner,
     ack,
     clear,
