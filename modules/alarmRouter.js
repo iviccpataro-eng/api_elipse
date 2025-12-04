@@ -256,10 +256,32 @@ router.post("/clear-recognized", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const dados = global.dados || {};
+
+    // Disciplina válidas (tanto código quanto nome)
+    const disciplineMap = {
+      DB: "Dashboard",
+      AC: "Ar Condicionado",
+      IL: "Iluminação",
+      EL: "Elétrica",
+      HI: "Hidráulica",
+      DT: "Detecção de Incêndio",
+      CM: "Comunicação",
+      SC: "Segurança",
+      FR: "Ferramentas"
+    };
+
+    const validDisciplines = new Set([
+      ...Object.keys(disciplineMap),   // AC, IL, EL...
+      ...Object.values(disciplineMap) // Ar Condicionado, Iluminação...
+    ]);
+
     const alarms = {};
 
-    // Percorre TODA a estrutura de equipamentos do E3
     for (const disc of Object.keys(dados)) {
+
+      // ❌ Ignorar tudo que não for disciplina REAL
+      if (!validDisciplines.has(disc)) continue;
+
       const discObj = dados[disc];
       if (!discObj || typeof discObj !== "object") continue;
 
@@ -275,7 +297,7 @@ router.get("/", async (req, res) => {
             const eqObj = pavObj[equip];
             if (!eqObj || typeof eqObj !== "object") continue;
 
-            // TAG completa = DISC / PRÉDIO / PAVIMENTO / EQUIPAMENTO
+            // ---- TAG REAL DO EQUIPAMENTO ----
             const tag = `${disc}/${predio}/${pav}/${equip}`;
 
             const info = Array.isArray(eqObj.info)
@@ -284,19 +306,13 @@ router.get("/", async (req, res) => {
 
             const alarmList = eqObj.alarm || [];
 
-            // ---- IMPORTANTE ----
-            // Puxando nomes REAIS do Elipse
-            const edificioNome = info.building || predio;
-            const pavimentoNome = info.floor || pav;
-            const disciplinaNome = info.discipline || disc;
-
             alarms[tag] = {
               tag,
               info: {
                 name: info.name || equip,
-                disciplina: disciplinaNome,   // nome real ou código
-                edificio: edificioNome,        // nome real do prédio
-                pavimento: pavimentoNome       // nome real do pavimento
+                disciplina: info.discipline || disc,
+                edificio: info.building || predio,
+                pavimento: info.floor || pav
               },
               alarms: alarmList.map(a => ({
                 name: a.name,
