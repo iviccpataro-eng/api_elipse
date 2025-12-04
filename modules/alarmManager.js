@@ -76,8 +76,13 @@ export async function registerAlarm(tag, alarm) {
       ? new Date(alarm.timestamp)
       : new Date();
 
-    const message = alarm.message || buildMessage(name, tag);
-    const source = alarm.source || buildSource(tag);
+    const message = alarm.message?.trim()
+  ? alarm.message
+  : buildMessage(name, tag);
+
+    const source = alarm.source?.trim()
+  ? alarm.source
+  : buildSource(name, tag);
 
     // verificar se já existe ativo
     const existing = await pool.query(
