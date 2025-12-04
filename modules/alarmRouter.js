@@ -256,8 +256,8 @@ router.post("/clear-recognized", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const dados = global.dados || {};
+    const alarms = {};
 
-    // Disciplina válidas (tanto código quanto nome)
     const disciplineMap = {
       DB: "Dashboard",
       AC: "Ar Condicionado",
@@ -271,33 +271,25 @@ router.get("/", async (req, res) => {
     };
 
     const validDisciplines = new Set([
-      ...Object.keys(disciplineMap),   // AC, IL, EL...
-      ...Object.values(disciplineMap) // Ar Condicionado, Iluminação...
+      ...Object.keys(disciplineMap),
+      ...Object.values(disciplineMap)
     ]);
-
-    const alarms = {};
 
     for (const disc of Object.keys(dados)) {
 
-      // ❌ Ignorar tudo que não for disciplina REAL
       if (!validDisciplines.has(disc)) continue;
 
       const discObj = dados[disc];
-      if (!discObj || typeof discObj !== "object") continue;
 
       for (const predio of Object.keys(discObj)) {
         const predObj = discObj[predio];
-        if (!predObj || typeof predObj !== "object") continue;
 
         for (const pav of Object.keys(predObj)) {
           const pavObj = predObj[pav];
-          if (!pavObj || typeof pavObj !== "object") continue;
 
           for (const equip of Object.keys(pavObj)) {
             const eqObj = pavObj[equip];
-            if (!eqObj || typeof eqObj !== "object") continue;
 
-            // ---- TAG REAL DO EQUIPAMENTO ----
             const tag = `${disc}/${predio}/${pav}/${equip}`;
 
             const info = Array.isArray(eqObj.info)
@@ -312,7 +304,7 @@ router.get("/", async (req, res) => {
                 name: info.name || equip,
                 disciplina: info.discipline || disc,
                 edificio: info.building || predio,
-                pavimento: info.floor || pav
+                pavimento: info.floor || pav  // <<<<< AGORA CORRETO
               },
               alarms: alarmList.map(a => ({
                 name: a.name,
