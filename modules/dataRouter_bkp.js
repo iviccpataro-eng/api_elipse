@@ -3,6 +3,7 @@ import express from "express";
 import { Buffer } from "buffer";
 import { generateFrontendData } from "./structureBuilder.js";
 import { registerAlarm, clearAlarm } from "./alarmManager.js";
+import { extractAlarmsFromDados } from "../services/alarmExtractor.js";
 
 const router = express.Router();
 
@@ -93,52 +94,65 @@ function montarTag(disciplina, predio, pavimento, equipamento) {
 }
 
 /* -----------------------------------------------------------
-   🔥 Suporte universal para alarmes do Elipse
-   Agora suporta arrays tipo:
-   ["Nome", true, 0, "dt_in", "dt_out"]
+   Normalizadores de alarme
 ----------------------------------------------------------- */
-function normalizeAlarmArray(raw) {
+function normalizeAlarmArrayRaw(raw) {
   if (!Array.isArray(raw)) return null;
-
   const [name, active, severity, dt_in, dt_out] = raw;
-
   if (!name) return null;
-
   return {
     name,
     active: Boolean(active),
-    severity: severity ?? 0,
-    timestamp: dt_in || new Date().toISOString(),
+    severity: typeof severity === "number" ? severity : (severity ? Number(severity) : 0),
+    timestampIn: dt_in || null,
+    timestampOut: dt_out || null,
     message: name,
   };
 }
 
-function processIncomingAlarms(tag, alarms) {
+async function processIncomingAlarms(tag, alarms) {
   if (!Array.isArray(alarms)) return;
 
-  alarms.forEach((al) => {
-    let alarmObj = al;
+  // alarms can be: array-of-arrays OR array-of-objects
+  for (const al of alarms) {
+    let alarmObj = null;
 
-    // Se veio no formato array ["Nome", true, ...]
     if (Array.isArray(al)) {
-      alarmObj = normalizeAlarmArray(al);
-      if (!alarmObj) return;
+      alarmObj = normalizeAlarmArrayRaw(al);
+    } else if (al && typeof al === "object" && al.name) {
+      alarmObj = {
+        name: al.name,
+        active: Boolean(al.active),
+        severity: typeof al.severity === "number" ? al.severity : (al.severity ? Number(al.severity) : 0),
+        timestampIn: al.timestamp || al.timestampIn || null,
+        timestampOut: al.timestampOut || null,
+        message: al.message || al.name,
+        source: al.source || tag,
+      };
     }
 
-    if (!alarmObj || !alarmObj.name) return;
+    if (!alarmObj || !alarmObj.name) continue;
 
     if (alarmObj.active) {
-      registerAlarm(tag, alarmObj);
+      // Persistir novo evento (ou reativar se não duplicado)
+      await registerAlarm(tag, {
+        name: alarmObj.name,
+        severity: alarmObj.severity,
+        timestamp: alarmObj.timestampIn || new Date().toISOString(),
+        message: alarmObj.message,
+        source: alarmObj.source || tag,
+      });
     } else {
-      clearAlarm(tag, alarmObj.name);
+      // marca como finalizado (fecha timestamp_out)
+      await clearAlarm(tag, alarmObj.name);
     }
-  });
+  }
 }
 
 /* -----------------------------------------------------------
-   POST /dados
+   POST /dados  (AGORA async -> aguardamos persistência)
 ----------------------------------------------------------- */
-router.post("/dados", (req, res) => {
+router.post("/dados", async (req, res) => {
   try {
     let payload = decodePossiblyBase64Payload(req.body);
 
@@ -163,6 +177,7 @@ router.post("/dados", (req, res) => {
         mergeDeep(global.dados[discKey], discPayload);
       }
 
+      // Se houver alarmes no topo (sem tag) apenas logamos
       if (Array.isArray(payload.alarms)) {
         console.log("⚠️ Full payload trouxe alarmes sem tag — ignorando.");
       }
@@ -205,27 +220,24 @@ router.post("/dados", (req, res) => {
         unidades: payload.unidades || {},
       };
 
+      // persist raw detail for compatibility
       global.dados[disc][predio][pavimento][equipamento] = detail;
 
       /* -----------------------------------------------------------
-         🔥 NOVO — SUPORTE TOTAL para o formato do Elipse
-         payload.alarm: [["Nome", true, ...], ...]
+         Suporte a payload.alarm (array-of-arrays) enviado pelo Elipse
       ----------------------------------------------------------- */
       if (Array.isArray(payload.alarm)) {
-        const normalized = payload.alarm
-          .map(normalizeAlarmArray)
-          .filter((x) => x);
-
-        processIncomingAlarms(canonicalTag, normalized);
-        detail.alarm = normalized;
+        await processIncomingAlarms(canonicalTag, payload.alarm);
+        // store normalized alarms in details for frontend visibility
+        detail.alarm = (payload.alarm || []).map(normalizeAlarmArrayRaw).filter(Boolean);
       }
 
       /* -----------------------------------------------------------
-         🔥 SUPORTE para payload.alarms (varios alarmes)
+         Suporte a payload.alarms (another possible key)
       ----------------------------------------------------------- */
       if (Array.isArray(payload.alarms)) {
-        processIncomingAlarms(canonicalTag, payload.alarms);
-        detail.alarms = payload.alarms;
+        await processIncomingAlarms(canonicalTag, payload.alarms);
+        detail.alarms = (payload.alarms || []).map(normalizeAlarmArrayRaw).filter(Boolean);
       }
 
       /* -----------------------------------------------------------
@@ -233,9 +245,15 @@ router.post("/dados", (req, res) => {
       ----------------------------------------------------------- */
       if (payload.alarm && !Array.isArray(payload.alarm) && payload.alarm.name) {
         if (payload.alarm.active) {
-          registerAlarm(canonicalTag, payload.alarm);
+          await registerAlarm(canonicalTag, {
+            name: payload.alarm.name,
+            message: payload.alarm.message || "",
+            severity: payload.alarm.severity ?? 0,
+            timestamp: payload.alarm.timestamp || new Date().toISOString(),
+            source: payload.alarm.source || canonicalTag,
+          });
         } else {
-          clearAlarm(canonicalTag, payload.alarm.name);
+          await clearAlarm(canonicalTag, payload.alarm.name);
         }
         detail.alarm = payload.alarm;
       }
