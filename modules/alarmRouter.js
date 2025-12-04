@@ -256,69 +256,34 @@ router.post("/clear-recognized", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const dados = global.dados || {};
+    const details = dados.structureDetails || {};
+
     const alarms = {};
 
-    const disciplineMap = {
-      DB: "Dashboard",
-      AC: "Ar Condicionado",
-      IL: "Iluminação",
-      EL: "Elétrica",
-      HI: "Hidráulica",
-      DT: "Detecção de Incêndio",
-      CM: "Comunicação",
-      SC: "Segurança",
-      FR: "Ferramentas"
-    };
+    for (const tag of Object.keys(details)) {
+      const equip = details[tag];
 
-    const validDisciplines = new Set([
-      ...Object.keys(disciplineMap),
-      ...Object.values(disciplineMap)
-    ]);
+      const info = equip || {};
+      const alarmList = info.alarm || [];
 
-    for (const disc of Object.keys(dados)) {
-
-      if (!validDisciplines.has(disc)) continue;
-
-      const discObj = dados[disc];
-
-      for (const predio of Object.keys(discObj)) {
-        const predObj = discObj[predio];
-
-        for (const pav of Object.keys(predObj)) {
-          const pavObj = predObj[pav];
-
-          for (const equip of Object.keys(pavObj)) {
-            const eqObj = pavObj[equip];
-
-            const tag = `${disc}/${predio}/${pav}/${equip}`;
-
-            const info = Array.isArray(eqObj.info)
-              ? eqObj.info[0]
-              : eqObj.info || {};
-
-            const alarmList = eqObj.alarm || [];
-
-            alarms[tag] = {
-              tag,
-              info: {
-                name: info.name || equip,
-                disciplina: info.discipline || disc,
-                edificio: info.building || predio,
-                pavimento: info.floor || pav  // <<<<< AGORA CORRETO
-              },
-              alarms: alarmList.map(a => ({
-                name: a.name,
-                active: a.active,
-                severity: a.severity,
-                timestampIn: a.timestampIn || null,
-                timestampOut: a.timestampOut || null,
-                message: a.message || a.name,
-                raw: { ...a }
-              }))
-            };
-          }
-        }
-      }
+      alarms[tag] = {
+        tag,
+        info: {
+          name: info.name || tag.split("/").pop(),
+          disciplina: info.discipline || info.disciplina || tag.split("/")[0],
+          edificio: info.building || info.edificio || tag.split("/")[1],
+          pavimento: info.floor || info.pavimento || tag.split("/")[2],
+        },
+        alarms: alarmList.map(a => ({
+          name: a.name,
+          active: a.active,
+          severity: a.severity,
+          timestampIn: a.timestampIn || null,
+          timestampOut: a.timestampOut || null,
+          message: a.message || a.name,
+          raw: { ...a }
+        }))
+      };
     }
 
     return res.json({ ok: true, alarms });
