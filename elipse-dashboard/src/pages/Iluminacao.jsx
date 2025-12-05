@@ -134,7 +134,7 @@ export default function Iluminacao() {
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.map(([pavKey, eqList]) => (
+                {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
