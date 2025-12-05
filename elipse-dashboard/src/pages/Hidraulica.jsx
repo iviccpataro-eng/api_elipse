@@ -5,6 +5,7 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
+import { getRealBuildingName } from "../utils/getRealBuildingName";
 import { apiFetch } from "../utils/apiFetch"; // 🔥 novo
 
 export default function Hidraulica() {
@@ -81,7 +82,10 @@ export default function Hidraulica() {
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} –{" "}
+                    {getRealBuildingName(
+                        selectedBuilding,
+                        detalhes
+                    )} –{" "}
                     {getRealFloorName(
                         selectedBuilding,
                         selectedFloor,
@@ -122,10 +126,13 @@ export default function Hidraulica() {
                         className="bg-white rounded-2xl shadow p-4"
                     >
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {selectedBuilding} –{" "}
+                            {getRealBuildingName(
+                                selectedBuilding,
+                                detalhes
+                            )} –{" "}
                             {getRealFloorName(
                                 selectedBuilding,
-                                pavKey,
+                                selectedFloor,
                                 detalhes
                             )}
                         </h2>

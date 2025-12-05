@@ -139,10 +139,13 @@ export default function ArCondicionado() {
                 {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {selectedBuilding} –{" "}
+                            {getRealBuildingName(
+                                selectedBuilding,
+                                detalhes
+                            )} –{" "}
                             {getRealFloorName(
                                 selectedBuilding,
-                                pavKey,
+                                selectedFloor,
                                 detalhes
                             )}
                         </h2>
