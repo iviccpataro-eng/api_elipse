@@ -1,4 +1,4 @@
-export function getRealFloorName(building, floorKey, detalhes) {
+export function getRealFloorName(floorKey, detalhes) {
 
     const tag = Object.keys(detalhes).find(
         (t) => detalhes[t]?.pavimento === floorKey || detalhes[t]?.floorKey === floorKey

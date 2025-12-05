@@ -87,7 +87,6 @@ export default function Hidraulica() {
                         detalhes
                     )} –{" "}
                     {getRealFloorName(
-                        selectedBuilding,
                         selectedFloor,
                         detalhes
                     )}
@@ -131,7 +130,6 @@ export default function Hidraulica() {
                                 detalhes
                             )} –{" "}
                             {getRealFloorName(
-                                selectedBuilding,
                                 selectedFloor,
                                 detalhes
                             )}

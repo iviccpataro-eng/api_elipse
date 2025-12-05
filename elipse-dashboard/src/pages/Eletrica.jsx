@@ -103,7 +103,6 @@ export default function Eletrica() {
                         detalhes
                     )} –{" "}
                     {getRealFloorName(
-                        selectedBuilding,
                         selectedFloor,
                         detalhes
                     )}
@@ -147,7 +146,6 @@ export default function Eletrica() {
                                 detalhes
                             )} –{" "}
                             {getRealFloorName(
-                                selectedBuilding,
                                 selectedFloor,
                                 detalhes
                             )}

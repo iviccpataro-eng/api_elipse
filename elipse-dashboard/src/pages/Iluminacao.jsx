@@ -88,7 +88,6 @@ export default function Iluminacao() {
                         detalhes
                     )} –{" "}
                     {getRealFloorName(
-                        selectedBuilding,
                         selectedFloor,
                         detalhes
                     )}
@@ -128,9 +127,12 @@ export default function Iluminacao() {
                     >
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {selectedBuilding} –{" "}
-                            {getRealFloorName(
+                            {getRealBuildingName(
                                 selectedBuilding,
-                                pavKey,
+                                detalhes
+                            )} –{" "}
+                            {getRealFloorName(
+                                selectedFloor,
                                 detalhes
                             )}
                         </h2>

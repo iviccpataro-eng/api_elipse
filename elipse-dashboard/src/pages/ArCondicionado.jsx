@@ -98,7 +98,6 @@ export default function ArCondicionado() {
                         detalhes
                     )} –{" "}
                     {getRealFloorName(
-                        selectedBuilding,
                         selectedFloor,
                         detalhes
                     )}
@@ -144,7 +143,6 @@ export default function ArCondicionado() {
                                 detalhes
                             )} –{" "}
                             {getRealFloorName(
-                                selectedBuilding,
                                 selectedFloor,
                                 detalhes
                             )}
