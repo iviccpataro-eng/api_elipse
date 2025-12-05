@@ -85,7 +85,7 @@ router.get("/actives", async (req, res) => {
           ackUser: db?.ackUser ?? db?.ack_user ?? null,
           ackTimestamp: db?.ackTimestamp ?? db?.ack_timestamp ?? null,
           message: a.message || db?.message || null,
-          source: a.source || db?.source || buildSourceFromTag(tag),
+          source: buildSourceFromTag(tag) || a.source || db?.source,
           notified: db?.notified ?? false,
           // opcional: payload cru para debug
           rawFromE3: a,
@@ -140,15 +140,12 @@ router.get("/actives", async (req, res) => {
 });
 
 function buildSourceFromTag(tag) {
-  //const parts = tag.split("/").filter(Boolean);
-  // formato esperado: DISC/BUILD/FLOOR/EQUIP
-  //const building = parts[1] || "";
-  //const floor = parts[2] || "";
-  //const equip = parts[3] || parts[parts.length - 1] || "";
-  const building = tag.info?.building || tag.split("/")[1] || "";
-  const floor = tag.info?.floor || tag.split("/")[2] || "";
-  const equip = tag.info?.name || tag.split("/")[3] || "";
-  return `${building} > ${floor} > ${equip}`;
+  const equip = details[tag];
+  const info = equip || {};
+  const building = info.building || tag.split("/")[1] || "";
+  const floor = info.floor || tag.split("/")[2] || "";
+  const name = info.name || tag.split("/")[3] || "";
+  return `${building} > ${floor} > ${name}`;
 }
 
 /* ============================================================
