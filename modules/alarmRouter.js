@@ -264,25 +264,27 @@ router.get("/", async (req, res) => {
       const equip = details[tag];
 
       const info = equip || {};
-      const alarmList = info.alarm || [];
+      const alarmList = Array.isArray(info.alarm) ? info.alarm : [];
 
       alarms[tag] = {
-        tag,
-        info: {
-          name: info.name || tag.split("/").pop(),
-          disciplina: info.discipline || info.disciplina || tag.split("/")[0],
-          edificio: info.building || info.edificio || tag.split("/")[1],
-          pavimento: info.floor || info.pavimento || tag.split("/")[2],
-        },
-        alarms: alarmList.map(a => ({
-          name: a.name,
-          active: a.active,
-          severity: a.severity,
-          timestampIn: a.timestampIn || null,
-          timestampOut: a.timestampOut || null,
-          message: a.message || a.name,
-          raw: { ...a }
-        }))
+          tag,
+          info: {
+              name: info.name || tag.split("/").pop(),
+              disciplina: info.discipline || info.disciplina || tag.split("/")[0],
+              edificio: info.building || info.edificio || tag.split("/")[1],
+              pavimento: info.floor || info.pavimento || tag.split("/")[2],
+          },
+          alarms: alarmList
+              .filter(a => a && typeof a === "object")   // <-- Protege de valores inválidos
+              .map(a => ({
+                  name: a.name || "",
+                  active: !!a.active,
+                  severity: a.severity ?? 0,
+                  timestampIn: a.timestampIn || null,
+                  timestampOut: a.timestampOut || null,
+                  message: a.message || a.name || "",
+                  raw: { ...a }
+              }))
       };
     }
 
