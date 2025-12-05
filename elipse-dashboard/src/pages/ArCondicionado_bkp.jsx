@@ -6,6 +6,7 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
+import { apiFetch } from "../utils/apiFetch"; // 🔥 corrigido
 
 export default function ArCondicionado() {
     const [estrutura, setEstrutura] = useState({});
@@ -20,28 +21,23 @@ export default function ArCondicionado() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // 🔹 Função responsável por buscar toda a estrutura
-    const fetchAC = useCallback(() => {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-            setErro("Token não encontrado. Faça login novamente.");
-            setLoading(false);
-            return;
-        }
+    // ============================================================
+    // 🔹 Buscar dados da estrutura (com logout automático)
+    // ============================================================
+    const fetchAC = useCallback(async () => {
+        const data = await apiFetch(`${API_BASE}/estrutura`, {}, navigate);
 
-        fetch(`${API_BASE}/estrutura`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                setEstrutura(data.structure?.AC || {});
-                setDetalhes(data.structureDetails || {});
-            })
-            .catch(() => setErro("Falha na comunicação com a API."))
-            .finally(() => setLoading(false));
-    }, [API_BASE]);
+        if (!data) return; // token expirou → redirecionado automaticamente
 
-    // 🔹 Configura intervalo de atualização
+        setEstrutura(data.structure?.AC || {});
+        setDetalhes(data.structureDetails || {});
+        setErro("");
+        setLoading(false);
+    }, [API_BASE, navigate]);
+
+    // ============================================================
+    // 🔹 Intervalo de atualização baseado no token
+    // ============================================================
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
@@ -51,15 +47,14 @@ export default function ArCondicionado() {
 
         fetchAC();
         const interval = setInterval(fetchAC, Math.max(5000, refreshTime));
-
         return () => clearInterval(interval);
     }, [fetchAC]);
 
-    // 🔹 Logs organizados
+    // Debug útil
     useEffect(() => {
-        console.group("📦 Dados Carregados");
-        console.log("Estrutura AC carregada:", estrutura);
-        console.log("Detalhes AC carregados:", detalhes);
+        console.group("📦 Dados Carregados - AC");
+        console.log("Estrutura:", estrutura);
+        console.log("Detalhes:", detalhes);
         console.groupEnd();
     }, [estrutura, detalhes]);
 
@@ -67,6 +62,9 @@ export default function ArCondicionado() {
         navigate(`/arcondicionado/equipamento/${encodeURIComponent(tag)}`);
     };
 
+    // ============================================================
+    // 🔹 Estados de carregamento / erro
+    // ============================================================
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
@@ -75,18 +73,31 @@ export default function ArCondicionado() {
         );
 
     if (erro)
-        return <div className="p-6 pt-20 text-center text-red-500 font-medium">{erro}</div>;
+        return (
+            <div className="p-6 pt-20 text-center text-red-500 font-medium">
+                {erro}
+            </div>
+        );
 
+    // ============================================================
+    // 🔹 Conteúdo principal renderizado
+    // ============================================================
     let contentToRender;
 
-    // 🔹 Tela: Pavimento selecionado
+    // Pavimento selecionado
     if (selectedBuilding && selectedFloor) {
-        const equipamentos = estrutura[selectedBuilding]?.[selectedFloor] ?? [];
+        const equipamentos =
+            estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} – {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
+                    {selectedBuilding} –{" "}
+                    {getRealFloorName(
+                        selectedBuilding,
+                        selectedFloor,
+                        detalhes
+                    )}
                 </h2>
 
                 <EquipmentGrid
@@ -101,26 +112,35 @@ export default function ArCondicionado() {
         );
     }
 
-    // 🔹 Tela: Prédio selecionado
+    // Prédio selecionado
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
-        const pavimentosOrdenados = Object.entries(pavimentos).sort(([a], [b]) => {
-            const ord = (floorKey) => {
-                const tag = Object.keys(detalhes).find((t) =>
-                    t.includes(`/Principal/${floorKey}/`)
-                );
-                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
-            };
-            return ord(b) - ord(a);
-        });
+        // Ordenação correta dos pavimentos via detalhes
+        const pavimentosOrdenados = Object.entries(pavimentos).sort(
+            ([a], [b]) => {
+                const ord = (pav) => {
+                    const tag = Object.keys(detalhes).find((t) =>
+                        t.includes(`/AC/${selectedBuilding}/${pav}/`)
+                    );
+                    return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
+                };
+
+                return ord(b) - ord(a);
+            }
+        );
 
         contentToRender = (
             <div className="space-y-6">
                 {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {selectedBuilding} – {getRealFloorName(selectedBuilding, pavKey, detalhes)}
+                            {selectedBuilding} –{" "}
+                            {getRealFloorName(
+                                selectedBuilding,
+                                pavKey,
+                                detalhes
+                            )}
                         </h2>
 
                         <EquipmentGrid
@@ -137,7 +157,7 @@ export default function ArCondicionado() {
         );
     }
 
-    // 🔹 Tela Inicial
+    // Tela inicial
     else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
@@ -148,6 +168,9 @@ export default function ArCondicionado() {
         );
     }
 
+    // ============================================================
+    // 🔹 Layout com sidebar
+    // ============================================================
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
             <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
@@ -172,9 +195,7 @@ export default function ArCondicionado() {
                 />
             </aside>
 
-            <main className="flex-1 p-6 ml-64">
-                {contentToRender}
-            </main>
+            <main className="flex-1 p-6 ml-64">{contentToRender}</main>
         </div>
     );
 }
