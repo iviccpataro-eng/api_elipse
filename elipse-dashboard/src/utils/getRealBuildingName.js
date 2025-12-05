@@ -8,17 +8,13 @@
  * - Se achar e existir info.building → retorna o nome real
  * - Caso não encontre, retorna o alias `building` (fallback básico)
  */
-export function getRealBuildingName(building, detalhes) {
+export function getRealBuildingName(buildingKey, detalhes) {
 
-    // encontra qualquer tag do prédio (estrutura TAG: disciplina / building / floor / equipamento)
-    const tag = Object.keys(detalhes).find((t) => {
-        const parts = t.split("/");
-        return parts.length >= 2 && parts[1] === building;
-    });
+    const tag = Object.keys(detalhes).find(
+        (t) => detalhes[t]?.predio === buildingKey || detalhes[t]?.buildingKey === buildingKey
+    );
 
-    // se não achou nenhum tag, retorna o alias
-    if (!tag) return building;
+    if (!tag) return buildingKey; // fallback seguro
 
-    // se achou → retorna exclusivamente info.building
-    return detalhes[tag]?.info?.building || building;
+    return detalhes[tag].building || detalhes[tag].predio || buildingKey;
 }
