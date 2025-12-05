@@ -7,6 +7,7 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
+import { getRealBuildingName } from "../utils/getRealBuildingName";
 import { apiFetch } from "../utils/apiFetch"; // 🔥 padronização
 
 export default function Eletrica() {
