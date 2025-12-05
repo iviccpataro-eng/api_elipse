@@ -140,11 +140,14 @@ router.get("/actives", async (req, res) => {
 });
 
 function buildSourceFromTag(tag) {
-  const parts = tag.split("/").filter(Boolean);
+  //const parts = tag.split("/").filter(Boolean);
   // formato esperado: DISC/BUILD/FLOOR/EQUIP
-  const building = parts[1] || "";
-  const floor = parts[2] || "";
-  const equip = parts[3] || parts[parts.length - 1] || "";
+  //const building = parts[1] || "";
+  //const floor = parts[2] || "";
+  //const equip = parts[3] || parts[parts.length - 1] || "";
+  const building = tag.info?.building || tag.split("/")[1] || "";
+  const floor = tag.info?.floor || tag.split("/")[2] || "";
+  const equip = tag.info?.name || tag.split("/")[3] || "";
   return `${building} > ${floor} > ${equip}`;
 }
 
