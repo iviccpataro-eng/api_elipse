@@ -16,7 +16,6 @@ export default function ArCondicionado() {
     const [erro, setErro] = useState("");
     const [selectedBuilding, setSelectedBuilding] = useState(null);
     const [selectedFloor, setSelectedFloor] = useState(null);
-
     const navigate = useNavigate();
 
     const API_BASE =
@@ -69,7 +68,7 @@ export default function ArCondicionado() {
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
-                Carregando Ar Condicionado...
+                Carregando dados de Ar Condicionado...
             </div>
         );
 
@@ -129,7 +128,6 @@ export default function ArCondicionado() {
                     );
                     return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
                 };
-
                 return ord(b) - ord(a);
             }
         );
@@ -139,15 +137,8 @@ export default function ArCondicionado() {
                 {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {getRealBuildingName(
-                                selectedBuilding,
-                                detalhes
-                            )} –{" "}
-                            {getRealFloorName(
-                                selectedBuilding,
-                                pavKey,
-                                detalhes
-                            )}
+                            {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
+                            {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
                         </h2>
 
                         <EquipmentGrid

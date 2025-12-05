@@ -1,3 +1,4 @@
+// src/pages/Iluminacao.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lightbulb } from "lucide-react";
@@ -20,34 +21,36 @@ export default function Iluminacao() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // ------------ Carregar dados com TOKEN AUTO-LOGOUT ------------
-    const fetchData = useCallback(async () => {
+    // ============================================================
+    // 🔹 Buscar dados da estrutura (com logout automático)
+    // ============================================================
+    const fetchIL = useCallback(async () => {
         const data = await apiFetch(`${API_BASE}/estrutura`, {}, navigate);
 
         if (!data) return; // token expirou → login automático
 
         setEstrutura(data.structure?.IL || {});
         setDetalhes(data.structureDetails || {});
-
         setErro("");
         setLoading(false);
     }, [API_BASE, navigate]);
 
-    // ------------ Intervalo de atualização ------------
+    // ============================================================
+    // 🔹 Intervalo de atualização baseado no token
+    // ============================================================
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
         const user = jwtDecode(token);
-        const refreshTime = (user?.refreshtime || 15) * 1000;
+        const refreshTime = (user?.refreshtime || 10) * 1000;
 
-        fetchData();
-
-        const interval = setInterval(fetchData, Math.max(5000, refreshTime));
+        fetchIL();
+        const interval = setInterval(fetchIL, Math.max(5000, refreshTime));
         return () => clearInterval(interval);
-    }, [fetchData]);
+    }, [fetchIL]);
 
-    // Debug opcional
+    // Debug útil
     useEffect(() => {
         console.group("📦 Dados Carregados - IL");
         console.log("Estrutura:", estrutura);
@@ -55,15 +58,17 @@ export default function Iluminacao() {
         console.groupEnd();
     }, [estrutura, detalhes]);
 
-    const handleEquipamentoClick = (tag) => {
+    const handleEquipClick = (tag) => {
         navigate(`/iluminacao/equipamento/${encodeURIComponent(tag)}`);
     };
 
-    // ------------ Renderização ------------
+    // ============================================================
+    // 🔹 Estados de carregamento / erro
+    // ============================================================
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
-                Carregando dados...
+                Carregando dados de Iluminação ...
             </div>
         );
 
@@ -74,8 +79,12 @@ export default function Iluminacao() {
             </div>
         );
 
+    // ============================================================
+    // 🔹 Conteúdo principal renderizado
+    // ============================================================
     let contentToRender;
 
+    // Pavimento selecionado
     if (selectedBuilding && selectedFloor) {
         const equipamentos =
             estrutura[selectedBuilding]?.[selectedFloor] || [];
@@ -99,14 +108,18 @@ export default function Iluminacao() {
                     selectedBuilding={selectedBuilding}
                     selectedFloor={selectedFloor}
                     detalhes={detalhes}
+                    onClick={handleEquipClick}
                     disciplineCode="IL"
-                    onClick={handleEquipamentoClick}
                 />
             </div>
         );
-    } else if (selectedBuilding) {
+    }
+
+    // Prédio selecionado
+    else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
+        // Ordenação correta dos pavimentos via detalhes
         const pavimentosOrdenados = Object.entries(pavimentos).sort(
             ([a], [b]) => {
                 const ord = (pav) => {
@@ -122,35 +135,28 @@ export default function Iluminacao() {
         contentToRender = (
             <div className="space-y-6">
                 {pavimentosOrdenados.map(([pavKey, eqList]) => (
-                    <div
-                        key={pavKey}
-                        className="bg-white rounded-2xl shadow p-4"
-                    >
+                    <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {getRealBuildingName(
-                                selectedBuilding,
-                                detalhes
-                            )} –{" "}
-                            {getRealFloorName(
-                                selectedBuilding,
-                                selectedFloor,
-                                detalhes
-                            )}
+                            {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
+                            {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={eqList}
+                            equipamentos={equipamentos}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
+                            onClick={handleEquipClick}
                             disciplineCode="IL"
-                            onClick={handleEquipamentoClick}
                         />
                     </div>
                 ))}
             </div>
         );
-    } else {
+    }
+
+    // Tela inicial
+    else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
                 <span className="text-lg italic">
@@ -160,6 +166,9 @@ export default function Iluminacao() {
         );
     }
 
+    // ============================================================
+    // 🔹 Layout com sidebar
+    // ============================================================
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
             <aside className="w-64 bg-white border-r p-4 shadow-sm fixed top-16 left-0 h-[calc(100vh-4rem)] overflow-y-auto">
@@ -173,13 +182,13 @@ export default function Iluminacao() {
                     detalhes={detalhes}
                     selectedBuilding={selectedBuilding}
                     selectedFloor={selectedFloor}
-                    onSelectBuilding={(b) => {
-                        setSelectedBuilding(b);
+                    onSelectBuilding={(building) => {
+                        setSelectedBuilding(building);
                         setSelectedFloor(null);
                     }}
-                    onSelectFloor={(b, f) => {
-                        setSelectedBuilding(b);
-                        setSelectedFloor(f);
+                    onSelectFloor={(building, floor) => {
+                        setSelectedBuilding(building);
+                        setSelectedFloor(floor);
                     }}
                 />
             </aside>
