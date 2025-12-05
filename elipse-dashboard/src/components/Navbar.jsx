@@ -91,14 +91,19 @@ export default function Navbar({ onLogout }) {
             const token = localStorage.getItem("authToken");
             if (token) {
                 const payload = JSON.parse(atob(token.split(".")[1]));
+
                 setUser({
-                    name: payload?.username || "Usuário",
+                    name:
+                        payload?.user ||     // ✔ valor REAL do seu token
+                        payload?.username ||
+                        payload?.name ||
+                        "Usuário",
                     role: payload?.role || "operador",
                     image: payload?.image || null,
                 });
             }
-        } catch (e) {
-            console.error("Erro ao ler token:", e);
+        } catch (err) {
+            console.error("Erro ao decodificar token:", err);
         }
     }, []);
 
