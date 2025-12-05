@@ -11,10 +11,10 @@
 export function getRealBuildingName(buildingKey, detalhes) {
 
     const tag = Object.keys(detalhes).find(
-        (t) => detalhes[t]?.predio === buildingKey || detalhes[t]?.buildingKey === buildingKey
+        (t) => detalhes[t]?.edificio === buildingKey || detalhes[t]?.buildingKey === buildingKey
     );
 
     if (!tag) return buildingKey; // fallback seguro
 
-    return detalhes[tag].building || detalhes[tag].predio || buildingKey;
+    return detalhes[tag].building || detalhes[tag].edificio || buildingKey;
 }
