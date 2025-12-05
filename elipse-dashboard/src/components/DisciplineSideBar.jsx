@@ -2,7 +2,7 @@
 import React from 'react';
 import { Building, Layers2 } from "lucide-react";
 import { getRealFloorName } from "../utils/getRealFloorName";
-
+import { getRealBuildingName } from '../utils/getRealBuildingName';
 
 // Helper to get a representative ordPav for a floor, to be used in sorting.
 const getFloorOrder = (building, floor, detalhes) => {
@@ -50,7 +50,7 @@ export default function DisciplineSidebar({
                                 }`}
                         >
                             <Building className="h-5 w-5 mr-3 flex-shrink-0" />
-                            <span className="flex-grow font-medium">{building}</span>
+                            <span className="flex-grow font-medium">{getRealBuildingName(building, detalhes)}</span>
                         </button>
 
                         {/* Always-visible floors */}
