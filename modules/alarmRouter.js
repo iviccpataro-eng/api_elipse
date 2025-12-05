@@ -37,41 +37,39 @@ router.post("/", async (req, res) => {
 });
 
 /* ============================================================
-   GET /alarms/active
+   GET /alarms/actives
    ============================================================ */
 router.get("/actives", async (req, res) => {
   try {
-    // 1) Dados do E3 (crus) via global.dados.structureDetails
     const dados = global.dados || {};
     const sd = dados.structureDetails || {};
 
-    // 2) Dados ativos do banco (registros que já foram persistidos)
-    const persisted = await getActiveAlarms(); // [{ id, tag, name, severity, ... }, ...]
+    const persisted = await getActiveAlarms();
 
-    // montar um map para acesso rápido por tag|name
     const persistedMap = new Map();
     for (const p of persisted) {
-      const key = `${p.tag}|${p.name}`;
-      persistedMap.set(key, p);
+      persistedMap.set(`${p.tag}|${p.name}`, p);
     }
 
-    // 3) varrer structureDetails para achar alarmes ativos
     const actives = [];
 
     for (const tag of Object.keys(sd)) {
       const node = sd[tag];
       if (!node) continue;
-      const alarms = Array.isArray(node.alarm) ? node.alarm : (node.alarm ? [node.alarm] : []);
-      if (!alarms || alarms.length === 0) continue;
+
+      const alarms = Array.isArray(node.alarm)
+        ? node.alarm
+        : node.alarm ? [node.alarm] : [];
+
+      if (!alarms.length) continue;
 
       for (const a of alarms) {
         if (!a?.name) continue;
-        if (!a.active) continue; // só queremos ativos aqui
+        if (!a.active) continue;
 
         const key = `${tag}|${a.name}`;
         const db = persistedMap.get(key);
 
-        // construir o objeto final para frontend
         const out = {
           id: db?.id ?? null,
           tag,
@@ -80,14 +78,18 @@ router.get("/actives", async (req, res) => {
           active: true,
           timestampIn: a.timestampIn || a.timestamp || null,
           timestampOut: a.timestampOut || null,
-          // ack / notified — preferir dados do DB quando existir, caso contrário defaults
+
           ack: db?.ack ?? false,
           ackUser: db?.ackUser ?? db?.ack_user ?? null,
           ackTimestamp: db?.ackTimestamp ?? db?.ack_timestamp ?? null,
-          message: a.message || db?.message || null,
-          source: buildSourceFromTag(tag) || a.source || db?.source,
+
+          message: a.message || db?.message || a.name || null,
+
+          // 🔥 CORRIGIDO — usa o registro correto sem depender de "details"
+          source: buildSourceFromTag(tag, node, dados.structure),
+
           notified: db?.notified ?? false,
-          // opcional: payload cru para debug
+
           rawFromE3: a,
           rawDB: db ?? null
         };
@@ -96,13 +98,12 @@ router.get("/actives", async (req, res) => {
       }
     }
 
-    // 4) também incluir alarmes que existem no DB mas não aparecem em structureDetails (opcional)
-    //    — ex: registro ativo no banco mas E3 momentaneamente não enviou (evita sumiço)
+    // Adiciona alarmes ativos apenas no DB
     for (const p of persisted) {
       const key = `${p.tag}|${p.name}`;
-      const existsInActives = actives.find(x => `${x.tag}|${x.name}` === key);
-      if (!existsInActives) {
-        // adicionar vindo do DB (sem dados E3)
+      const exists = actives.some(x => `${x.tag}|${x.name}` === key);
+
+      if (!exists) {
         actives.push({
           id: p.id,
           tag: p.tag,
@@ -123,30 +124,33 @@ router.get("/actives", async (req, res) => {
       }
     }
 
-    // 5) ordenação: severity desc, timestampIn asc (mesma lógica do alarmManager.getActiveAlarms)
     actives.sort((a, b) => {
       const s = (b.severity ?? 0) - (a.severity ?? 0);
       if (s !== 0) return s;
-      const ta = a.timestampIn ? new Date(a.timestampIn).getTime() : 0;
-      const tb = b.timestampIn ? new Date(b.timestampIn).getTime() : 0;
-      return ta - tb;
+      return (new Date(a.timestampIn).getTime() || 0) - (new Date(b.timestampIn).getTime() || 0);
     });
 
     return res.json({ ok: true, total: actives.length, alarms: actives });
+
   } catch (err) {
     console.error("[/alarms/actives] Erro:", err);
     return res.status(500).json({ ok: false, erro: "Erro ao gerar /alarms/actives" });
   }
 });
 
-function buildSourceFromTag(tag) {
-  const equip = details[tag];
-  const info = equip || {};
-  const building = info.building || tag.split("/")[1] || "";
-  const floor = info.floor || tag.split("/")[2] || "";
-  const name = info.name || tag.split("/")[3] || "";
-  return `${building} > ${floor} > ${name}`;
+/* ============================================================
+   Função correta de montagem da SOURCE amigável
+   ============================================================ */
+function buildSourceFromTag(tag, node, structure) {
+  if (!node) return tag;
+
+  const equipName = node.name || tag.split("/").pop();
+  const building = node.building || node.edificio || tag.split("/")[1] || "";
+  const floor = node.floor || node.pavimento || tag.split("/")[2] || "";
+
+  return `${building} > ${floor} > ${equipName}`;
 }
+
 
 /* ============================================================
    GET /alarms/history
