@@ -6,8 +6,7 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
-import { getRealBuildingName } from "../utils/getRealBuildingName";
-import { apiFetch } from "../utils/apiFetch";
+import { apiFetch } from "../utils/apiFetch"; // 🔥 corrigido
 
 export default function ArCondicionado() {
     const [estrutura, setEstrutura] = useState({});
@@ -93,11 +92,9 @@ export default function ArCondicionado() {
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {getRealBuildingName(
-                        selectedBuilding,
-                        detalhes
-                    )} –{" "}
+                    {selectedBuilding} –{" "}
                     {getRealFloorName(
+                        selectedBuilding,
                         selectedFloor,
                         detalhes
                     )}
@@ -138,12 +135,10 @@ export default function ArCondicionado() {
                 {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {getRealBuildingName(
-                                selectedBuilding,
-                                detalhes
-                            )} –{" "}
+                            {selectedBuilding} –{" "}
                             {getRealFloorName(
-                                selectedFloor,
+                                selectedBuilding,
+                                pavKey,
                                 detalhes
                             )}
                         </h2>

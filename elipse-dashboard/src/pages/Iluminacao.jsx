@@ -5,7 +5,6 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
-import { getRealBuildingName } from "../utils/getRealBuildingName";
 import { apiFetch } from "../utils/apiFetch"; // 🔥 novo
 
 export default function Iluminacao() {
@@ -83,11 +82,9 @@ export default function Iluminacao() {
         contentToRender = (
             <div className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {getRealBuildingName(
-                        selectedBuilding,
-                        detalhes
-                    )} –{" "}
+                    {selectedBuilding} –{" "}
                     {getRealFloorName(
+                        selectedBuilding,
                         selectedFloor,
                         detalhes
                     )}
@@ -127,12 +124,9 @@ export default function Iluminacao() {
                     >
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {selectedBuilding} –{" "}
-                            {getRealBuildingName(
-                                selectedBuilding,
-                                detalhes
-                            )} –{" "}
                             {getRealFloorName(
-                                selectedFloor,
+                                selectedBuilding,
+                                pavKey,
                                 detalhes
                             )}
                         </h2>
