@@ -116,18 +116,19 @@ export default function ArCondicionado() {
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
+        // Garante que sempre estamos lidando com um array de entries
+        const pavimentosEntries = Object.entries(pavimentos || {});
+
         // Ordenação correta dos pavimentos via detalhes
-        const pavimentosOrdenados = Object.entries(pavimentos).sort(
-            ([a], [b]) => {
-                const ord = (pav) => {
-                    const tag = Object.keys(detalhes).find((t) =>
-                        t.includes(`/AC/${selectedBuilding}/${pav}/`)
-                    );
-                    return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
-                };
-                return ord(b) - ord(a);
-            }
-        );
+        const pavimentosOrdenados = pavimentosEntries.sort(([a], [b]) => {
+            const ord = (pav) => {
+                const tag = Object.keys(detalhes || {}).find((t) =>
+                    t.includes(`/AC/${selectedBuilding}/${pav}/`)
+                );
+                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
+            };
+            return ord(b) - ord(a);
+        });
 
         contentToRender = (
             <div className="space-y-6">
@@ -135,7 +136,7 @@ export default function ArCondicionado() {
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
-                            {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
+                            {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
