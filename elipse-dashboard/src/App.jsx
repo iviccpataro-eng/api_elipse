@@ -164,7 +164,11 @@ export default function App() {
           <AlarmBanner
             banner={banner}
             onClose={closeBanner}
-            onClick={() => banner && goToEquipment(banner.tag)}
+            onClick={() => {
+              if (!banner) return;
+              navigate(`/${banner.disciplineRoute}/equipamento/${encodeURIComponent(banner.tag)}`);
+              closeBanner();
+            }}
           />
 
           {/* FAB com número de alarmes */}

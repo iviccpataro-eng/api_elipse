@@ -57,6 +57,21 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
+     🧩 Configuração da Disciplina do Alarme
+  ============================================================ */
+  function getDisciplineRoute(tag) {
+  const root = tag.split("/")[0]; // AC, IL, EL, HD ...
+
+  switch (root) {
+    case "AC": return "arcondicionado";
+    case "IL": return "iluminacao";
+    case "EL": return "eletrica";
+    case "HD": return "hidraulica";
+    default: return "equipamento";
+  }
+}
+
+  /* ============================================================
      📡 FETCH DE ALARMES
   ============================================================ */
   async function fetchAlarms() {
@@ -148,7 +163,21 @@ export default function useAlarms(interval = 3000) {
     const next = sorted[0];
 
     // Remove da fila
-    setBannerQueue((q) => q.filter((x) => x !== next));
+    setBannerQueue((q) => [
+      ...q,
+      {
+        id: a.id,
+        severity: a.severity,
+        tag: a.tag,
+
+        name: a.name,
+        equipment: a.info?.equipamento || a.equipment,
+        floor: a.info?.pavimento || a.floor,
+        building: a.info?.prédio || a.building,
+
+        disciplineRoute: getDisciplineRoute(a.tag)
+      },
+    ]);
 
     // Exibe banner
     setBanner(next);
