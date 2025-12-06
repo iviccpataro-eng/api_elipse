@@ -1,3 +1,4 @@
+// src/pages/ArCondicionado.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Droplets } from "lucide-react";
@@ -5,7 +6,8 @@ import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
-import { apiFetch } from "../utils/apiFetch"; // 🔥 novo
+import { getRealBuildingName } from "../utils/getRealBuildingName";
+import { apiFetch } from "../utils/apiFetch";
 
 export default function Hidraulica() {
     const [estrutura, setEstrutura] = useState({});
@@ -19,33 +21,39 @@ export default function Hidraulica() {
     const API_BASE =
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
-    // ------------ Carregar dados com TOKEN AUTO-LOGOUT ------------
-    const fetchData = useCallback(async () => {
+    // ============================================================
+    // 🔹 Buscar estrutura e detalhes da API (com logout automático)
+    // ============================================================
+    const fetchHI = useCallback(async () => {
         const data = await apiFetch(`${API_BASE}/estrutura`, {}, navigate);
 
-        if (!data) return; // token expirado → redirecionado ao login
+        if (!data) return; // token expirou → apiFetch já redirecionou
 
-        setEstrutura(data.structure?.HI || {});
+        setEstrutura(data.structure?.AC || {});
         setDetalhes(data.structureDetails || {});
         setErro("");
         setLoading(false);
     }, [API_BASE, navigate]);
 
-    // ------------ Intervalo de atualização ------------
+    // ============================================================
+    // 🔹 Atualização periódica baseada no refresh time do token
+    // ============================================================
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
         const user = jwtDecode(token);
-        const refreshTime = (user?.refreshtime || 15) * 1000;
+        const refreshTimeMs = (user?.refreshtime || 10) * 1000;
 
-        fetchData();
+        fetchHI();
+        const interval = setInterval(fetchHI, Math.max(5000, refreshTimeMs));
 
-        const interval = setInterval(fetchData, Math.max(5000, refreshTime));
         return () => clearInterval(interval);
-    }, [fetchData]);
+    }, [fetchHI]);
 
-    // Debug opcional
+    // ============================================================
+    // 🔹 Debug
+    // ============================================================
     useEffect(() => {
         console.group("📦 Dados Carregados - HI");
         console.log("Estrutura:", estrutura);
@@ -53,15 +61,17 @@ export default function Hidraulica() {
         console.groupEnd();
     }, [estrutura, detalhes]);
 
-    const handleEquipamentoClick = (tag) => {
+    const handleEquipClick = (tag) => {
         navigate(`/hidraulica/equipamento/${encodeURIComponent(tag)}`);
     };
 
-    // ------------ Renderização ------------
+    // ============================================================
+    // 🔹 Loading / Erro
+    // ============================================================
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
-                Carregando dados...
+                Carregando dados de Hidráulica...
             </div>
         );
 
@@ -72,36 +82,46 @@ export default function Hidraulica() {
             </div>
         );
 
+    // ============================================================
+    // 🔹 Conteúdo principal
+    // ============================================================
     let contentToRender;
 
+    // ============================================================
+    // ✅ CASO 1 — Pavimento selecionado
+    // ============================================================
     if (selectedBuilding && selectedFloor) {
         const equipamentos =
-            estrutura[selectedBuilding]?.[selectedFloor] || [];
+            estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
-            <div className="bg-white rounded-2xl shadow p-4">
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {selectedBuilding} –{" "}
-                    {getRealFloorName(
-                        selectedBuilding,
-                        selectedFloor,
-                        detalhes
-                    )}
-                </h2>
+            <div className="space-y-6">
+                <div className="bg-white rounded-2xl shadow p-4">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
+                        {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
+                    </h2>
 
-                <EquipmentGrid
-                    equipamentos={equipamentos}
-                    selectedBuilding={selectedBuilding}
-                    selectedFloor={selectedFloor}
-                    detalhes={detalhes}
-                    disciplineCode="HI"
-                    onClick={handleEquipamentoClick}
-                />
+                    <EquipmentGrid
+                        equipamentos={equipamentos}
+                        selectedBuilding={selectedBuilding}
+                        selectedFloor={selectedFloor}
+                        detalhes={detalhes}
+                        onClick={handleEquipClick}
+                        disciplineCode="HI"
+                    />
+                </div>
             </div>
         );
-    } else if (selectedBuilding) {
+    }
+
+    // ============================================================
+    // ✅ CASO 2 — Prédio selecionado (listar pavimentos)
+    // ============================================================
+    else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
+        // Ordenar pavimentos pelo ordPav do primeiro equipamento que encontrar
         const pavimentosOrdenados = Object.entries(pavimentos).sort(
             ([a], [b]) => {
                 const ord = (pav) => {
@@ -116,33 +136,31 @@ export default function Hidraulica() {
 
         contentToRender = (
             <div className="space-y-6">
-                {pavimentosOrdenados.map(([pavKey, eqList]) => (
-                    <div
-                        key={pavKey}
-                        className="bg-white rounded-2xl shadow p-4"
-                    >
+                {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
+                    <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                            {selectedBuilding} –{" "}
-                            {getRealFloorName(
-                                selectedBuilding,
-                                pavKey,
-                                detalhes
-                            )}
+                            {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
+                            {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
-                            equipamentos={eqList}
+                            equipamentos={equipamentos}
                             selectedBuilding={selectedBuilding}
                             selectedFloor={pavKey}
                             detalhes={detalhes}
+                            onClick={handleEquipClick}
                             disciplineCode="HI"
-                            onClick={handleEquipamentoClick}
                         />
                     </div>
                 ))}
             </div>
         );
-    } else {
+    }
+
+    // ============================================================
+    // ✅ CASO 3 — Nada selecionado
+    // ============================================================
+    else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
                 <span className="text-lg italic">
@@ -152,9 +170,12 @@ export default function Hidraulica() {
         );
     }
 
+    // ============================================================
+    // 🔹 Layout com Sidebar
+    // ============================================================
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
-            <aside className="w-64 bg-white border-r p-4 shadow-sm fixed top-16 left-0 h-[calc(100vh-4rem)] overflow-y-auto">
+            <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
                 <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 z-10 border-b">
                     <Droplets className="w-5 h-5 text-blue-500" />
                     Hidráulica
@@ -165,13 +186,13 @@ export default function Hidraulica() {
                     detalhes={detalhes}
                     selectedBuilding={selectedBuilding}
                     selectedFloor={selectedFloor}
-                    onSelectBuilding={(b) => {
-                        setSelectedBuilding(b);
+                    onSelectBuilding={(building) => {
+                        setSelectedBuilding(building);
                         setSelectedFloor(null);
                     }}
-                    onSelectFloor={(b, f) => {
-                        setSelectedBuilding(b);
-                        setSelectedFloor(f);
+                    onSelectFloor={(building, floor) => {
+                        setSelectedBuilding(building);
+                        setSelectedFloor(floor);
                     }}
                 />
             </aside>

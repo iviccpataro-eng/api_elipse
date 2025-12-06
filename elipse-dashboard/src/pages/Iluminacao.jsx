@@ -7,7 +7,7 @@ import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
 import { getRealFloorName } from "../utils/getRealFloorName";
 import { getRealBuildingName } from "../utils/getRealBuildingName";
-import { apiFetch } from "../utils/apiFetch"; // 🔥 novo
+import { apiFetch } from "../utils/apiFetch";
 
 export default function Iluminacao() {
     const [estrutura, setEstrutura] = useState({});
@@ -22,12 +22,12 @@ export default function Iluminacao() {
         import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
     // ============================================================
-    // 🔹 Buscar dados da estrutura (com logout automático)
+    // 🔹 Buscar estrutura e detalhes da API (com logout automático)
     // ============================================================
     const fetchIL = useCallback(async () => {
         const data = await apiFetch(`${API_BASE}/estrutura`, {}, navigate);
 
-        if (!data) return; // token expirou → login automático
+        if (!data) return; // token expirou → apiFetch já redirecionou
 
         setEstrutura(data.structure?.IL || {});
         setDetalhes(data.structureDetails || {});
@@ -36,21 +36,24 @@ export default function Iluminacao() {
     }, [API_BASE, navigate]);
 
     // ============================================================
-    // 🔹 Intervalo de atualização baseado no token
+    // 🔹 Atualização periódica baseada no refresh time do token
     // ============================================================
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
         const user = jwtDecode(token);
-        const refreshTime = (user?.refreshtime || 10) * 1000;
+        const refreshTimeMs = (user?.refreshtime || 10) * 1000;
 
         fetchIL();
-        const interval = setInterval(fetchIL, Math.max(5000, refreshTime));
+        const interval = setInterval(fetchIL, Math.max(5000, refreshTimeMs));
+
         return () => clearInterval(interval);
     }, [fetchIL]);
 
-    // Debug útil
+    // ============================================================
+    // 🔹 Debug
+    // ============================================================
     useEffect(() => {
         console.group("📦 Dados Carregados - IL");
         console.log("Estrutura:", estrutura);
@@ -63,12 +66,12 @@ export default function Iluminacao() {
     };
 
     // ============================================================
-    // 🔹 Estados de carregamento / erro
+    // 🔹 Loading / Erro
     // ============================================================
     if (loading)
         return (
             <div className="flex items-center justify-center h-screen text-gray-500">
-                Carregando dados de Iluminação ...
+                Carregando dados de Iluminação...
             </div>
         );
 
@@ -80,46 +83,45 @@ export default function Iluminacao() {
         );
 
     // ============================================================
-    // 🔹 Conteúdo principal renderizado
+    // 🔹 Conteúdo principal
     // ============================================================
     let contentToRender;
 
-    // Pavimento selecionado
+    // ============================================================
+    // ✅ CASO 1 — Pavimento selecionado
+    // ============================================================
     if (selectedBuilding && selectedFloor) {
         const equipamentos =
-            estrutura[selectedBuilding]?.[selectedFloor] || [];
+            estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
-            <div className="bg-white rounded-2xl shadow p-4">
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {getRealBuildingName(
-                        selectedBuilding,
-                        detalhes
-                    )} –{" "}
-                    {getRealFloorName(
-                        selectedBuilding,
-                        selectedFloor,
-                        detalhes
-                    )}
-                </h2>
+            <div className="space-y-6">
+                <div className="bg-white rounded-2xl shadow p-4">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
+                        {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
+                    </h2>
 
-                <EquipmentGrid
-                    equipamentos={equipamentos}
-                    selectedBuilding={selectedBuilding}
-                    selectedFloor={selectedFloor}
-                    detalhes={detalhes}
-                    onClick={handleEquipClick}
-                    disciplineCode="IL"
-                />
+                    <EquipmentGrid
+                        equipamentos={equipamentos}
+                        selectedBuilding={selectedBuilding}
+                        selectedFloor={selectedFloor}
+                        detalhes={detalhes}
+                        onClick={handleEquipClick}
+                        disciplineCode="IL"
+                    />
+                </div>
             </div>
         );
     }
 
-    // Prédio selecionado
+    // ============================================================
+    // ✅ CASO 2 — Prédio selecionado (listar pavimentos)
+    // ============================================================
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
-        // Ordenação correta dos pavimentos via detalhes
+        // Ordenar pavimentos pelo ordPav do primeiro equipamento que encontrar
         const pavimentosOrdenados = Object.entries(pavimentos).sort(
             ([a], [b]) => {
                 const ord = (pav) => {
@@ -138,7 +140,7 @@ export default function Iluminacao() {
                     <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
                             {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
-                            {getRealFloorName(selectedBuilding, selectedFloor, detalhes)}
+                            {getRealFloorName(selectedBuilding, pavKey, detalhes)}
                         </h2>
 
                         <EquipmentGrid
@@ -155,7 +157,9 @@ export default function Iluminacao() {
         );
     }
 
-    // Tela inicial
+    // ============================================================
+    // ✅ CASO 3 — Nada selecionado
+    // ============================================================
     else {
         contentToRender = (
             <div className="flex items-center justify-center h-full text-gray-400 select-none">
@@ -167,11 +171,11 @@ export default function Iluminacao() {
     }
 
     // ============================================================
-    // 🔹 Layout com sidebar
+    // 🔹 Layout com Sidebar
     // ============================================================
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
-            <aside className="w-64 bg-white border-r p-4 shadow-sm fixed top-16 left-0 h-[calc(100vh-4rem)] overflow-y-auto">
+            <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
                 <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 z-10 border-b">
                     <Lightbulb className="w-5 h-5 text-yellow-500" />
                     Iluminação
