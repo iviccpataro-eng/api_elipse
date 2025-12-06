@@ -1,6 +1,25 @@
+// src/hooks/useAlarms.js
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+/**
+ * useAlarms
+ * -------------------------------------------
+ * Hook responsável por:
+ * ✔ Buscar /alarms/actives
+ * ✔ Detectar novos alarmes
+ * ✔ Criar fila de banners
+ * ✔ Somar sons
+ * ✔ Timeout automático para severidades 0-1-2
+ * ✔ Sem timeout para severidade 3
+ * ✔ Atualizar "notified" no backend
+ * ✔ Banner clicável → leva ao equipamento
+ * -------------------------------------------
+ */
 
 export default function useAlarms(interval = 3000) {
+  const navigate = useNavigate();
+
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
@@ -10,19 +29,19 @@ export default function useAlarms(interval = 3000) {
   const [bannerQueue, setBannerQueue] = useState([]);
   const [banner, setBanner] = useState(null);
 
-  const shownRef = useRef({}); // alarmes já notificados
+  const shownRef = useRef({});
   const pollRef = useRef(null);
   const timerRef = useRef(null);
 
   /* ============================================================
-     🔊 Som do alarme
+     🔊 SOM DO ALARME
   ============================================================ */
   const lastSoundRef = useRef(null);
 
-  function playAlarmSound(sev, id) {
+  function playAlarmSound(sev, key) {
     try {
-      if (lastSoundRef.current === id) return;
-      lastSoundRef.current = id;
+      if (lastSoundRef.current === key) return;
+      lastSoundRef.current = key;
 
       let path =
         sev >= 3
@@ -38,33 +57,38 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     📡 Fetch de alarmes
+     📡 FETCH DE ALARMES
   ============================================================ */
   async function fetchAlarms() {
     try {
-      const res = await fetch(`${API_BASE}/alarms/active`);
-      const list = await res.json();
+      const res = await fetch(`${API_BASE}/alarms/actives`);
+      const json = await res.json();
 
-      if (!Array.isArray(list)) {
-        console.warn("Resposta inesperada:", list);
-        return;
-      }
+      if (!json.ok) return;
 
+      const list = json.alarms || [];
       setAlarms(list);
 
-      // Detectar novos alarmes
       list.forEach((a) => {
-        if (a.active && !shownRef.current[a.id]) {
-          shownRef.current[a.id] = true;
+        const key = `${a.tag}|${a.name}`;
 
-          playAlarmSound(a.severity, a.id);
+        // Detecção de novo alarme não notificado
+        if (a.active && !shownRef.current[key]) {
+          shownRef.current[key] = true;
 
+          playAlarmSound(a.severity, key);
+
+          // Adiciona ao bannerQueue
           setBannerQueue((q) => [
             ...q,
             {
+              tag: a.tag,
+              name: a.name,
               id: a.id,
-              message: `Novo alarme: ${a.name}`,
-              severity: a.severity || 0,
+              message: a.message,
+              severity: a.severity,
+              source: a.source,
+              notified: a.notified,
             },
           ]);
 
@@ -72,11 +96,12 @@ export default function useAlarms(interval = 3000) {
         }
       });
 
-      // Permitir alarme notificar de novo caso ele feche e volte
-      Object.keys(shownRef.current).forEach((id) => {
-        if (!list.find((a) => a.id == id)) {
-          delete shownRef.current[id];
-        }
+      // Limpa alarmes que não estão ativos
+      Object.keys(shownRef.current).forEach((key) => {
+        const exists = list.find(
+          (a) => `${a.tag}|${a.name}` === key && a.active
+        );
+        if (!exists) delete shownRef.current[key];
       });
     } catch (err) {
       console.error("Erro ao buscar alarmes:", err);
@@ -84,7 +109,7 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🔄 Polling
+     🔄 POLLING
   ============================================================ */
   useEffect(() => {
     fetchAlarms();
@@ -93,31 +118,48 @@ export default function useAlarms(interval = 3000) {
   }, [interval]);
 
   /* ============================================================
-     🎯 Sistema de fila real dos banners
+     🟧 ATUALIZAR NOTIFIED NO BACKEND
+  ============================================================ */
+  async function markAsNotified(id) {
+    if (!id) return;
+    try {
+      await fetch(`${API_BASE}/alarms/notified`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, notified: true }),
+      });
+    } catch (err) {
+      console.warn("Erro ao atualizar notified:", err);
+    }
+  }
+
+  /* ============================================================
+     🎯 SISTEMA DE FILA + PRIORIDADE + TIMEOUT
   ============================================================ */
   useEffect(() => {
-    // Nada a fazer se já tem banner exibido
     if (banner) return;
-
     if (bannerQueue.length === 0) return;
 
-    // SEVERIDADE MAIS ALTA SEMPRE PRIMEIRO
+    // Ordena por severidade
     const sorted = [...bannerQueue].sort(
       (a, b) => b.severity - a.severity
     );
 
     const next = sorted[0];
 
-    // Remove esse da fila
+    // Remove da fila
     setBannerQueue((q) => q.filter((x) => x !== next));
 
-    // Exibe
+    // Exibe banner
     setBanner(next);
 
-    // 🔥 se alarme é crítico, NÃO SOME
+    // Marca como "notified"
+    if (next.id) markAsNotified(next.id);
+
+    // Severidade 3 (CRÍTICO) → sem timeout
     if (next.severity >= 3) return;
 
-    // ⏳ remove após 5 segundos
+    // Timeout de 5s para 0-1-2
     timerRef.current = setTimeout(() => {
       setBanner(null);
     }, 5000);
@@ -126,7 +168,7 @@ export default function useAlarms(interval = 3000) {
   }, [bannerQueue, banner]);
 
   /* ============================================================
-     ❌ Fechar banner manualmente
+     ❌ FECHAR BANNER MANUALMENTE
   ============================================================ */
   function closeBanner() {
     clearTimeout(timerRef.current);
@@ -134,7 +176,26 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🔧 Ações ACK / CLEAR
+     🟦 CLICK → IR PARA EQUIPAMENTO
+  ============================================================ */
+  function goToEquipment(tag) {
+    try {
+      const parts = tag.split("/");
+      const disciplina = parts[0];
+      const building = parts[1];
+      const floor = parts[2];
+      const equip = parts[3];
+
+      navigate(
+        `/equipamento/${disciplina}/${building}/${floor}/${equip}`
+      );
+    } catch (err) {
+      console.warn("Erro ao navegar para equipamento:", err);
+    }
+  }
+
+  /* ============================================================
+     🔧 AÇÕES (ACK / CLEAR)
   ============================================================ */
   async function ack(tag, name) {
     await fetch(`${API_BASE}/alarms/ack`, {
@@ -166,6 +227,7 @@ export default function useAlarms(interval = 3000) {
     hasNew,
     banner,
     closeBanner,
+    goToEquipment,
     ack,
     clear,
     clearRecognized,

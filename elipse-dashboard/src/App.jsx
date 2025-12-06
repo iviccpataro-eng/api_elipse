@@ -104,7 +104,6 @@ export default function App() {
     const params = new URLSearchParams(location.search);
     const invite = params.get("invite");
 
-    // Redireciona para registro caso tenha convite
     if (invite && location.pathname !== "/register") {
       navigate(`/register?invite=${invite}`, { replace: true });
     }
@@ -126,12 +125,15 @@ export default function App() {
   const params = new URLSearchParams(location.search);
   const invite = params.get("invite");
 
-  // HOOKS DE ALARME (sempre dentro do componente, nunca condicionais)
+  /* ============================================================
+     🔔 HOOKS DE ALARME
+  ============================================================ */
   const {
     alarms,
     hasNew,
     banner,
     closeBanner,
+    goToEquipment,   // <-- IMPORTANTE
     ack,
     clear,
     clearRecognized
@@ -156,19 +158,23 @@ export default function App() {
         <>
           <Navbar onLogout={handleLogout} />
 
+          {/* ============================================================
+               🚨 BANNER DE ALARME (NOVO SISTEMA)
+          ============================================================ */}
           <AlarmBanner
-            message={banner?.message}
-            severity={banner?.severity}
-            visible={!!banner}
+            banner={banner}
             onClose={closeBanner}
+            onClick={() => banner && goToEquipment(banner.tag)}
           />
 
+          {/* FAB com número de alarmes */}
           <AlarmFab
             count={alarms.length}
             hasNew={hasNew}
             onClick={() => setShowPanel(true)}
           />
 
+          {/* Painel lateral de alarmes */}
           <AlarmPanel
             alarms={alarms}
             open={showPanel}
