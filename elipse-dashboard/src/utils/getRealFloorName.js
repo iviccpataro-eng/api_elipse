@@ -1,12 +1,12 @@
-// utils/getRealBuildingName.js
+// utils/getRealFloorName.js
 
 /**
  * Retorna o nome REAL do pavimento, vindo exclusivamente de:
- *    detalhes[tag].info.building
+ *    detalhes[tag].info.floor
  *
- * - Procura um tag cujo prédio (segunda parte do tag) seja igual ao alias `building`
- * - Se achar e existir info.building → retorna o nome real
- * - Caso não encontre, retorna o alias `building` (fallback básico)
+ * - Procura um tag cujo pavimento (segunda parte do tag) seja igual ao alias `floor`
+ * - Se achar e existir info.floor → retorna o nome real
+ * - Caso não encontre, retorna o alias `floor` (fallback básico)
  */
 export function getRealFloorName(building, floorKey, detalhes) {
 
