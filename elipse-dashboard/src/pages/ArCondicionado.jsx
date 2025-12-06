@@ -90,27 +90,24 @@ export default function ArCondicionado() {
             estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
         contentToRender = (
-            <div className="bg-white rounded-2xl shadow p-4">
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                    {getRealBuildingName(
-                        selectedBuilding,
-                        detalhes
-                    )} –{" "}
-                    {getRealFloorName(
-                        selectedBuilding,
-                        selectedFloor,
-                        detalhes
-                    )}
-                </h2>
+            <div className="space-y-6">
+                {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
+                    <div key={pavKey} className="bg-white rounded-2xl shadow p-4">
+                        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                            {getRealBuildingName(selectedBuilding, detalhes)} –{" "}
+                            {getRealFloorName(selectedBuilding, pavKey, detalhes)}
+                        </h2>
 
-                <EquipmentGrid
-                    equipamentos={equipamentos}
-                    selectedBuilding={selectedBuilding}
-                    selectedFloor={selectedFloor}
-                    detalhes={detalhes}
-                    onClick={handleEquipClick}
-                    disciplineCode="AC"
-                />
+                        <EquipmentGrid
+                            equipamentos={equipamentos}
+                            selectedBuilding={selectedBuilding}
+                            selectedFloor={pavKey}
+                            detalhes={detalhes}
+                            onClick={handleEquipClick}
+                            disciplineCode="AC"
+                        />
+                    </div>
+                ))}
             </div>
         );
     }
