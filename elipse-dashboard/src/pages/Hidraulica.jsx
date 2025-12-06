@@ -29,7 +29,7 @@ export default function Hidraulica() {
 
         if (!data) return; // token expirou → apiFetch já redirecionou
 
-        setEstrutura(data.structure?.AC || {});
+        setEstrutura(data.structure?.HI || {});
         setDetalhes(data.structureDetails || {});
         setErro("");
         setLoading(false);
