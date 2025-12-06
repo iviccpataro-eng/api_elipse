@@ -89,6 +89,17 @@ export default function ArCondicionado() {
         const equipamentos =
             estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
+        // Ordenação correta dos pavimentos via detalhes
+        const pavimentosOrdenados = pavimentosEntries.sort(([a], [b]) => {
+            const ord = (pav) => {
+                const tag = Object.keys(detalhes || {}).find((t) =>
+                    t.includes(`/AC/${selectedBuilding}/${pav}/`)
+                );
+                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
+            };
+            return ord(b) - ord(a);
+        });
+
         contentToRender = (
             <div className="space-y-6">
                 {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
