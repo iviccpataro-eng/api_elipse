@@ -3,18 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 /**
- * useAlarms
- * -------------------------------------------
- * Hook responsável por:
- * ✔ Buscar /alarms/actives
- * ✔ Detectar novos alarmes
- * ✔ Criar fila de banners
- * ✔ Somar sons
- * ✔ Timeout automático para severidades 0-1-2
+ * useAlarms()
+ * ----------------------------------------------------------------------
+ * ✔ Realiza polling de /alarms/actives
+ * ✔ Detecta novos alarmes
+ * ✔ Reproduz sons por severidade
+ * ✔ Mantém fila (queue) com prioridade
+ * ✔ Timeout automático para severidade 0–2
  * ✔ Sem timeout para severidade 3
- * ✔ Atualizar "notified" no backend
- * ✔ Banner clicável → leva ao equipamento
- * -------------------------------------------
+ * ✔ Marca alarmes como "notified" no backend
+ * ✔ Exponibiliza função goToEquipment() para navegação
+ * ----------------------------------------------------------------------
  */
 
 export default function useAlarms(interval = 3000) {
@@ -43,7 +42,7 @@ export default function useAlarms(interval = 3000) {
       if (lastSoundRef.current === key) return;
       lastSoundRef.current = key;
 
-      let path =
+      const path =
         sev >= 3
           ? "/sounds/critical.mp3"
           : sev === 2
@@ -55,21 +54,6 @@ export default function useAlarms(interval = 3000) {
       audio.play().catch(() => {});
     } catch {}
   }
-
-  /* ============================================================
-     🧩 Configuração da Disciplina do Alarme
-  ============================================================ */
-  function getDisciplineRoute(tag) {
-  const root = tag.split("/")[0]; // AC, IL, EL, HD ...
-
-  switch (root) {
-    case "AC": return "arcondicionado";
-    case "IL": return "iluminacao";
-    case "EL": return "eletrica";
-    case "HD": return "hidraulica";
-    default: return "equipamento";
-  }
-}
 
   /* ============================================================
      📡 FETCH DE ALARMES
@@ -87,23 +71,20 @@ export default function useAlarms(interval = 3000) {
       list.forEach((a) => {
         const key = `${a.tag}|${a.name}`;
 
-        // Detecção de novo alarme não notificado
         if (a.active && !shownRef.current[key]) {
           shownRef.current[key] = true;
 
           playAlarmSound(a.severity, key);
 
-          // Adiciona ao bannerQueue
           setBannerQueue((q) => [
             ...q,
             {
+              id: a.id,
               tag: a.tag,
               name: a.name,
-              id: a.id,
-              message: a.message,
               severity: a.severity,
               source: a.source,
-              notified: a.notified,
+              disciplineRoute: getDisciplineRoute(a.tag),
             },
           ]);
 
@@ -111,11 +92,9 @@ export default function useAlarms(interval = 3000) {
         }
       });
 
-      // Limpa alarmes que não estão ativos
+      // remove alarmes que deixaram de existir
       Object.keys(shownRef.current).forEach((key) => {
-        const exists = list.find(
-          (a) => `${a.tag}|${a.name}` === key && a.active
-        );
+        const exists = list.find((a) => `${a.tag}|${a.name}` === key && a.active);
         if (!exists) delete shownRef.current[key];
       });
     } catch (err) {
@@ -133,7 +112,22 @@ export default function useAlarms(interval = 3000) {
   }, [interval]);
 
   /* ============================================================
-     🟧 ATUALIZAR NOTIFIED NO BACKEND
+     🟧 AUX: ROTA pela disciplina
+  ============================================================ */
+  function getDisciplineRoute(tag) {
+    const d = tag.split("/")[0];
+
+    switch (d) {
+      case "AC": return "arcondicionado";
+      case "IL": return "iluminacao";
+      case "EL": return "eletrica";
+      case "HD": return "hidraulica";
+      default:   return "equipamento";
+    }
+  }
+
+  /* ============================================================
+     🟧 Atualizar notified = true
   ============================================================ */
   async function markAsNotified(id) {
     if (!id) return;
@@ -149,55 +143,30 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🎯 SISTEMA DE FILA + PRIORIDADE + TIMEOUT
+     🎯 FILA DO BANNER + PRIORIDADE + TIMEOUT
   ============================================================ */
   useEffect(() => {
     if (banner) return;
     if (bannerQueue.length === 0) return;
 
-    // Ordena por severidade
-    const sorted = [...bannerQueue].sort(
-      (a, b) => b.severity - a.severity
-    );
-
+    const sorted = [...bannerQueue].sort((a, b) => b.severity - a.severity);
     const next = sorted[0];
 
-    // Remove da fila
-    setBannerQueue((q) => [
-      ...q,
-      {
-        id: a.id,
-        severity: a.severity,
-        tag: a.tag,
+    setBannerQueue((q) => q.filter((x) => x !== next));
 
-        name: a.name,
-        equipment: a.info?.equipamento || a.equipment,
-        floor: a.info?.pavimento || a.floor,
-        building: a.info?.prédio || a.building,
-
-        disciplineRoute: getDisciplineRoute(a.tag)
-      },
-    ]);
-
-    // Exibe banner
     setBanner(next);
 
-    // Marca como "notified"
     if (next.id) markAsNotified(next.id);
 
-    // Severidade 3 (CRÍTICO) → sem timeout
     if (next.severity >= 3) return;
 
-    // Timeout de 5s para 0-1-2
-    timerRef.current = setTimeout(() => {
-      setBanner(null);
-    }, 5000);
+    timerRef.current = setTimeout(() => setBanner(null), 5000);
 
     return () => clearTimeout(timerRef.current);
   }, [bannerQueue, banner]);
 
   /* ============================================================
-     ❌ FECHAR BANNER MANUALMENTE
+     ❌ FECHAR BANNER manual
   ============================================================ */
   function closeBanner() {
     clearTimeout(timerRef.current);
@@ -205,22 +174,10 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🟦 CLICK → IR PARA EQUIPAMENTO
+     🔵 Clique → ir para equipamento
   ============================================================ */
-  function goToEquipment(tag) {
-    try {
-      const parts = tag.split("/");
-      const disciplina = parts[0];
-      const building = parts[1];
-      const floor = parts[2];
-      const equip = parts[3];
-
-      navigate(
-        `/equipamento/${disciplina}/${building}/${floor}/${equip}`
-      );
-    } catch (err) {
-      console.warn("Erro ao navegar para equipamento:", err);
-    }
+  function goToEquipment(tag, disciplineRoute) {
+    navigate(`/${disciplineRoute}/equipamento/${encodeURIComponent(tag)}`);
   }
 
   /* ============================================================
@@ -257,6 +214,7 @@ export default function useAlarms(interval = 3000) {
     banner,
     closeBanner,
     goToEquipment,
+
     ack,
     clear,
     clearRecognized,
