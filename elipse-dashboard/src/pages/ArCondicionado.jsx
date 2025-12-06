@@ -89,17 +89,6 @@ export default function ArCondicionado() {
         const equipamentos =
             estrutura[selectedBuilding]?.[selectedFloor] ?? [];
 
-        // Ordenação correta dos pavimentos via detalhes
-        const pavimentosOrdenados = pavimentosEntries.sort(([a], [b]) => {
-            const ord = (pav) => {
-                const tag = Object.keys(detalhes || {}).find((t) =>
-                    t.includes(`/AC/${selectedBuilding}/${pav}/`)
-                );
-                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
-            };
-            return ord(b) - ord(a);
-        });
-
         contentToRender = (
             <div className="space-y-6">
                 {pavimentosOrdenados.map(([pavKey, equipamentos]) => (
@@ -127,19 +116,18 @@ export default function ArCondicionado() {
     else if (selectedBuilding) {
         const pavimentos = estrutura[selectedBuilding] || {};
 
-        // Garante que sempre estamos lidando com um array de entries
-        const pavimentosEntries = Object.entries(pavimentos || {});
-
-        // Ordenação correta dos pavimentos via detalhes
-        const pavimentosOrdenados = pavimentosEntries.sort(([a], [b]) => {
-            const ord = (pav) => {
-                const tag = Object.keys(detalhes || {}).find((t) =>
-                    t.includes(`/AC/${selectedBuilding}/${pav}/`)
-                );
-                return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
-            };
-            return ord(b) - ord(a);
-        });
+        // Ordenar pavimentos corretamente pelo ordPav retirado dos detalhes
+        const pavimentosOrdenados = Object.entries(pavimentos).sort(
+            ([a], [b]) => {
+                const ord = (pav) => {
+                    const tag = Object.keys(detalhes).find((t) =>
+                        t.includes(`/AC/${selectedBuilding}/${pav}/`)
+                    );
+                    return tag ? detalhes[tag]?.ordPav ?? 0 : 0;
+                };
+                return ord(b) - ord(a);
+            }
+        );
 
         contentToRender = (
             <div className="space-y-6">
