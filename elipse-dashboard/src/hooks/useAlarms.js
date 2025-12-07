@@ -43,11 +43,10 @@ export default function useAlarms(interval = 3000) {
       lastSoundRef.current = key;
 
       const path =
-        sev >= 3
-          ? "/sounds/critical.mp3"
-          : sev === 2
-          ? "/sounds/high.mp3"
-          : "/sounds/low.mp3";
+        sev = 3 ? "/sounds/critical.mp3"
+          : sev === 2 ? "/sounds/high.mp3"
+          : sev === 1 ? "/sounds/low.mp3"
+          : "";
 
       const audio = new Audio(path);
       audio.volume = sev >= 3 ? 1 : 0.6;
