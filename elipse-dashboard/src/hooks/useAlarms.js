@@ -142,25 +142,41 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🎯 FILA DO BANNER + PRIORIDADE + TIMEOUT
+    🎯 FILA DO BANNER — PRIORIDADE + TIMEOUT + EMPILHAMENTO
   ============================================================ */
   useEffect(() => {
+    // Se já há um banner exibido → aguardar sair
     if (banner) return;
+
+    // Fila vazia → nada a fazer
     if (bannerQueue.length === 0) return;
 
-    const sorted = [...bannerQueue].sort((a, b) => b.severity - a.severity);
+    // Ordenar por severidade (3 > 2 > 1 > 0)
+    const sorted = [...bannerQueue].sort(
+      (a, b) => b.severity - a.severity
+    );
+
+    // Primeiro da fila
     const next = sorted[0];
 
-    setBannerQueue((q) => q.filter((x) => x !== next));
+    // Remover corretamente esse item da fila
+    setBannerQueue((q) => q.filter((item) => item !== next));
 
+    // Exibir banner atual
     setBanner(next);
 
+    // Atualizar notified no backend
     if (next.id) markAsNotified(next.id);
 
+    // Se severidade >=3 → não tem timeout
     if (next.severity >= 3) return;
 
-    timerRef.current = setTimeout(() => setBanner(null), 5000);
+    // Criar timeout de 5 segundos
+    timerRef.current = setTimeout(() => {
+      setBanner(null);
+    }, 5000);
 
+    // Limpeza do timeout
     return () => clearTimeout(timerRef.current);
   }, [bannerQueue, banner]);
 
