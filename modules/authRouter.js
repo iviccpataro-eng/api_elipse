@@ -3,7 +3,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { uploadAvatar } from "./uploadAvatar.js"; 
-import { processAvatar } from "../services/processAvatar";
+import { processAvatar } from "../services/processAvatar.js";
 import path from "path";
 
 export default function authRouter(pool, SECRET) {
