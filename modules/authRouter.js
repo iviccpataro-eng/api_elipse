@@ -2,8 +2,8 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { uploadAvatar } from "./uploadAvatar"; // seu multer middleware (já existente)
-import { processAvatar } from "../services/processAvatar"; // módulo que vamos adicionar
+import { uploadAvatar } from "./uploadAvatar.js"; 
+import { processAvatar } from "../services/processAvatar";
 import path from "path";
 
 export default function authRouter(pool, SECRET) {
