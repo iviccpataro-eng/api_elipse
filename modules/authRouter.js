@@ -2,6 +2,8 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { uploadAvatar } from "./uploadAvatar";
+import { processAvatar } from "../services/processAvatar";
 
 export default function authRouter(pool, SECRET) {
   const router = express.Router();
@@ -311,6 +313,75 @@ export default function authRouter(pool, SECRET) {
       res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
     }
   });
+
+  // =============================
+  // 🆕 Atualizar perfil + avatar
+  // =============================
+  router.post(
+      "/update-profile",
+      autenticar,
+      uploadAvatar, // middleware que recebe multipart/form-data
+      async (req, res) => {
+          try {
+              const { fullname, registernumb, refreshtime, usertheme } = req.body;
+              let avatarUrl = null;
+
+              // -------------------------------
+              // 📌 Se veio avatar no upload:
+              // -------------------------------
+              if (req.file) {
+                  const processed = await processAvatar(req.file.path);
+
+                  avatarUrl =
+                      `${process.env.SERVER_URL || API_BASE}/` +
+                      processed.replace("uploads/", "");
+
+                  await pool.query(
+                      `UPDATE users SET avatarurl = $1 WHERE username = $2`,
+                      [avatarUrl, req.user.user]
+                  );
+              }
+
+              // -------------------------------
+              // 📌 Atualiza campos textuais
+              // -------------------------------
+              await pool.query(
+                  `UPDATE users
+                  SET fullname = $1,
+                      registernumb = $2,
+                      refreshtime = $3,
+                      usertheme = $4
+                  WHERE username = $5`,
+                  [
+                      fullname || "",
+                      registernumb || "",
+                      refreshtime ?? 10,
+                      usertheme || "light",
+                      req.user.user,
+                  ]
+              );
+
+              // -------------------------------
+              // 📌 Retorna perfil atualizado
+              // -------------------------------
+              const result = await pool.query(
+                  `SELECT username, rolename, fullname, registernumb,
+                          refreshtime, usertheme, avatarurl
+                  FROM users WHERE username = $1`,
+                  [req.user.user]
+              );
+
+              res.json({
+                  ok: true,
+                  msg: "Perfil atualizado com sucesso!",
+                  usuario: result.rows[0],
+              });
+          } catch (err) {
+              console.error("[AUTH UPDATE-PROFILE] Erro:", err);
+              res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
+          }
+      }
+  );
 
   return router;
 }
