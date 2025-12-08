@@ -117,6 +117,9 @@ app.use("/auth", authRouter(pool, SECRET));
 app.use("/config", configRouter(pool));
 app.use("/", dataRouter)
 
+// ✅ 3. Rota de arquivos estáticos (imagens de avatar) 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // -------------------------
 // 🚨 Rotas de Alarme
 // -------------------------
