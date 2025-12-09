@@ -148,6 +148,16 @@ export default function authRouter(pool, SECRET) {
   // -------------------------
   router.get("/me", autenticar, async (req, res) => {
     try {
+      const username =
+        req.user?.user ||        // tokens antigos
+        req.user?.username ||    // alguns middlewares usam username
+        req.user?.id ||          // fallback seguro
+        null;
+
+      if (!username) {
+        return res.status(400).json({ erro: "Token inválido: usuário ausente." });
+      }
+
       const result = await pool.query(
         `SELECT username, rolename,
                 COALESCE(fullname,'') AS fullname,
@@ -155,19 +165,22 @@ export default function authRouter(pool, SECRET) {
                 COALESCE(refreshtime,10) AS refreshtime,
                 COALESCE(usertheme,'light') AS usertheme,
                 COALESCE(avatarurl,'') AS avatarurl
-         FROM users WHERE username = $1`,
-        [req.user.user]
+        FROM users WHERE username = $1`,
+        [username]
       );
 
-      if (result.rows.length === 0) return res.status(404).json({ erro: "Usuário não encontrado" });
+      if (result.rows.length === 0)
+        return res.status(404).json({ erro: "Usuário não encontrado" });
+
       res.json({ ok: true, usuario: result.rows[0] });
+
     } catch (err) {
-      console.error("[AUTH ME] Erro:", err.message || err);
+      console.error("[AUTH ME] Erro:", err.message);
       res.status(500).json({ erro: "Erro ao buscar perfil." });
     }
   });
 
-  // -------------------------
+// -------------------------
   // 👥 Listar todos os usuários (admin/supervisor)
   // -------------------------
   router.get("/list-users", autenticar, async (req, res) => {
