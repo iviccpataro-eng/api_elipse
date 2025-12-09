@@ -260,6 +260,8 @@ export default function authRouter(pool, SECRET) {
     uploadAvatar,
     async (req, res) => {
       try {
+          console.log("BODY:", req.body);
+          console.log("FILE:", req.file);
         // -------------------------
         // 1) Ler campos
         // -------------------------
@@ -369,6 +371,7 @@ export default function authRouter(pool, SECRET) {
         console.error("[AUTH UPDATE-PROFILE] Erro:", err);
         // multer upload errors podem vir como Error: Field too large | invalid mimetype etc.
         res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
+        return res.status(400).json({ok: false, erro: err.message});
       }
     }
   );
