@@ -175,7 +175,7 @@ export default function authRouter(pool, SECRET) {
       res.json({ ok: true, usuario: result.rows[0] });
 
     } catch (err) {
-      console.error("[AUTH ME] Erro:", err.message);
+      console.error("[AUTH ME] ERRO COMPLETO:", err);
       res.status(500).json({ erro: "Erro ao buscar perfil." });
     }
   });
@@ -320,7 +320,7 @@ export default function authRouter(pool, SECRET) {
         if (req.file) {
           // processAvatar valida dimensões mínimas e gera webp otimizado
           const processedRelativePath = await processAvatar(req.file.path, req.user.user);
-          const serverBase = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
+          const serverBase = process.env.SERVER_URL?.trim() || `http://localhost:${process.env.PORT || 3000}`;
           avatarUrl = `${serverBase}/${processedRelativePath.replace(/^[\\/]+/, "")}`;
 
           // grava avatarurl no banco
