@@ -3,71 +3,70 @@ import React, { useState, useEffect } from "react";
 import AvatarCropper from "./AvatarCropper";
 
 /**
- * UpdateProfile
- *
- * - Carrega perfil via /auth/me
- * - Mostra campos: Nome completo, Matrícula, Nome de usuário (disabled), Grupo (disabled)
- * - Permite alterar senha (atual, nova, confirmar)
- * - Permite upload de avatar (validações: tipo imagem, <= 4MB, >= 400x400)
- * - Abre cropper (AvatarCropper) para recorte quadrado (400x400)
- * - Envia formulário via multipart/form-data para /auth/update-profile
- * - Ao resposta bem-sucedida atualiza preview e atualiza token no localStorage para refletir avatar sem reload
- *
- * Observações:
- *  - API_BASE deve apontar para seu backend
- *  - backend: rota POST /auth/update-profile aceita multipart/form-data e retorna usuario.avatarurl
+ * UpdateProfile.jsx
+ * ---------------------------------------------------------
+ * Responsável por:
+ * - Carregar dados reais do usuário via /auth/me
+ * - Exibir e editar nome completo, matrícula
+ * - Alterar senha (com confirmação)
+ * - Atualizar avatar com cropper + preview
+ * - Enviar multipart/form-data para /auth/update-profile
+ * - Aceitar newToken retornado pelo backend e substituir
+ *   corretamente o token no localStorage
+ * ---------------------------------------------------------
  */
 
 const API_BASE =
     import.meta?.env?.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
 export default function UpdateProfile() {
-    // campos
+    // Campos de perfil
     const [fullname, setFullname] = useState("");
     const [registernumb, setRegisterNumb] = useState("");
     const [username, setUsername] = useState("");
     const [role, setRole] = useState("");
 
-    // senhas
+    // Campos de senha
     const [senhaAtual, setSenhaAtual] = useState("");
     const [novaSenha, setNovaSenha] = useState("");
     const [confirmaSenha, setConfirmaSenha] = useState("");
 
-    // mensagens / feedback
+    // Feedback/mensagens
     const [msg, setMsg] = useState("");
 
-    // avatar states
-    const [avatarPreview, setAvatarPreview] = useState(null); // dataURL ou remote URL
-    const [avatarFile, setAvatarFile] = useState(null); // arquivo original (unused after crop, but kept)
+    // Estados do avatar
+    const [avatarPreview, setAvatarPreview] = useState(null); // URL ou blob URL
     const [cropping, setCropping] = useState(false);
     const [croppedBlob, setCroppedBlob] = useState(null);
 
-    // Limites (mesmo que backend)
-    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-    const MIN_DIM = 400; // px
+    // Restrições locais
+    const MAX_FILE_SIZE = 4 * 1024 * 1024;
+    const MIN_DIM = 400;
 
-    // Carrega perfil e token (inicial)
+    // ---------------------------------------------------------
+    // Carrega informações do usuário ao abrir o componente
+    // ---------------------------------------------------------
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
-        // tenta decodificar payload do token (para preencher username/role)
+        // Decodifica payload do token para exibir username e role
         try {
             const payload = JSON.parse(atob(token.split(".")[1]));
-            setUsername(payload.user || payload.username || payload.name || "");
+            setUsername(payload.user || payload.username || "");
             setRole(payload.role || "");
-        } catch (e) {
-            console.warn("Token inválido ou não padrão:", e);
+        } catch {
+            console.warn("Token inválido.");
         }
 
-        // busca /auth/me para fullname, registernumb e avatar
+        // Busca dados completos via /auth/me
         (async () => {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!res.ok) return; // silencioso
                 const data = await res.json();
+
                 if (data.ok && data.usuario) {
                     setFullname(data.usuario.fullname || "");
                     setRegisterNumb(data.usuario.registernumb || "");
@@ -81,61 +80,51 @@ export default function UpdateProfile() {
         })();
     }, []);
 
-    // Quando o usuário seleciona um arquivo (antes do crop)
+    // ---------------------------------------------------------
+    // Validação inicial e abertura do cropper
+    // ---------------------------------------------------------
     const handleAvatarChange = (e) => {
         setMsg("");
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // valida tipo
         if (!file.type.startsWith("image/")) {
-            setMsg("Formato inválido. Selecione um arquivo de imagem.");
-            return;
+            return setMsg("Selecione uma imagem válida.");
         }
-
-        // valida tamanho
         if (file.size > MAX_FILE_SIZE) {
-            setMsg("Arquivo muito grande. Máx 4MB.");
-            return;
+            return setMsg("Arquivo muito grande. Máximo 4MB.");
         }
 
-        // cria preview temporário e valida dimensões
+        // Lê imagem para validar dimensões
         const reader = new FileReader();
         reader.onload = () => {
-            const dataUrl = reader.result;
             const img = new Image();
             img.onload = () => {
                 if (img.width < MIN_DIM || img.height < MIN_DIM) {
-                    setMsg(`A imagem deve ter pelo menos ${MIN_DIM}×${MIN_DIM} pixels.`);
-                    return;
+                    return setMsg(`A imagem deve ter pelo menos ${MIN_DIM}×${MIN_DIM} pixels.`);
                 }
-                // abre cropper
-                setAvatarFile(file);
-                setAvatarPreview(dataUrl);
+                setAvatarPreview(reader.result);
                 setCropping(true);
             };
-            img.onerror = () => setMsg("Não foi possível ler a imagem.");
-            img.src = dataUrl;
+            img.src = reader.result;
         };
         reader.readAsDataURL(file);
     };
 
-    // Submissão do formulário
+    // ---------------------------------------------------------
+    // Envio do formulário
+    // ---------------------------------------------------------
     const handleUpdate = async (e) => {
         e.preventDefault();
         setMsg("");
 
         if (novaSenha && novaSenha !== confirmaSenha) {
-            setMsg("Nova senha e confirmação não coincidem.");
-            return;
+            return setMsg("Nova senha e confirmação não coincidem.");
         }
 
         try {
             const token = localStorage.getItem("authToken");
-            if (!token) {
-                setMsg("Faça login novamente.");
-                return;
-            }
+            if (!token) return setMsg("Faça login novamente.");
 
             const formData = new FormData();
             formData.append("fullname", fullname || "");
@@ -143,122 +132,105 @@ export default function UpdateProfile() {
             formData.append("senhaAtual", senhaAtual || "");
             formData.append("novaSenha", novaSenha || "");
 
-            // Se houver avatar recortado, envia como 'avatar'
             if (croppedBlob) {
                 formData.append("avatar", croppedBlob, "avatar.png");
             }
 
             const res = await fetch(`${API_BASE}/auth/update-profile`, {
                 method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    // NOTE: não definir Content-Type — browser define multipart boundary
-                },
+                headers: { Authorization: `Bearer ${token}` },
                 body: formData,
             });
 
             const data = await res.json();
             if (!data.ok) {
-                setMsg(data.erro || "Erro ao atualizar perfil.");
-                return;
+                return setMsg(data.erro || "Erro ao atualizar perfil.");
             }
 
+            // Mensagem OK
             setMsg("Perfil atualizado com sucesso!");
 
-            // Atualiza preview se backend retornou avatarurl
+            // Atualiza preview de avatar, se veio nova imagem do backend
             if (data.usuario?.avatarurl) {
                 setAvatarPreview(data.usuario.avatarurl);
-
-                // Atualiza token no localStorage para que Navbar leia o novo avatar (sem reload)
-                try {
-                    const originalToken = localStorage.getItem("authToken");
-                    if (originalToken) {
-                        const parts = originalToken.split(".");
-                        if (parts.length === 3) {
-                            const payload = JSON.parse(atob(parts[1]));
-                            payload.image = data.usuario.avatarurl;
-                            const newPayloadB64 = btoa(JSON.stringify(payload));
-                            const newToken = `${parts[0]}.${newPayloadB64}.${parts[2]}`;
-                            localStorage.setItem("authToken", newToken);
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Não foi possível atualizar token localmente:", err);
-                }
             }
 
-            // limpa senha e blob
+            // 👉 ATUALIZA TOKEN SE O BACKEND RETORNAR NEWTOKEN
+            if (data.newToken) {
+                localStorage.setItem("authToken", data.newToken);
+            }
+
+            // Limpa senhas
             setSenhaAtual("");
             setNovaSenha("");
             setConfirmaSenha("");
             setCroppedBlob(null);
         } catch (err) {
-            setMsg(`Erro: ${err.message}`);
+            setMsg("Erro interno: " + err.message);
         }
     };
 
     return (
         <div>
             <form onSubmit={handleUpdate} className="space-y-6">
-                {/* Dados pessoais */}
+                {/* Campos de Perfil */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Nome Completo *</label>
+                    <label className="block text-sm font-medium">Nome Completo *</label>
                     <input
                         type="text"
                         value={fullname}
-                        onChange={(e) => setFullname(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite seu nome completo"
                         required
+                        className="mt-1 w-full px-3 py-2 border rounded-lg"
+                        onChange={(e) => setFullname(e.target.value)}
                     />
 
-                    <label className="block mt-4 text-sm font-medium text-gray-700">Nome de Usuário *</label>
+                    <label className="block mt-4 text-sm font-medium">Nome de Usuário *</label>
                     <input
                         type="text"
                         value={username}
                         disabled
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-100 cursor-not-allowed"
+                        className="mt-1 w-full px-3 py-2 border rounded-lg bg-gray-100"
                     />
 
-                    <label className="block mt-4 text-sm font-medium text-gray-700">Grupo de Usuário *</label>
+                    <label className="block mt-4 text-sm font-medium">Grupo *</label>
                     <input
                         type="text"
                         value={role}
                         disabled
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm bg-gray-100 cursor-not-allowed"
+                        className="mt-1 w-full px-3 py-2 border rounded-lg bg-gray-100"
                     />
 
-                    <label className="block mt-4 text-sm font-medium text-gray-700">Matrícula</label>
+                    <label className="block mt-4 text-sm font-medium">Matrícula</label>
                     <input
                         type="text"
                         value={registernumb}
+                        className="mt-1 w-full px-3 py-2 border rounded-lg"
                         onChange={(e) => setRegisterNumb(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Opcional"
                     />
 
-                    {/* Avatar upload */}
-                    <label className="block mt-4 text-sm font-medium text-gray-700">Foto de Perfil</label>
-                    <div className="flex items-center gap-4 mt-2">
-                        <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
+                    {/* Avatar */}
+                    <label className="block mt-4 text-sm font-medium">Foto de Perfil</label>
+
+                    <div className="flex gap-4 mt-2 items-center">
+                        <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200">
                             {avatarPreview ? (
-                                // se avatarPreview for blob/url, mostramos
-                                // useImageElement com object URL já é suportado
-                                <img src={avatarPreview} alt="preview" className="w-full h-full object-cover" />
+                                <img src={avatarPreview} className="object-cover w-full h-full" />
                             ) : (
-                                <div className="text-gray-600">—</div>
+                                <div className="flex items-center justify-center w-full h-full">
+                                    —
+                                </div>
                             )}
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div>
                             <input
                                 type="file"
                                 accept="image/*"
-                                onChange={handleAvatarChange}
                                 className="text-sm"
+                                onChange={handleAvatarChange}
                             />
-                            <div className="text-xs text-gray-500">
-                                JPG / PNG / WEBP. Mínimo {MIN_DIM}×{MIN_DIM}px. Máx 4MB.
+                            <div className="text-xs text-gray-600">
+                                Min. {MIN_DIM}px, máx. 4MB.
                             </div>
                         </div>
                     </div>
@@ -266,62 +238,49 @@ export default function UpdateProfile() {
 
                 <hr className="my-6" />
 
-                {/* Mudança de senha */}
-                <h2 className="text-md font-semibold mb-2">Mudança de Senha</h2>
-                <div>
-                    <label className="block text-sm text-gray-700">Senha Atual</label>
-                    <input
-                        type="password"
-                        value={senhaAtual}
-                        onChange={(e) => setSenhaAtual(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite sua senha atual"
-                    />
+                {/* SENHAS */}
+                <h2 className="font-semibold">Mudança de Senha</h2>
 
-                    <label className="block text-sm mt-3 text-gray-700">Nova Senha</label>
-                    <input
-                        type="password"
-                        value={novaSenha}
-                        onChange={(e) => setNovaSenha(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Digite a nova senha"
-                    />
+                <label className="block text-sm">Senha Atual</label>
+                <input
+                    type="password"
+                    value={senhaAtual}
+                    className="mt-1 w-full px-3 py-2 border rounded-lg"
+                    onChange={(e) => setSenhaAtual(e.target.value)}
+                />
 
-                    <label className="block text-sm mt-3 text-gray-700">Confirmar Nova Senha</label>
-                    <input
-                        type="password"
-                        value={confirmaSenha}
-                        onChange={(e) => setConfirmaSenha(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm text-sm"
-                        placeholder="Confirme a nova senha"
-                    />
-                </div>
+                <label className="block text-sm mt-3">Nova Senha</label>
+                <input
+                    type="password"
+                    value={novaSenha}
+                    className="mt-1 w-full px-3 py-2 border rounded-lg"
+                    onChange={(e) => setNovaSenha(e.target.value)}
+                />
+
+                <label className="block text-sm mt-3">Confirmar Nova Senha</label>
+                <input
+                    type="password"
+                    value={confirmaSenha}
+                    className="mt-1 w-full px-3 py-2 border rounded-lg"
+                    onChange={(e) => setConfirmaSenha(e.target.value)}
+                />
 
                 <div className="text-right">
-                    <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
+                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                         Salvar Alterações
                     </button>
                 </div>
             </form>
 
-            {msg && <p className="mt-4 text-sm text-gray-700">{msg}</p>}
+            {msg && <p className="mt-4 text-sm">{msg}</p>}
 
-            {/* Modal cropper */}
             {cropping && avatarPreview && (
                 <AvatarCropper
                     imageSrc={avatarPreview}
-                    onCancel={() => {
-                        setCropping(false);
-                        // Mantemos avatarPreview para preview anterior; não limpar automaticamente
-                    }}
+                    onCancel={() => setCropping(false)}
                     onCrop={(blob) => {
-                        // blob -> salvar localmente e preparar para envio
                         setCroppedBlob(blob);
                         setCropping(false);
-                        // preview instantâneo (uso URL para mostrar antes do upload)
                         setAvatarPreview(URL.createObjectURL(blob));
                     }}
                 />

@@ -2,10 +2,17 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { uploadAvatar } from "./uploadAvatar.js"; 
+import { uploadAvatar } from "./uploadAvatar.js"; // multer single('avatar')
 import { processAvatar } from "../services/processAvatar.js";
 import path from "path";
 
+/**
+ * authRouter(pool, SECRET)
+ * - pool: instancia do pg.Pool
+ * - SECRET: secret jwt
+ *
+ * Retorna um express.Router com todas as rotas de autenticação / perfil.
+ */
 export default function authRouter(pool, SECRET) {
   const router = express.Router();
 
@@ -21,15 +28,13 @@ export default function authRouter(pool, SECRET) {
       const payload = jwt.verify(token, SECRET);
 
       // Bloqueia tokens do tipo 'invite'
-      if (payload.type === "invite") {
-        return res.status(403).json({
-          erro: "Convites não têm permissão para acessar o sistema.",
-        });
-      }
+      if (payload.type === "invite")
+        return res.status(403).json({ erro: "Convites não têm permissão para acessar o sistema." });
 
-      req.user = payload;
+      req.user = payload; // { id, user, role, ... }
       next();
-    } catch {
+    } catch (err) {
+      console.warn("[AUTH] token inválido:", err?.message || err);
       return res.status(403).json({ erro: "Token inválido" });
     }
   }
@@ -67,7 +72,7 @@ export default function authRouter(pool, SECRET) {
 
       res.json({ token });
     } catch (err) {
-      console.error("[AUTH LOGIN] Erro:", err.message);
+      console.error("[AUTH LOGIN] Erro:", err.message || err);
       res.status(500).json({ erro: "Erro interno no servidor" });
     }
   });
@@ -76,15 +81,20 @@ export default function authRouter(pool, SECRET) {
   // 🎟️ Geração de convite (Admin)
   // -------------------------
   router.post("/invite", autenticar, somenteAdmin, (req, res) => {
-    const { role, expiresIn } = req.body || {};
-    const payload = {
-      type: "invite",
-      createdBy: req.user.user,
-      role: role || "user",
-    };
-    const token = jwt.sign(payload, SECRET, { expiresIn: expiresIn || "1h" });
-    const link = `${process.env.FRONTEND_URL || "https://api-elipse.onrender.com"}/register?invite=${token}`;
-    res.json({ msg: "Convite gerado", link, token, payload });
+    try {
+      const { role, expiresIn } = req.body || {};
+      const payload = {
+        type: "invite",
+        createdBy: req.user.user,
+        role: role || "user",
+      };
+      const token = jwt.sign(payload, SECRET, { expiresIn: expiresIn || "1h" });
+      const link = `${process.env.FRONTEND_URL || "https://api-elipse.onrender.com"}/register?invite=${token}`;
+      res.json({ msg: "Convite gerado", link, token, payload });
+    } catch (err) {
+      console.error("[AUTH INVITE] Erro:", err);
+      res.status(500).json({ erro: "Erro ao gerar convite" });
+    }
   });
 
   // -------------------------
@@ -97,7 +107,7 @@ export default function authRouter(pool, SECRET) {
       const payload = jwt.verify(token, SECRET);
       if (payload.type !== "invite") throw new Error();
       res.json({ ok: true, role: payload.role });
-    } catch {
+    } catch (err) {
       res.json({ ok: false, erro: "Convite inválido ou expirado" });
     }
   });
@@ -128,14 +138,13 @@ export default function authRouter(pool, SECRET) {
 
       res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
     } catch (err) {
-      console.error("[AUTH REGISTER] Erro:", err.message);
+      console.error("[AUTH REGISTER] Erro:", err.message || err);
       res.status(400).json({ erro: "Convite inválido ou expirado" });
     }
   });
 
   // -------------------------
-  // 👤 Perfil do usuário autenticado
-  //    (retorna avatarurl também)
+  // 👤 Perfil do usuário autenticado (retorna avatarurl)
   // -------------------------
   router.get("/me", autenticar, async (req, res) => {
     try {
@@ -149,10 +158,11 @@ export default function authRouter(pool, SECRET) {
          FROM users WHERE username = $1`,
         [req.user.user]
       );
+
       if (result.rows.length === 0) return res.status(404).json({ erro: "Usuário não encontrado" });
       res.json({ ok: true, usuario: result.rows[0] });
     } catch (err) {
-      console.error("[AUTH ME] Erro:", err.message);
+      console.error("[AUTH ME] Erro:", err.message || err);
       res.status(500).json({ erro: "Erro ao buscar perfil." });
     }
   });
@@ -172,13 +182,13 @@ export default function authRouter(pool, SECRET) {
       `);
       res.json({ ok: true, usuarios: result.rows });
     } catch (err) {
-      console.error("[AUTH LIST-USERS] Erro:", err.message);
+      console.error("[AUTH LIST-USERS] Erro:", err.message || err);
       res.status(500).json({ ok: false, erro: "Erro ao listar usuários." });
     }
   });
 
   // -------------------------
-  // 🧭 Buscar dados detalhados de um usuário (admin/supervisor)
+  // 🧭 Buscar usuário específico (admin/supervisor)
   // -------------------------
   router.get("/user/:username", autenticar, somenteAdmin, async (req, res) => {
     try {
@@ -193,16 +203,16 @@ export default function authRouter(pool, SECRET) {
       );
 
       if (result.rows.length === 0) return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
-
       res.json({ ok: true, usuario: result.rows[0] });
     } catch (err) {
-      console.error("[AUTH USER/:USERNAME] Erro:", err.message);
+      console.error("[AUTH USER/:USERNAME] Erro:", err.message || err);
       res.status(500).json({ ok: false, erro: "Erro ao buscar usuário." });
     }
   });
 
   // -------------------------
   // 👥 Atualizar outro usuário (somente admin/supervisor)
+  // - Se username for alterado, retornamos newToken no response para uso do front.
   // -------------------------
   router.post("/admin-update-user", autenticar, somenteAdmin, async (req, res) => {
     try {
@@ -212,25 +222,27 @@ export default function authRouter(pool, SECRET) {
       const updates = [];
       const values = [];
       let idx = 1;
+      let usernameChangedTo = null;
 
-      if (fullname) {
+      if (fullname !== undefined) {
         updates.push(`fullname = $${idx++}`);
-        values.push(fullname);
+        values.push(fullname || "");
       }
 
-      if (registernumb) {
+      if (registernumb !== undefined) {
         updates.push(`registernumb = $${idx++}`);
-        values.push(registernumb);
+        values.push(registernumb || "");
       }
 
-      if (role) {
+      if (role !== undefined) {
         updates.push(`rolename = $${idx++}`);
-        values.push(role);
+        values.push(role || "");
       }
 
-      if (req.user.role === "admin" && username) {
+      if (username !== undefined && username.trim() !== "") {
         updates.push(`username = $${idx++}`);
         values.push(username);
+        usernameChangedTo = username;
       }
 
       if (updates.length === 0) return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
@@ -238,9 +250,25 @@ export default function authRouter(pool, SECRET) {
       values.push(targetUser);
       await pool.query(`UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`, values);
 
-      res.json({ ok: true, msg: "Usuário atualizado com sucesso!" });
+      const resp = { ok: true, msg: "Usuário atualizado com sucesso!" };
+
+      // Se username foi alterado, gerar token novo (útil para front)
+      if (usernameChangedTo) {
+        // buscar rolename do usuário (após update)
+        const r = await pool.query("SELECT username, rolename FROM users WHERE username = $1", [usernameChangedTo]);
+        if (r.rows.length > 0) {
+          const u = r.rows[0];
+          const newToken = jwt.sign({ id: u.username, user: u.username, role: u.rolename }, SECRET, {
+            expiresIn: "8h",
+          });
+          resp.newToken = newToken;
+          resp.newUsername = u.username;
+        }
+      }
+
+      res.json(resp);
     } catch (err) {
-      console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message);
+      console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message || err);
       res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
     }
   });
@@ -256,16 +284,15 @@ export default function authRouter(pool, SECRET) {
   router.post(
     "/update-profile",
     autenticar,
-    // multer middleware (recebe multipart/form-data caso venha um arquivo)
+    // multer middleware (se não houver arquivo, multer apenas define req.file = undefined)
     uploadAvatar,
     async (req, res) => {
       try {
-          console.log("BODY:", req.body);
-          console.log("FILE:", req.file);
-        // -------------------------
-        // 1) Ler campos
-        // -------------------------
-        // NOTE: com multipart/form-data os campos vêm em req.body como strings
+        // DEBUG log leve (útil durante dev)
+        console.log("BODY:", req.body);
+        console.log("FILE:", req.file ? { filename: req.file.filename, size: req.file.size } : null);
+
+        // 1) Ler campos (com multipart/form-data, campos vêm como strings)
         const {
           fullname,
           registernumb,
@@ -275,18 +302,11 @@ export default function authRouter(pool, SECRET) {
           novaSenha,
         } = req.body || {};
 
-        // -------------------------
-        // 2) Se veio arquivo, processa avatar
-        // -------------------------
-        // uploadAvatar salva o arquivo em diskStorage e popula req.file (ou undefined)
+        // 2) Se veio arquivo, processa avatar (sharp)
         let avatarUrl = null;
         if (req.file) {
-          // processAvatar deve validar dimensões e otimizar (converte/gera webp)
-          // recebe o caminho do arquivo temporário (uploads/avatars/<filename>)
+          // processAvatar valida dimensões mínimas e gera webp otimizado
           const processedRelativePath = await processAvatar(req.file.path, req.user.user);
-
-          // processedRelativePath deve ser algo como 'uploads/avatars/<user>.webp'
-          // montamos a URL pública (SERVER_URL deve apontar para seu backend base)
           const serverBase = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
           avatarUrl = `${serverBase}/${processedRelativePath.replace(/^[\\/]+/, "")}`;
 
@@ -294,29 +314,21 @@ export default function authRouter(pool, SECRET) {
           await pool.query(`UPDATE users SET avatarurl = $1 WHERE username = $2`, [avatarUrl, req.user.user]);
         }
 
-        // -------------------------
         // 3) Se pediu troca de senha: validar e gravar
-        // -------------------------
-        if (novaSenha) {
-          // novaSenha solicitada — senhaAtual é obrigatória
+        if (novaSenha !== undefined && String(novaSenha).length > 0) {
           if (!senhaAtual) return res.status(400).json({ ok: false, erro: "Senha atual é necessária para trocar a senha." });
 
-          // buscar hash atual
           const r = await pool.query("SELECT passhash FROM users WHERE username = $1", [req.user.user]);
           if (r.rows.length === 0) return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
 
           const match = await bcrypt.compare(senhaAtual, r.rows[0].passhash);
           if (!match) return res.status(401).json({ ok: false, erro: "Senha atual incorreta." });
 
-          // hash nova senha e atualiza
           const newHash = await bcrypt.hash(novaSenha, 10);
           await pool.query("UPDATE users SET passhash = $1 WHERE username = $2", [newHash, req.user.user]);
         }
 
-        // -------------------------
         // 4) Atualizar campos textuais (fullname, registernumb, refreshtime, usertheme)
-        //    - se nenhum campo foi enviado e não houve avatar nem senha, responder erro
-        // -------------------------
         const updates = [];
         const values = [];
         let idx = 1;
@@ -333,9 +345,13 @@ export default function authRouter(pool, SECRET) {
 
         if (refreshtime !== undefined) {
           updates.push(`refreshtime = $${idx++}`);
-          // garantir number
-          const rt = Number(refreshtime);
-          values.push(Number.isFinite(rt) ? rt : 10);
+          // tratar vazio, null, undefined → usa default 10
+          if (refreshtime === "" || refreshtime === null) {
+            values.push(10);
+          } else {
+            const rt = Number(refreshtime);
+            values.push(Number.isFinite(rt) ? rt : 10);
+          }
         }
 
         if (usertheme !== undefined) {
@@ -343,15 +359,12 @@ export default function authRouter(pool, SECRET) {
           values.push(usertheme || "light");
         }
 
-        // se houver updates textuais, executa
         if (updates.length > 0) {
           values.push(req.user.user);
           await pool.query(`UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`, values);
         }
 
-        // -------------------------
         // 5) Ler dados recém-atualizados para retorno
-        // -------------------------
         const result = await pool.query(
           `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
                   COALESCE(registernumb,'') AS registernumb,
@@ -368,19 +381,16 @@ export default function authRouter(pool, SECRET) {
           usuario: result.rows[0],
         });
       } catch (err) {
-        console.error("[AUTH UPDATE-PROFILE] Erro:", err);
-        // multer upload errors podem vir como Error: Field too large | invalid mimetype etc.
-        res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
-        return res.status(400).json({ok: false, erro: err.message});
+        // Evita envio de múltiplas respostas — respondemos uma vez aqui
+        console.error("[AUTH UPDATE-PROFILE] Erro:", err && err.message ? err.message : err);
+        // Se for erro do multer (file too large / invalid mimetype), devolva 400 com a mensagem
+        if (err && /file/i.test(err.message || "")) {
+          return res.status(400).json({ ok: false, erro: err.message });
+        }
+        return res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
       }
     }
   );
-
-  // -------------------------
-  // ⚙️ Atualizar preferências (rota separada opcional)
-  //    (Mantive apenas a rota unificada acima; se quiser rota JSON-only,
-  //     podemos acrescentar /update-profile-prefs)
-  // -------------------------
 
   return router;
 }

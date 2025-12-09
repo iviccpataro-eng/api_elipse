@@ -61,6 +61,48 @@ export default function Navbar({ onLogout }) {
     const avatarTabletRef = useRef(null);
 
     /* ---------------------------------------------------------
+     Detecta troca de token localmente e recarrega perfil
+    ---------------------------------------------------------- */
+    useEffect(() => {
+        const updateUserInfo = async () => {
+            const token = localStorage.getItem("authToken");
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                const data = await res.json();
+                if (data.ok && data.usuario) {
+                    setUser({
+                        name: data.usuario.fullname || data.usuario.username,
+                        role: data.usuario.rolename,
+                        avatarUrl: data.usuario.avatarurl || null,
+                    });
+                }
+            } catch (err) {
+                console.error("Erro ao atualizar usuário:", err);
+            }
+        };
+
+        // 1) Chamada inicial
+        updateUserInfo();
+
+        // 2) Listener para mudanças no token
+        const interval = setInterval(() => {
+            const currentToken = localStorage.getItem("authToken");
+            if (currentToken !== window.__lastToken) {
+                window.__lastToken = currentToken;
+                updateUserInfo();
+            }
+        }, 800);
+
+        return () => clearInterval(interval);
+    }, []);
+
+
+    /* ---------------------------------------------------------
        Fecha o dropdown ao clicar fora
     ---------------------------------------------------------- */
     useEffect(() => {
