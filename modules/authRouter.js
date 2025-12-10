@@ -12,6 +12,11 @@ import path from "path";
  * - SECRET: secret jwt
  *
  * Retorna um express.Router com todas as rotas de autenticação / perfil.
+ *
+ * Observações principais:
+ * - Evitar enviar string vazia ("") para colunas numéricas (BIGINT / SMALLINT).
+ * - Campos numéricos: registernumb (bigint) e refreshtime (smallint).
+ * - uploadAvatar é middleware multer.single('avatar'): se não houver arquivo, req.file = undefined.
  */
 export default function authRouter(pool, SECRET) {
   const router = express.Router();
@@ -23,7 +28,7 @@ export default function authRouter(pool, SECRET) {
     const authHeader = req.headers["authorization"];
     if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
 
-    const token = authHeader.split(" ")[1];
+    const token = String(authHeader).split(" ")[1];
     try {
       const payload = jwt.verify(token, SECRET);
 
@@ -130,10 +135,16 @@ export default function authRouter(pool, SECRET) {
       const check = await pool.query("SELECT 1 FROM users WHERE username = $1", [username]);
       if (check.rows.length > 0) return res.status(400).json({ erro: "Usuário já existe." });
 
+      // Tratar registernumb: se vazio, inserir NULL (coluna bigint aceita NULL)
+      const regNumValue =
+        registerNumb === undefined || registerNumb === null || String(registerNumb).trim() === ""
+          ? null
+          : String(registerNumb).trim();
+
       await pool.query(
         `INSERT INTO users (username, passhash, rolename, fullname, registernumb)
          VALUES ($1,$2,$3,$4,$5)`,
-        [username, hash, role || "user", fullName || "", registerNumb || ""]
+        [username, hash, role || "user", fullName || "", regNumValue]
       );
 
       res.json({ ok: true, msg: "Usuário registrado com sucesso!" });
@@ -148,10 +159,11 @@ export default function authRouter(pool, SECRET) {
   // -------------------------
   router.get("/me", autenticar, async (req, res) => {
     try {
+      // Suporte a diferentes formatos de token antigos/novos
       const username =
-        req.user?.user ||        // tokens antigos
-        req.user?.username ||    // alguns middlewares usam username
-        req.user?.id ||          // fallback seguro
+        req.user?.user || // tokens antigos
+        req.user?.username ||
+        req.user?.id ||
         null;
 
       if (!username) {
@@ -160,12 +172,12 @@ export default function authRouter(pool, SECRET) {
 
       const result = await pool.query(
         `SELECT username, rolename,
-                COALESCE(fullname,'') AS fullname,
-                COALESCE(registernumb,'') AS registernumb,
-                COALESCE(refreshtime,10) AS refreshtime,
-                COALESCE(usertheme,'light') AS usertheme,
-                COALESCE(avatarurl,'') AS avatarurl
-        FROM users WHERE username = $1`,
+                COALESCE(fullname, '') AS fullname,
+                COALESCE(registernumb::text, '') AS registernumb,
+                COALESCE(refreshtime::text, '10') AS refreshtime,
+                COALESCE(usertheme, 'light') AS usertheme,
+                COALESCE(avatarurl, '') AS avatarurl
+         FROM users WHERE username = $1`,
         [username]
       );
 
@@ -173,14 +185,13 @@ export default function authRouter(pool, SECRET) {
         return res.status(404).json({ erro: "Usuário não encontrado" });
 
       res.json({ ok: true, usuario: result.rows[0] });
-
     } catch (err) {
-      console.error("[AUTH ME] ERRO COMPLETO:", err);
+      console.error("[AUTH ME] ERRO COMPLETO:", err && err.message ? err.message : err);
       res.status(500).json({ erro: "Erro ao buscar perfil." });
     }
   });
 
-// -------------------------
+  // -------------------------
   // 👥 Listar todos os usuários (admin/supervisor)
   // -------------------------
   router.get("/list-users", autenticar, async (req, res) => {
@@ -190,7 +201,7 @@ export default function authRouter(pool, SECRET) {
       }
       const result = await pool.query(`
         SELECT username, rolename, COALESCE(fullname, '') AS fullname,
-               COALESCE(registernumb, '') AS registernumb
+               COALESCE(registernumb::text, '') AS registernumb
         FROM users ORDER BY username ASC
       `);
       res.json({ ok: true, usuarios: result.rows });
@@ -210,7 +221,7 @@ export default function authRouter(pool, SECRET) {
 
       const result = await pool.query(
         `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
-                COALESCE(registernumb,'') AS registernumb, COALESCE(avatarurl,'') AS avatarurl
+                COALESCE(registernumb::text,'') AS registernumb, COALESCE(avatarurl,'') AS avatarurl
         FROM users WHERE username = $1`,
         [username]
       );
@@ -226,10 +237,11 @@ export default function authRouter(pool, SECRET) {
   // -------------------------
   // 👥 Atualizar outro usuário (somente admin/supervisor)
   // - Se username for alterado, retornamos newToken no response para uso do front.
+  // - Trata corretamente registernumb/refreshtime para não enviar ""
   // -------------------------
   router.post("/admin-update-user", autenticar, somenteAdmin, async (req, res) => {
     try {
-      const { targetUser, fullname, registernumb, username, role } = req.body || {};
+      const { targetUser, fullname, registernumb, username, role, refreshtime, usertheme } = req.body || {};
       if (!targetUser) return res.status(400).json({ ok: false, erro: "Usuário alvo não informado." });
 
       const updates = [];
@@ -237,37 +249,65 @@ export default function authRouter(pool, SECRET) {
       let idx = 1;
       let usernameChangedTo = null;
 
+      // fullname
       if (fullname !== undefined) {
         updates.push(`fullname = $${idx++}`);
         values.push(fullname || "");
       }
 
+      // username (rename) - only if provided and not empty
+      if (username !== undefined && String(username).trim() !== "") {
+        updates.push(`username = $${idx++}`);
+        values.push(String(username).trim());
+        usernameChangedTo = String(username).trim();
+      }
+
+      // registernumb (bigint) - accept NULL when empty
       if (registernumb !== undefined) {
         updates.push(`registernumb = $${idx++}`);
-        values.push(registernumb || "");
+        if (registernumb === "" || registernumb === null) {
+          values.push(null);
+        } else {
+          // keep as string (safer for big ints) or number if small
+          const rn = String(registernumb).trim();
+          values.push(rn === "" ? null : rn);
+        }
       }
 
+      // refreshtime (smallint)
+      if (refreshtime !== undefined) {
+        updates.push(`refreshtime = $${idx++}`);
+        if (refreshtime === "" || refreshtime === null) {
+          values.push(10);
+        } else {
+          const rt = Number(refreshtime);
+          values.push(Number.isFinite(rt) ? rt : 10);
+        }
+      }
+
+      // rolename
       if (role !== undefined) {
         updates.push(`rolename = $${idx++}`);
-        values.push(role || "");
+        values.push(role || null);
       }
 
-      if (username !== undefined && username.trim() !== "") {
-        updates.push(`username = $${idx++}`);
-        values.push(username);
-        usernameChangedTo = username;
+      // usertheme (string)
+      if (usertheme !== undefined) {
+        updates.push(`usertheme = $${idx++}`);
+        values.push(usertheme || "light");
       }
 
       if (updates.length === 0) return res.status(400).json({ ok: false, erro: "Nada a atualizar." });
 
+      // finalize: WHERE targetUser
       values.push(targetUser);
-      await pool.query(`UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`, values);
+      const sql = `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`;
+      await pool.query(sql, values);
 
       const resp = { ok: true, msg: "Usuário atualizado com sucesso!" };
 
       // Se username foi alterado, gerar token novo (útil para front)
       if (usernameChangedTo) {
-        // buscar rolename do usuário (após update)
         const r = await pool.query("SELECT username, rolename FROM users WHERE username = $1", [usernameChangedTo]);
         if (r.rows.length > 0) {
           const u = r.rows[0];
@@ -281,7 +321,7 @@ export default function authRouter(pool, SECRET) {
 
       res.json(resp);
     } catch (err) {
-      console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err.message || err);
+      console.error("[AUTH ADMIN-UPDATE-USER] Erro:", err && err.message ? err.message : err);
       res.status(500).json({ ok: false, erro: "Erro interno ao atualizar usuário." });
     }
   });
@@ -297,15 +337,15 @@ export default function authRouter(pool, SECRET) {
   router.post(
     "/update-profile",
     autenticar,
-    // multer middleware (se não houver arquivo, multer apenas define req.file = undefined)
+    // multer middleware (se não houver arquivo, req.file = undefined)
     uploadAvatar,
     async (req, res) => {
       try {
-        // DEBUG log leve (útil durante dev)
+        // DEBUG leve (útil para dev)
         console.log("BODY:", req.body);
         console.log("FILE:", req.file ? { filename: req.file.filename, size: req.file.size } : null);
 
-        // 1) Ler campos (com multipart/form-data, campos vêm como strings)
+        // 1) Ler campos
         const {
           fullname,
           registernumb,
@@ -316,18 +356,21 @@ export default function authRouter(pool, SECRET) {
         } = req.body || {};
 
         // 2) Se veio arquivo, processa avatar (sharp)
-        let avatarUrl = null;
         if (req.file) {
-          // processAvatar valida dimensões mínimas e gera webp otimizado
-          const processedRelativePath = await processAvatar(req.file.path, req.user.user);
-          const serverBase = process.env.SERVER_URL?.trim() || `http://localhost:${process.env.PORT || 3000}`;
-          avatarUrl = `${serverBase}/${processedRelativePath.replace(/^[\\/]+/, "")}`;
+          try {
+            const processedRelativePath = await processAvatar(req.file.path, req.user.user);
+            const serverBase = process.env.SERVER_URL?.trim() || `http://localhost:${process.env.PORT || 3000}`;
+            const avatarUrl = `${serverBase}/${processedRelativePath.replace(/^[\\/]+/, "")}`;
 
-          // grava avatarurl no banco
-          await pool.query(`UPDATE users SET avatarurl = $1 WHERE username = $2`, [avatarUrl, req.user.user]);
+            await pool.query(`UPDATE users SET avatarurl = $1 WHERE username = $2`, [avatarUrl, req.user.user]);
+          } catch (errProcess) {
+            // processAvatar pode lançar erro (ex: imagem pequena) — devolve 400 com mensagem clara
+            console.error("[AUTH UPDATE-PROFILE] Erro ao processar avatar:", errProcess && errProcess.message ? errProcess.message : errProcess);
+            return res.status(400).json({ ok: false, erro: errProcess.message || "Erro ao processar avatar." });
+          }
         }
 
-        // 3) Se pediu troca de senha: validar e gravar
+        // 3) Troca de senha (se solicitada)
         if (novaSenha !== undefined && String(novaSenha).length > 0) {
           if (!senhaAtual) return res.status(400).json({ ok: false, erro: "Senha atual é necessária para trocar a senha." });
 
@@ -353,12 +396,17 @@ export default function authRouter(pool, SECRET) {
 
         if (registernumb !== undefined) {
           updates.push(`registernumb = $${idx++}`);
-          values.push(registernumb || "");
+          if (registernumb === "" || registernumb === null) {
+            values.push(null);
+          } else {
+            // manter como string para bigint (mais seguro para números grandes)
+            const rn = String(registernumb).trim();
+            values.push(rn === "" ? null : rn);
+          }
         }
 
         if (refreshtime !== undefined) {
           updates.push(`refreshtime = $${idx++}`);
-          // tratar vazio, null, undefined → usa default 10
           if (refreshtime === "" || refreshtime === null) {
             values.push(10);
           } else {
@@ -374,14 +422,15 @@ export default function authRouter(pool, SECRET) {
 
         if (updates.length > 0) {
           values.push(req.user.user);
-          await pool.query(`UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`, values);
+          const sql = `UPDATE users SET ${updates.join(", ")} WHERE username = $${idx}`;
+          await pool.query(sql, values);
         }
 
-        // 5) Ler dados recém-atualizados para retorno
+        // 5) Ler dados recém-atualizados para retorno (inclui avatarurl)
         const result = await pool.query(
           `SELECT username, rolename, COALESCE(fullname,'') AS fullname,
-                  COALESCE(registernumb,'') AS registernumb,
-                  COALESCE(refreshtime,10) AS refreshtime,
+                  COALESCE(registernumb::text,'') AS registernumb,
+                  COALESCE(refreshtime::text,'10') AS refreshtime,
                   COALESCE(usertheme,'light') AS usertheme,
                   COALESCE(avatarurl,'') AS avatarurl
            FROM users WHERE username = $1`,
@@ -394,12 +443,18 @@ export default function authRouter(pool, SECRET) {
           usuario: result.rows[0],
         });
       } catch (err) {
-        // Evita envio de múltiplas respostas — respondemos uma vez aqui
+        // Tratamento especial para erros de multer (por exemplo: file too large / invalid mimetype)
         console.error("[AUTH UPDATE-PROFILE] Erro:", err && err.message ? err.message : err);
-        // Se for erro do multer (file too large / invalid mimetype), devolva 400 com a mensagem
-        if (err && /file/i.test(err.message || "")) {
+
+        // Multer errors costumam ter name 'MulterError' ou message contendo 'File too large'
+        if (err && err.name === "MulterError") {
           return res.status(400).json({ ok: false, erro: err.message });
         }
+        // Se for erro relacionado a input -> devolve 400 com mensagem
+        if (err && /invalid input syntax for type/i.test(String(err.message || ""))) {
+          return res.status(400).json({ ok: false, erro: err.message });
+        }
+
         return res.status(500).json({ ok: false, erro: "Erro ao atualizar perfil." });
       }
     }
