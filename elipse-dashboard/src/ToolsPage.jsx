@@ -81,7 +81,7 @@ export default function ToolsPage() {
             </div>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="flex-1 p-4 md:p-6 md:ml-64 transition-all">
+            <main className="flex-1 p-4 md:p-6 lg:ml-64 transition-all">
 
                 {/* Título apenas no MOBILE */}
                 <div className="lg:hidden">
