@@ -65,7 +65,7 @@ export default function ToolsPage() {
             </aside>
 
             {/* ABAS HORIZONTAIS (MOBILE) */}
-            <div className="md:hidden w-full bg-white border-b px-3 pb-2 pt-4 flex space-x-4 overflow-x-auto">
+            <div className="lg:hidden w-full bg-white border-b px-3 pb-2 pt-4 flex space-x-4 overflow-x-auto">
                 {tabs.map((t) => (
                     <button
                         key={t.key}
@@ -84,7 +84,7 @@ export default function ToolsPage() {
             <main className="flex-1 p-4 md:p-6 md:ml-64 transition-all">
 
                 {/* Título apenas no MOBILE */}
-                <div className="md:hidden">
+                <div className="lg:hidden">
                     <h1 className="text-2xl font-semibold flex items-center gap-2 mb-6 mt-4">
                         <Settings className="w-5 h-5" />
                         Configurações
