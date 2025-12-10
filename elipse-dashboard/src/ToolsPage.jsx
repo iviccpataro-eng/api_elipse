@@ -2,72 +2,57 @@ import React, { useState } from "react";
 import InviteGenerator from "./components/InviteGenerator";
 import SystemConfig from "./components/SystemConfig";
 import UserConfig from "./components/UserConfig";
-import AboutSystem from "./components/AboutSystem"; // ✅ nova página "Em breve"
+import AboutSystem from "./components/AboutSystem";
 
 export default function ToolsPage() {
     const [selected, setSelected] = useState("system");
 
+    const tabs = [
+        { key: "system", label: "Configurações do Sistema" },
+        { key: "user", label: "Configurações de Usuário" },
+        { key: "invite", label: "Gerar Convite" },
+        { key: "about", label: "Sobre o Sistema" }
+    ];
+
     const renderContent = () => {
         switch (selected) {
-            case "system":
-                return <SystemConfig />;
-            case "user":
-                return <UserConfig />;
-            case "invite":
-                return <InviteGenerator />;
-            case "about":
-                return <AboutSystem />; // ✅ nova aba
-            default:
-                return <div>Selecione uma opção no menu</div>;
+            case "system": return <SystemConfig />;
+            case "user": return <UserConfig />;
+            case "invite": return <InviteGenerator />;
+            case "about": return <AboutSystem />;
+            default: return <div>Selecione uma opção no menu</div>;
         }
     };
 
     return (
         <div className="flex min-h-screen pt-16">
-            {/* Sidebar fixa */}
-            <aside className="w-64 bg-gray-100 border-r p-4 flex flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
+
+            {/* SIDEBAR (DESKTOP/TABLET) */}
+            <aside className="hidden md:flex w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
                 <div>
                     <h2 className="text-lg font-semibold mb-4">Ferramentas</h2>
                     <nav className="space-y-2">
-                        <button
-                            onClick={() => setSelected("system")}
-                            className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "system"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200"
-                                }`}
-                        >
-                            Configurações do Sistema
-                        </button>
-
-                        <button
-                            onClick={() => setSelected("user")}
-                            className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "user"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200"
-                                }`}
-                        >
-                            Configurações de Usuário
-                        </button>
-
-                        <button
-                            onClick={() => setSelected("invite")}
-                            className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "invite"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200"
-                                }`}
-                        >
-                            Gerar Convite
-                        </button>
+                        {tabs.slice(0, 3).map((t) => (
+                            <button
+                                key={t.key}
+                                onClick={() => setSelected(t.key)}
+                                className={`block w-full text-left px-3 py-2 rounded-lg ${selected === t.key
+                                        ? "bg-blue-600 text-white"
+                                        : "hover:bg-gray-200"
+                                    }`}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
                     </nav>
                 </div>
 
-                {/* Rodapé fixo da sidebar */}
                 <div className="border-t mt-6 pt-3">
                     <button
                         onClick={() => setSelected("about")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "about"
-                            ? "bg-blue-600 text-white"
-                            : "hover:bg-gray-200 text-gray-700"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200 text-gray-700"
                             }`}
                     >
                         Sobre o Sistema
@@ -75,8 +60,24 @@ export default function ToolsPage() {
                 </div>
             </aside>
 
-            {/* Conteúdo principal */}
-            <main className="flex-1 p-6 ml-64 overflow-y-auto">{renderContent()}</main>
+            {/* ABAS HORIZONTAIS (MOBILE) */}
+            <div className="md:hidden w-full bg-white border-b overflow-x-auto whitespace-nowrap px-3 py-2 flex space-x-3">
+                {tabs.map((t) => (
+                    <button
+                        key={t.key}
+                        onClick={() => setSelected(t.key)}
+                        className={`px-3 py-1 text-sm rounded-md whitespace-nowrap ${selected === t.key
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                    >
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* CONTEÚDO PRINCIPAL */}
+            <main className="flex-1 p-6 md:ml-64">{renderContent()}</main>
         </div>
     );
 }
