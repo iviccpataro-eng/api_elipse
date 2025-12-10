@@ -25,10 +25,10 @@ export default function ToolsPage() {
     };
 
     return (
-        <div className="flex min-h-screen pt-16">
+        <div className="flex flex-col md:flex-row min-h-screen pt-16">
 
             {/* SIDEBAR (DESKTOP/TABLET) */}
-            <aside className="hidden md:flex w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
+            <aside className="hidden md:flex md:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed md:top-16 md:bottom-0 overflow-y-auto">
                 <div>
                     <h2 className="text-lg font-semibold mb-4">Ferramentas</h2>
                     <nav className="space-y-2">
@@ -37,8 +37,8 @@ export default function ToolsPage() {
                                 key={t.key}
                                 onClick={() => setSelected(t.key)}
                                 className={`block w-full text-left px-3 py-2 rounded-lg ${selected === t.key
-                                        ? "bg-blue-600 text-white"
-                                        : "hover:bg-gray-200"
+                                    ? "bg-blue-600 text-white"
+                                    : "hover:bg-gray-200"
                                     }`}
                             >
                                 {t.label}
@@ -51,8 +51,8 @@ export default function ToolsPage() {
                     <button
                         onClick={() => setSelected("about")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "about"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200 text-gray-700"
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-200 text-gray-700"
                             }`}
                     >
                         Sobre o Sistema
@@ -67,8 +67,8 @@ export default function ToolsPage() {
                         key={t.key}
                         onClick={() => setSelected(t.key)}
                         className={`px-3 py-1 text-sm rounded-md whitespace-nowrap ${selected === t.key
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                     >
                         {t.label}
@@ -77,7 +77,9 @@ export default function ToolsPage() {
             </div>
 
             {/* CONTEÚDO PRINCIPAL */}
-            <main className="flex-1 p-6 md:ml-64">{renderContent()}</main>
+            <main className="flex-1 p-4 md:p-6 md:ml-64 transition-all">
+                {renderContent()}
+            </main>
         </div>
     );
 }
