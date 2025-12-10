@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Settings from "lucide-react";
+import { Settings } from "lucide-react";
 import InviteGenerator from "./components/InviteGenerator";
 import SystemConfig from "./components/SystemConfig";
 import UserConfig from "./components/UserConfig";
@@ -71,8 +71,8 @@ export default function ToolsPage() {
                         key={t.key}
                         onClick={() => setSelected(t.key)}
                         className={`pb-2 whitespace-nowrap border-b-2 transition-colors ${selected === t.key
-                                ? "border-blue-600 text-blue-600 font-medium"
-                                : "border-transparent text-gray-600 hover:text-black"
+                            ? "border-blue-600 text-blue-600 font-medium"
+                            : "border-transparent text-gray-600 hover:text-black"
                             }`}
                     >
                         {t.label}
