@@ -29,7 +29,7 @@ export default function ToolsPage() {
         <div className="flex flex-col md:flex-row min-h-screen pt-16">
 
             {/* SIDEBAR (DESKTOP/TABLET) */}
-            <aside className="hidden md:flex md:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed md:top-16 md:bottom-0 overflow-y-auto">
+            <aside className="hidden lg:flex lg:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed lg:top-16 lg:bottom-0 overflow-y-auto">
                 <div>
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <Settings className="w-4 h-4" />
