@@ -26,23 +26,27 @@ export default function ToolsPage() {
     };
 
     return (
-        <div className="flex flex-col md:flex-row min-h-screen pt-16">
+        <div className="flex flex-col lg:flex-row min-h-screen pt-16">
 
-            {/* SIDEBAR (DESKTOP/TABLET) */}
-            <aside className="hidden lg:flex lg:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed lg:top-16 lg:bottom-0 overflow-y-auto">
+            {/* ======================================================
+               SIDEBAR: aparece apenas em DESKTOP (>= lg)
+            ======================================================= */}
+            <aside className="hidden lg:flex lg:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
+
                 <div>
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <Settings className="w-4 h-4" />
                         Configurações
                     </h2>
+
                     <nav className="space-y-2">
                         {tabs.slice(0, 3).map((t) => (
                             <button
                                 key={t.key}
                                 onClick={() => setSelected(t.key)}
                                 className={`block w-full text-left px-3 py-2 rounded-lg ${selected === t.key
-                                    ? "bg-blue-600 text-white"
-                                    : "hover:bg-gray-200"
+                                        ? "bg-blue-600 text-white"
+                                        : "hover:bg-gray-200"
                                     }`}
                             >
                                 {t.label}
@@ -55,8 +59,8 @@ export default function ToolsPage() {
                     <button
                         onClick={() => setSelected("about")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "about"
-                            ? "bg-blue-600 text-white"
-                            : "hover:bg-gray-200 text-gray-700"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-200 text-gray-700"
                             }`}
                     >
                         Sobre o Sistema
@@ -64,33 +68,41 @@ export default function ToolsPage() {
                 </div>
             </aside>
 
-            {/* ABAS HORIZONTAIS (MOBILE) */}
-            <div className="lg:hidden w-full bg-white border-b px-3 pb-2 pt-4 flex space-x-4 overflow-x-auto">
-                {tabs.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setSelected(t.key)}
-                        className={`pb-2 whitespace-nowrap border-b-2 transition-colors ${selected === t.key
-                            ? "border-blue-600 text-blue-600 font-medium"
-                            : "border-transparent text-gray-600 hover:text-black"
-                            }`}
-                    >
-                        {t.label}
-                    </button>
-                ))}
+            {/* ======================================================
+               MOBILE + TABLET HEADER
+               - aparece somente em < lg
+               - inclui o título + abas
+            ======================================================= */}
+            <div className="lg:hidden w-full bg-white">
+
+                {/* TÍTULO MOBILE — sempre acima das abas */}
+                <h1 className="text-2xl font-semibold flex items-center gap-2 px-4 pt-5 pb-2">
+                    <Settings className="w-5 h-5" />
+                    Configurações
+                </h1>
+
+                {/* ABAS MOBILE / TABLET */}
+                <div className="w-full border-b px-3 pb-2 pt-3 flex space-x-4 overflow-x-auto">
+                    {tabs.map((t) => (
+                        <button
+                            key={t.key}
+                            onClick={() => setSelected(t.key)}
+                            className={`pb-2 whitespace-nowrap border-b-2 transition-colors ${selected === t.key
+                                    ? "border-blue-600 text-blue-600 font-medium"
+                                    : "border-transparent text-gray-600 hover:text-black"
+                                }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* CONTEÚDO PRINCIPAL */}
+            {/* ======================================================
+               CONTEÚDO PRINCIPAL
+               - deslocado para a direita no DESKTOP (lg:ml-64)
+            ======================================================= */}
             <main className="flex-1 p-4 md:p-6 lg:ml-64 transition-all">
-
-                {/* Título apenas no MOBILE */}
-                <div className="lg:hidden">
-                    <h1 className="text-2xl font-semibold flex items-center gap-2 mb-6 mt-4">
-                        <Settings className="w-5 h-5" />
-                        Configurações
-                    </h1>
-                </div>
-
                 {renderContent()}
             </main>
         </div>
