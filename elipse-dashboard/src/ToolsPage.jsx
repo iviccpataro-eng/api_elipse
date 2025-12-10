@@ -25,7 +25,7 @@ export default function ToolsPage() {
     };
 
     return (
-        <div className="flex flex-col md:flex-row min-h-screen pt-16">
+        <div className="flex flex-col md:flex-row min-h-screen md:pt-20 pt-16">
 
             {/* SIDEBAR (DESKTOP/TABLET) */}
             <aside className="hidden md:flex md:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed md:top-16 md:bottom-0 overflow-y-auto">
