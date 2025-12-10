@@ -3,51 +3,45 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 /**
- * useAlarms()
- * ----------------------------------------------------------------------
- * ✔ Realiza polling de /alarms/actives
- * ✔ Detecta novos alarmes
- * ✔ Reproduz sons por severidade
- * ✔ Mantém fila (queue) com prioridade
- * ✔ Timeout automático para severidade 0–2
- * ✔ Sem timeout para severidade 3
- * ✔ Marca alarmes como "notified" no backend
- * ✔ Exponibiliza função goToEquipment() para navegação
- * ----------------------------------------------------------------------
+ * useAlarms - robust version
+ * - evita re-enfileirar o mesmo alarme usando chave única (tag|name)
+ * - remove da fila por chave (não por objeto)
+ * - logs detalhados
+ * - timeout de 5s para severidades 0..2
+ * - sem timeout para severidade 3
  */
 
 export default function useAlarms(interval = 3000) {
   const navigate = useNavigate();
-
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "https://api-elipse.onrender.com";
 
   const [alarms, setAlarms] = useState([]);
   const [hasNew, setHasNew] = useState(false);
 
+  // fila de banners: cada item tem { key, id, tag, name, severity, source, disciplineRoute }
   const [bannerQueue, setBannerQueue] = useState([]);
   const [banner, setBanner] = useState(null);
 
+  // shownRef guarda chaves já exibidas (key => true)
   const shownRef = useRef({});
   const pollRef = useRef(null);
   const timerRef = useRef(null);
 
   /* ============================================================
-     🔊 SOM DO ALARME
+     🔊 SOM DO ALARME (mantive sua lógica)
   ============================================================ */
   const lastSoundRef = useRef(null);
-
   function playAlarmSound(sev, key) {
     try {
       if (lastSoundRef.current === key) return;
       lastSoundRef.current = key;
-
       const path =
-        sev = 3 ? "/sounds/critical.mp3"
-          : sev === 2 ? "/sounds/high.mp3"
-          : sev === 1 ? "/sounds/low.mp3"
-          : "";
-
+        sev >= 3
+          ? "/sounds/critical.mp3"
+          : sev === 2
+          ? "/sounds/high.mp3"
+          : "/sounds/low.mp3";
       const audio = new Audio(path);
       audio.volume = sev >= 3 ? 1 : 0.6;
       audio.play().catch(() => {});
@@ -55,67 +49,10 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     📡 FETCH DE ALARMES
-  ============================================================ */
-  async function fetchAlarms() {
-    try {
-      const res = await fetch(`${API_BASE}/alarms/actives`);
-      const json = await res.json();
-
-      if (!json.ok) return;
-
-      const list = json.alarms || [];
-      setAlarms(list);
-
-      list.forEach((a) => {
-        const key = `${a.tag}|${a.name}`;
-
-        if (a.active && !shownRef.current[key]) {
-          shownRef.current[key] = true;
-
-          playAlarmSound(a.severity, key);
-
-          setBannerQueue((q) => [
-            ...q,
-            {
-              id: a.id,
-              tag: a.tag,
-              name: a.name,
-              severity: a.severity,
-              source: a.source,
-              disciplineRoute: getDisciplineRoute(a.tag),
-            },
-          ]);
-
-          setHasNew(true);
-        }
-      });
-
-      // remove alarmes que deixaram de existir
-      Object.keys(shownRef.current).forEach((key) => {
-        const exists = list.find((a) => `${a.tag}|${a.name}` === key && a.active);
-        if (!exists) delete shownRef.current[key];
-      });
-    } catch (err) {
-      console.error("Erro ao buscar alarmes:", err);
-    }
-  }
-
-  /* ============================================================
-     🔄 POLLING
-  ============================================================ */
-  useEffect(() => {
-    fetchAlarms();
-    pollRef.current = setInterval(fetchAlarms, interval);
-    return () => clearInterval(pollRef.current);
-  }, [interval]);
-
-  /* ============================================================
-     🟧 AUX: ROTA pela disciplina
+     🔧 util: rota por disciplina
   ============================================================ */
   function getDisciplineRoute(tag) {
-    const d = tag.split("/")[0];
-
+    const d = (tag || "").split("/")[0] || "";
     switch (d) {
       case "AC": return "arcondicionado";
       case "IL": return "iluminacao";
@@ -126,7 +63,7 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🟧 Atualizar notified = true
+     🟦 Atualizar notified no backend
   ============================================================ */
   async function markAsNotified(id) {
     if (!id) return;
@@ -137,78 +74,145 @@ export default function useAlarms(interval = 3000) {
         body: JSON.stringify({ id, notified: true }),
       });
     } catch (err) {
-      console.warn("Erro ao atualizar notified:", err);
+      console.warn("[useAlarms] markAsNotified error", err);
     }
   }
 
   /* ============================================================
-   🎯 FILA DO BANNER — PRIORIDADE + TIMEOUT + LOGS
+     📡 Buscar alarmes (polling)
+  ============================================================ */
+  async function fetchAlarms() {
+    try {
+      const res = await fetch(`${API_BASE}/alarms/actives`);
+      const json = await res.json();
+      if (!json || !json.ok) {
+        // log leve
+        console.warn("[useAlarms] resposta inválida de /alarms/actives", json);
+        return;
+      }
+
+      const list = json.alarms || [];
+      setAlarms(list);
+
+      // Percorre e enfileira apenas novos (usando key)
+      list.forEach((a) => {
+        const key = `${a.tag}|${a.name}`;
+
+        // se ativo e NÃO foi mostrado antes, enfileira
+        if (a.active && !shownRef.current[key]) {
+          shownRef.current[key] = true; // marca como já enfileirado/mostrado para não duplicar
+          playAlarmSound(a.severity, key);
+
+          const item = {
+            key,
+            id: a.id ?? null,
+            tag: a.tag,
+            name: a.name,
+            severity: a.severity ?? 0,
+            source: a.source || "",
+            disciplineRoute: getDisciplineRoute(a.tag),
+          };
+
+          console.log("%c[useAlarms] enfileirando novo alarme:", "color: #0a0", item);
+          setBannerQueue((q) => [...q, item]);
+          setHasNew(true);
+        }
+      });
+
+      // remove chaves de shownRef que não existem mais como ativos (se quiser reaparecer quando voltar)
+      Object.keys(shownRef.current).forEach((k) => {
+        const still = list.find((a) => `${a.tag}|${a.name}` === k && a.active);
+        if (!still) {
+          // permite reaparecer futuramente caso volte a ficar ativo
+          delete shownRef.current[k];
+        }
+      });
+    } catch (err) {
+      console.error("[useAlarms] Erro ao buscar alarmes:", err);
+    }
+  }
+
+  /* ============================================================
+     🔁 polling setup
   ============================================================ */
   useEffect(() => {
-    console.log("%c[BANNER] useEffect disparou", "color: #0af");
+    fetchAlarms();
+    pollRef.current = setInterval(fetchAlarms, interval);
+    return () => clearInterval(pollRef.current);
+  }, [interval]);
 
-    console.log("→ Banner atual:", banner);
-    console.log("→ Fila atual:", bannerQueue);
+  /* ============================================================
+     ▶️ FILA: consumo em sequência com timeout
+     - remove da fila por key
+     - logs detalhados
+  ============================================================ */
+  useEffect(() => {
+    console.log("%c[useAlarms] fila-effect disparou", "color: #06f");
+    console.log("  banner atual:", banner);
+    console.log("  fila:", bannerQueue.map((i) => i.key));
 
-    // Se já há um banner exibido → aguarda
+    // Se já tem banner exibido, aguarda
     if (banner) {
-      console.log("%c[BANNER] Há banner ativo, aguardando timeout.", "color: orange");
+      console.log("%c[useAlarms] já existe banner ativo, aguardando sua saída", "color: orange");
       return;
     }
 
-    // Fila vazia → nada a fazer
     if (bannerQueue.length === 0) {
-      console.log("%c[BANNER] Fila vazia, nada a exibir.", "color: gray");
+      console.log("%c[useAlarms] fila vazia", "color: gray");
       return;
     }
 
-    // Ordenar por severidade (críticos primeiro)
-    const sorted = [...bannerQueue].sort((a, b) => b.severity - a.severity);
-    const next = sorted[0];
-
-    console.log("%c[BANNER] Próximo banner selecionado:", "color: #0f0", next);
-
-    // Remover o próximo da fila
-    setBannerQueue((q) => {
-      const newQueue = q.filter((item) => item !== next);
-      console.log("%c[BANNER] Fila após remover NEXT:", "color: #ff0", newQueue);
-      return newQueue;
+    // Escolhe next por severidade (maior primeiro), depois FIFO
+    const sorted = [...bannerQueue].sort((a, b) => {
+      if (b.severity !== a.severity) return b.severity - a.severity;
+      return 0;
     });
 
-    // Exibir banner
-    setBanner(next);
-    console.log("%c[BANNER] Banner exibido:", "color: #0f0", next);
+    const next = sorted[0];
+    if (!next) return;
 
-    // Atualiza notified
+    console.log("%c[useAlarms] selecionado next:", "color: #0a0", next);
+
+    // Remover da fila por key
+    setBannerQueue((q) => {
+      const newQ = q.filter((item) => item.key !== next.key);
+      console.log("%c[useAlarms] fila após remover next:", "color: #ff0", newQ.map(i=>i.key));
+      return newQ;
+    });
+
+    // Exibe
+    setBanner(next);
+    console.log("%c[useAlarms] exibindo banner:", "color: #0f0", next);
+
+    // marca notified
     if (next.id) {
-      console.log("%c[BANNER] Marcando como notified no backend…", "color: cyan");
+      console.log("%c[useAlarms] marcando notified para id", "color: cyan", next.id);
       markAsNotified(next.id);
     }
 
-    // Severidade crítica → sem timeout
+    // se crítico -> não timeout
     if (next.severity >= 3) {
-      console.log("%c[BANNER] Banner crítico → sem timeout.", "color: red");
+      console.log("%c[useAlarms] banner crítico (sem timeout)", "color: red");
       return;
     }
 
-    // Cria timeout de 5s
-    console.log("%c[BANNER] Criando timeout de 5s…", "color: lightblue");
-
+    // cria timeout
+    console.log("%c[useAlarms] criando timeout 5s para key", "color: lightblue", next.key);
     timerRef.current = setTimeout(() => {
-      console.log("%c[BANNER] Timeout atingido → removendo banner!", "color: yellow");
+      console.log("%c[useAlarms] timeout expirou para key -> removendo banner", "color: yellow", next.key);
       setBanner(null);
+      // OBS: não removemos shownRef aqui para evitar re-enfileirar imediatamente
+      // se desejar permitir reaparecer, poderia-se remover shownRef[next.key] aqui.
     }, 5000);
 
-    // Cleanup
     return () => {
-      console.log("%c[BANNER] Limpando timeout anterior…", "color: gray");
+      console.log("%c[useAlarms] cleanup: limpando timeout anterior", "color: gray");
       clearTimeout(timerRef.current);
     };
   }, [bannerQueue, banner]);
 
-
   /* ============================================================
-     ❌ FECHAR BANNER manual
+     manual close
   ============================================================ */
   function closeBanner() {
     clearTimeout(timerRef.current);
@@ -216,38 +220,53 @@ export default function useAlarms(interval = 3000) {
   }
 
   /* ============================================================
-     🔵 Clique → ir para equipamento
+     navegação
   ============================================================ */
   function goToEquipment(tag, disciplineRoute) {
     navigate(`/${disciplineRoute}/equipamento/${encodeURIComponent(tag)}`);
   }
 
   /* ============================================================
-     🔧 AÇÕES (ACK / CLEAR)
+     ack / clear / clearRecognized
   ============================================================ */
   async function ack(tag, name) {
-    await fetch(`${API_BASE}/alarms/ack`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag, name }),
-    });
-    fetchAlarms();
+    try {
+      await fetch(`${API_BASE}/alarms/ack`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag, name }),
+      });
+    } catch (err) {
+      console.warn("[useAlarms] ack error", err);
+    } finally {
+      fetchAlarms();
+    }
   }
 
   async function clear(tag, name) {
-    await fetch(`${API_BASE}/alarms/clear`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag, name }),
-    });
-    fetchAlarms();
+    try {
+      await fetch(`${API_BASE}/alarms/clear`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag, name }),
+      });
+    } catch (err) {
+      console.warn("[useAlarms] clear error", err);
+    } finally {
+      fetchAlarms();
+    }
   }
 
   async function clearRecognized() {
-    await fetch(`${API_BASE}/alarms/clear-recognized`, {
-      method: "POST",
-    });
-    fetchAlarms();
+    try {
+      await fetch(`${API_BASE}/alarms/clear-recognized`, {
+        method: "POST",
+      });
+    } catch (err) {
+      console.warn("[useAlarms] clearRecognized error", err);
+    } finally {
+      fetchAlarms();
+    }
   }
 
   return {
@@ -256,7 +275,6 @@ export default function useAlarms(interval = 3000) {
     banner,
     closeBanner,
     goToEquipment,
-
     ack,
     clear,
     clearRecognized,

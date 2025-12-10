@@ -158,9 +158,7 @@ export default function App() {
         <>
           <Navbar onLogout={handleLogout} />
 
-          {/* ============================================================
-               🚨 BANNER DE ALARME (NOVO SISTEMA)
-          ============================================================ */}
+          {/* Banner de alarmes */}
           <AlarmBanner
             banner={banner}
             onClose={closeBanner}
