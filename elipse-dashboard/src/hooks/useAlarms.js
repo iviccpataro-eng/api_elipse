@@ -147,69 +147,48 @@ export default function useAlarms(interval = 3000) {
      - logs detalhados
   ============================================================ */
   useEffect(() => {
-    console.log("%c[useAlarms] fila-effect disparou", "color: #06f");
-    console.log("  banner atual:", banner);
-    console.log("  fila:", bannerQueue.map((i) => i.key));
+  console.log("%c[useAlarms] fila-effect disparou", "color: #06f");
+  console.log("  banner atual:", banner);
+  console.log("  fila:", bannerQueue.map((i) => i.key));
 
-    // Se já tem banner exibido, aguarda
-    if (banner) {
-      console.log("%c[useAlarms] já existe banner ativo, aguardando sua saída", "color: orange");
-      return;
-    }
+  // Se já existe banner exibido, apenas aguarda seu timeout
+  if (banner) {
+    console.log("%c[useAlarms] já existe banner ativo, não mexer", "color: orange");
+    return;
+  }
 
-    if (bannerQueue.length === 0) {
-      console.log("%c[useAlarms] fila vazia", "color: gray");
-      return;
-    }
+  // Sem itens na fila, nada a fazer
+  if (bannerQueue.length === 0) {
+    console.log("%c[useAlarms] fila vazia", "color: gray");
+    return;
+  }
 
-    // Escolhe next por severidade (maior primeiro), depois FIFO
-    const sorted = [...bannerQueue].sort((a, b) => {
-      if (b.severity !== a.severity) return b.severity - a.severity;
-      return 0;
-    });
+  // Seleciona por severidade
+  const sorted = [...bannerQueue].sort((a, b) => b.severity - a.severity);
+  const next = sorted[0];
 
-    const next = sorted[0];
-    if (!next) return;
+  console.log("%c[useAlarms] selecionado next:", "color: #0a0", next);
 
-    console.log("%c[useAlarms] selecionado next:", "color: #0a0", next);
+  // Remove da fila por key
+  setBannerQueue((q) => q.filter((item) => item.key !== next.key));
 
-    // Remover da fila por key
-    setBannerQueue((q) => {
-      const newQ = q.filter((item) => item.key !== next.key);
-      console.log("%c[useAlarms] fila após remover next:", "color: #ff0", newQ.map(i=>i.key));
-      return newQ;
-    });
+  // Exibe o banner
+  setBanner(next);
 
-    // Exibe
-    setBanner(next);
-    console.log("%c[useAlarms] exibindo banner:", "color: #0f0", next);
+  if (next.id) markAsNotified(next.id);
 
-    // marca notified
-    if (next.id) {
-      console.log("%c[useAlarms] marcando notified para id", "color: cyan", next.id);
-      markAsNotified(next.id);
-    }
+  // Severidade crítica não tem timeout
+  if (next.severity >= 3) return;
 
-    // se crítico -> não timeout
-    if (next.severity >= 3) {
-      console.log("%c[useAlarms] banner crítico (sem timeout)", "color: red");
-      return;
-    }
+  // Timeout de 5 segundos
+  timerRef.current = setTimeout(() => {
+    console.log("%c[useAlarms] timeout concluiu — removendo banner", "color: yellow");
+    setBanner(null);
+  }, 5000);
 
-    // cria timeout
-    console.log("%c[useAlarms] criando timeout 5s para key", "color: lightblue", next.key);
-    timerRef.current = setTimeout(() => {
-      console.log("%c[useAlarms] timeout expirou para key -> removendo banner", "color: yellow", next.key);
-      setBanner(null);
-      // OBS: não removemos shownRef aqui para evitar re-enfileirar imediatamente
-      // se desejar permitir reaparecer, poderia-se remover shownRef[next.key] aqui.
-    }, 5000);
-
-    return () => {
-      console.log("%c[useAlarms] cleanup: limpando timeout anterior", "color: gray");
-      clearTimeout(timerRef.current);
-    };
-  }, [bannerQueue, banner]);
+  // ⚠️ AGORA NÃO TEM MAIS CLEANUP
+  // SÓ TEMOS UM CLEANUP NO closeBanner()
+}, [bannerQueue, banner]);
 
   /* ============================================================
      manual close
