@@ -216,11 +216,20 @@ router.post("/notified", async (req, res) => {
   try {
     const { id, notified } = normalizeBody(req);
 
-    if (!id) {
-      return res.status(400).json({ ok: false, erro: "ID é obrigatório." });
+    if (!id && (!tag || !name)) {
+      return res.status(400).json({
+        ok: false,
+        erro: "É necessário fornecer ID ou (tag + name)"
+      });
     }
 
-    const updated = await markNotified(id, Boolean(notified));
+    let updated = null;
+
+    if (id) {
+      updated = await markNotified({ id, notified });
+    } else {
+      updated = await markNotified({ tag, name, notified });
+    }
     return res.json({ ok: true, alarm: updated });
   } catch (err) {
     console.error("[ALARMS /notified] Erro:", err);

@@ -37,11 +37,12 @@ export default function useAlarms(interval = 3000) {
       if (lastSoundRef.current === key) return;
       lastSoundRef.current = key;
       const path =
-        sev >= 3
-          ? "/sounds/critical.mp3"
+        sev >= 3 ? "/sounds/critical.mp3"
           : sev === 2
           ? "/sounds/high.mp3"
-          : "/sounds/low.mp3";
+          : sev === 1 
+          ? "/sounds/low.mp3"
+          : "";
       const audio = new Audio(path);
       audio.volume = sev >= 3 ? 1 : 0.6;
       audio.play().catch(() => {});
@@ -65,16 +66,32 @@ export default function useAlarms(interval = 3000) {
   /* ============================================================
      🟦 Atualizar notified no backend
   ============================================================ */
-  async function markAsNotified(id) {
-    if (!id) return;
+ async function markAsNotified(alarm) {
+    if (!alarm) return;
+
     try {
+      // Caso tenha ID → usa ID
+      if (alarm.id) {
+        await fetch(`${API_BASE}/alarms/notified`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: alarm.id, notified: true })
+        });
+        return;
+      }
+
+      // Caso NÃO tenha ID → envia tag + name
       await fetch(`${API_BASE}/alarms/notified`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, notified: true }),
+        body: JSON.stringify({
+          tag: alarm.tag,
+          name: alarm.name,
+          notified: true
+        })
       });
     } catch (err) {
-      console.warn("[useAlarms] markAsNotified error", err);
+      console.warn("Erro ao marcar notified:", err);
     }
   }
 
@@ -175,7 +192,7 @@ export default function useAlarms(interval = 3000) {
   // Exibe o banner
   setBanner(next);
 
-  if (next.id) markAsNotified(next.id);
+  markAsNotified(next);
 
   // Severidade crítica não tem timeout
   if (next.severity >= 3) return;
