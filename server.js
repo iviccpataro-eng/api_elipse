@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 
 import authRouter from "./modules/authRouter.js";
 import dataRouter from "./modules/dataRouter.js";
+import commsRouter from "./modules/commsRouter.js";
 import configRouter from "./modules/configRouter.js";
 import { initUpdater } from "./modules/updater.js";
 import alarmRouter from "./modules/alarmRouter.js";
@@ -96,6 +97,8 @@ app.use((req, res, next) => {
 // -------------------------
 global.dados = {};
 const dados = global.dados;
+global.alarms = {};
+global.comms = {};
 
 // -------------------------
 // 🔐 Token fixo do Elipse
@@ -116,6 +119,7 @@ app.get("/", (req, res) => res.send("API Elipse rodando!"));
 // ✅ 2. Rotas principais
 app.use("/auth", authRouter(pool, SECRET));
 app.use("/config", configRouter(pool));
+app.use("/comms", commsRouter(global.comms, global.alarms, SECRET, ELIPSE_FIXED_TOKEN));
 app.use("/", dataRouter)
 
 // ✅ 3. Rota de arquivos estáticos (imagens de avatar) 

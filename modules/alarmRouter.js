@@ -214,12 +214,12 @@ router.post("/clear", async (req, res) => {
    ============================================================ */
 router.post("/notified", async (req, res) => {
   try {
-    const { id, notified } = normalizeBody(req);
+    const { id, tag, name, notified } = normalizeBody(req);
 
     if (!id && (!tag || !name)) {
       return res.status(400).json({
         ok: false,
-        erro: "É necessário fornecer ID ou (tag + name)"
+        erro: "É necessário fornecer ID OU (tag + name)."
       });
     }
 
@@ -230,12 +230,14 @@ router.post("/notified", async (req, res) => {
     } else {
       updated = await markNotified({ tag, name, notified });
     }
+
     return res.json({ ok: true, alarm: updated });
   } catch (err) {
     console.error("[ALARMS /notified] Erro:", err);
     return res.status(500).json({ ok: false, erro: "Erro ao atualizar notified." });
   }
 });
+
 
 /* ============================================================
    POST /alarms/clear-recognized

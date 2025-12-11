@@ -1,0 +1,18 @@
+{
+    "MM_01_01": {
+        "info": {
+            "name": "MM-01-01",
+            "type": 1,
+            "description": "Conexão RS485 com conversor USB",
+            "floor": "1º Pavimento",
+            "building": "Principal",
+            "producer": "Schneider",
+            "model": "PM210",
+            "connection": 1,
+            "protocol": "MODBus",
+            "address": 1,
+            "communication": true,
+            "last-send": "2025-12-11T06:42:03"
+        }
+    }
+}

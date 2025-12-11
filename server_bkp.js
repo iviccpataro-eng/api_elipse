@@ -30,6 +30,7 @@ const __dirname = dirname(__filename);
 // -------------------------
 const app = express();
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 const SECRET = process.env.JWT_SECRET || "9a476d73d3f307125384a4728279ad9c";
 const pool = new Pool({
@@ -116,6 +117,9 @@ app.get("/", (req, res) => res.send("API Elipse rodando!"));
 app.use("/auth", authRouter(pool, SECRET));
 app.use("/config", configRouter(pool));
 app.use("/", dataRouter)
+
+// ✅ 3. Rota de arquivos estáticos (imagens de avatar) 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // -------------------------
 // 🚨 Rotas de Alarme
