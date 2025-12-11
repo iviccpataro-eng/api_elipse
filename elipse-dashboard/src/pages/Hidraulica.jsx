@@ -1,7 +1,7 @@
 // src/pages/ArCondicionado.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Droplets } from "lucide-react";
+import { Droplet } from "lucide-react";
 import DisciplineSidebar from "../components/DisciplineSideBar";
 import EquipmentGrid from "../components/EquipamentGrid";
 import { jwtDecode } from "jwt-decode";
@@ -177,7 +177,7 @@ export default function Hidraulica() {
         <div className="flex min-h-screen bg-gray-50 pt-16">
             <aside className="w-64 bg-white border-r p-4 shadow-sm overflow-y-auto fixed top-16 left-0 h-[calc(100vh-4rem)]">
                 <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 z-10 border-b">
-                    <Droplets className="w-5 h-5 text-blue-500" />
+                    <Droplet className="w-5 h-5 text-blue-500" />
                     Hidráulica
                 </h2>
 
