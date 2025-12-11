@@ -127,7 +127,7 @@ export default function SystemConfig() {
 
     return (
         <div className="space-y-10 max-w-4xl">
-            <h1 className="text-2xl font-bold mb-6">Configurações do Sistema</h1>
+            <h3 className="text-2xl font-bold mb-6">Configurações do Sistema</h3>
 
             {/* === Características do Sistema === */}
             <section className="bg-white p-6 rounded-lg shadow space-y-4">

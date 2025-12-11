@@ -33,7 +33,7 @@ export default function UserConfig() {
 
     return (
         <div className="space-y-10 pt-8 max-w-4xl">
-            <h1 className="text-2xl font-bold mb-6">Configurações de Usuário</h1>
+            <h3 className="text-2xl font-bold mb-6">Configurações de Usuário</h3>
             <div className="bg-white rounded-xl shadow p-6">
                 {/* Abas superiores */}
                 <div className="flex space-x-4 border-b mb-6">

@@ -34,9 +34,9 @@ export default function ToolsPage() {
             <aside className="hidden lg:flex lg:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
 
                 <div>
-                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Configurações
+                    <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 -mt-4 z-10 border-b">
+                        <Settings className="w-5 h-5 text-grey-400" />
+                        Ar Condicionado
                     </h2>
 
                     <nav className="space-y-2">
@@ -45,8 +45,8 @@ export default function ToolsPage() {
                                 key={t.key}
                                 onClick={() => setSelected(t.key)}
                                 className={`block w-full text-left px-3 py-2 rounded-lg ${selected === t.key
-                                        ? "bg-blue-600 text-white"
-                                        : "hover:bg-gray-200"
+                                    ? "bg-blue-600 text-white"
+                                    : "hover:bg-gray-200"
                                     }`}
                             >
                                 {t.label}
@@ -59,8 +59,8 @@ export default function ToolsPage() {
                     <button
                         onClick={() => setSelected("about")}
                         className={`block w-full text-left px-3 py-2 rounded-lg ${selected === "about"
-                                ? "bg-blue-600 text-white"
-                                : "hover:bg-gray-200 text-gray-700"
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-200 text-gray-700"
                             }`}
                     >
                         Sobre o Sistema
@@ -76,10 +76,10 @@ export default function ToolsPage() {
             <div className="lg:hidden w-full bg-white">
 
                 {/* TÍTULO MOBILE — sempre acima das abas */}
-                <h1 className="text-2xl font-semibold flex items-center gap-2 px-4 pt-5 pb-2">
-                    <Settings className="w-5 h-5" />
-                    Configurações
-                </h1>
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 -mt-4 z-10 border-b">
+                    <Settings className="w-5 h-5 text-grey-400" />
+                    Ar Condicionado
+                </h2>
 
                 {/* ABAS MOBILE / TABLET */}
                 <div className="w-full border-b px-3 pb-2 pt-3 flex space-x-4 overflow-x-auto">
@@ -88,8 +88,8 @@ export default function ToolsPage() {
                             key={t.key}
                             onClick={() => setSelected(t.key)}
                             className={`pb-2 whitespace-nowrap border-b-2 transition-colors ${selected === t.key
-                                    ? "border-blue-600 text-blue-600 font-medium"
-                                    : "border-transparent text-gray-600 hover:text-black"
+                                ? "border-blue-600 text-blue-600 font-medium"
+                                : "border-transparent text-gray-600 hover:text-black"
                                 }`}
                         >
                             {t.label}
