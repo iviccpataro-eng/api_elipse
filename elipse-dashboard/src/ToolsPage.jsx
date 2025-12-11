@@ -31,10 +31,11 @@ export default function ToolsPage() {
             {/* ======================================================
                SIDEBAR: aparece apenas em DESKTOP (>= lg)
             ======================================================= */}
-            <aside className="hidden lg:flex lg:w-64 bg-white border-r p-4 flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
+            <aside className="hidden lg:flex lg:w-64 bg-gray-100 border-r p-4 flex-col justify-between fixed top-16 bottom-0 overflow-y-auto">
+
                 <div>
-                    <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 -mt-4 z-10 border-b">
-                        <Settings className="w-5 h-5 text-grey-400" />
+                    <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-grey-400" />
                         Configurações
                     </h2>
 
@@ -75,9 +76,9 @@ export default function ToolsPage() {
             <div className="lg:hidden w-full bg-white">
 
                 {/* TÍTULO MOBILE — sempre acima das abas */}
-                <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 sticky top-0 bg-white py-2 -mt-4 z-10 border-b">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2 px-4 pt-5 pb-2">
                     <Settings className="w-5 h-5 text-grey-400" />
-                    configurações
+                    Configurações
                 </h2>
 
                 {/* ABAS MOBILE / TABLET */}
