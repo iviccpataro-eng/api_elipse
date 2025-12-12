@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NodeTooltip } from "./NodeTooltip.jsx";
+import NodeToolTip from "./NodeToolTip";
 
 export default function NodeBox({ info }) {
     const [hover, setHover] = useState(false);
@@ -24,7 +24,7 @@ export default function NodeBox({ info }) {
             </div>
 
             {hover && (
-                <NodeTooltip info={info} />
+                <NodeToolTip info={info} />
             )}
         </div>
     );
