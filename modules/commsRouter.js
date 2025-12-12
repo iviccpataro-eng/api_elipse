@@ -5,13 +5,16 @@ import { normalizeBody } from "./utils.js";
 export default function commsRouter(comms, alarms, SECRET, FIXED_TOKEN) {
   const router = express.Router();
 
-  // Middleware de autenticação
+  // ============================================================
+  //  Autenticação JWT / Token fixo (Elipse)
+  // ============================================================
   router.use((req, res, next) => {
     const authHeader = req.headers["authorization"];
     if (!authHeader) return res.status(401).json({ erro: "Token não enviado" });
 
     const token = authHeader.split(" ")[1];
 
+    // Token fixo permite integração direta com o Elipse E3
     if (token === FIXED_TOKEN) {
       req.user = { role: "system" };
       return next();
@@ -25,7 +28,10 @@ export default function commsRouter(comms, alarms, SECRET, FIXED_TOKEN) {
     }
   });
 
-  // POST /comms/:deviceId
+  // ============================================================
+  //  POST /comms/:deviceId
+  //  Registro e atualização de metadados de controladoras
+  // ============================================================
   router.post("/:deviceId", (req, res) => {
     try {
       const deviceId = req.params.deviceId;
@@ -39,23 +45,24 @@ export default function commsRouter(comms, alarms, SECRET, FIXED_TOKEN) {
         return res.status(400).json({ erro: "Formato inválido. Bloco 'info' não encontrado." });
       }
 
-      // Padronização de propriedades que não devem mudar
+      // Garantia de tipos (backend não confia no Elipse)
       info.address = Number(info.address);
       info.connection = Number(info.connection);
       info.type = Number(info.type);
       info.communication = Boolean(info.communication);
 
-      // Atualiza metadado
+      // Atualiza base de comunicação
       comms[deviceId] = {
         info,
         lastUpdate: new Date().toISOString()
       };
 
-      // Lógica de alarme automático de comunicação
+      // ======================================================
+      //  Geração automática de alarme de comunicação
+      // ======================================================
       if (!info.communication) {
         const alarmId = `COMM_${deviceId}`;
 
-        // Registra alarme caso ainda não exista
         if (!alarms[alarmId]) {
           alarms[alarmId] = {
             id: alarmId,
@@ -69,7 +76,6 @@ export default function commsRouter(comms, alarms, SECRET, FIXED_TOKEN) {
           };
         }
       } else {
-        // Se a comunicação voltou, fecha alarme se existir
         const alarmId = `COMM_${deviceId}`;
         if (alarms[alarmId]) {
           delete alarms[alarmId];
@@ -84,16 +90,106 @@ export default function commsRouter(comms, alarms, SECRET, FIXED_TOKEN) {
     }
   });
 
-  // GET /comms
+  // ============================================================
+  //  GET /comms
+  //  Lista completa dos metadados enviados pelas controladoras
+  // ============================================================
   router.get("/", (req, res) => {
     res.json(comms);
   });
 
-  // GET /comms/:deviceId
+  // ============================================================
+  //  GET /comms/:deviceId
+  //  Metadado detalhado de uma controladora específica
+  // ============================================================
   router.get("/:deviceId", (req, res) => {
     const info = comms[req.params.deviceId];
     if (!info) return res.status(404).json({ erro: "Equipamento não encontrado" });
     return res.json(info);
+  });
+
+  // ============================================================
+  //  GET /comms/tree
+  //  Monta a árvore hierárquica de controladoras
+  // ============================================================
+  router.get("/tree/all", (req, res) => {
+    try {
+      const devices = comms;
+
+      // --------------------------------------------------------
+      // 1. Criar mapa de nome → ID
+      //    (permite usar "GW-01" como parent de "GW_01")
+      // --------------------------------------------------------
+      const nameToId = {};
+      for (const id in devices) {
+        const devName = devices[id].info.name;
+        nameToId[devName] = id;
+      }
+
+      // --------------------------------------------------------
+      // 2. Normalizar campo "parent"
+      //    Cria novo campo parentId
+      // --------------------------------------------------------
+      for (const id in devices) {
+        const info = devices[id].info;
+
+        if (!info.parent || info.parent === "") {
+          info.parentId = null;
+          continue;
+        }
+
+        // Caso parent já seja um ID válido
+        if (devices[info.parent]) {
+          info.parentId = info.parent;
+          continue;
+        }
+
+        // Caso parent seja o "name" do equipamento
+        if (nameToId[info.parent]) {
+          info.parentId = nameToId[info.parent];
+          continue;
+        }
+
+        // Caso não exista ainda (pai não enviado pelo Elipse)
+        info.parentId = null;
+      }
+
+      // --------------------------------------------------------
+      // 3. Função recursiva para montar árvore
+      // --------------------------------------------------------
+      function buildNode(id) {
+        const node = {
+          deviceId: id,
+          info: devices[id].info,
+          children: []
+        };
+
+        for (const otherId in devices) {
+          if (devices[otherId].info.parentId === id) {
+            node.children.push(buildNode(otherId));
+          }
+        }
+
+        return node;
+      }
+
+      // --------------------------------------------------------
+      // 4. Encontrar raízes (type 0 ou sem parentId)
+      // --------------------------------------------------------
+      const roots = [];
+      for (const id in devices) {
+        const info = devices[id].info;
+        if (info.type === 0 || info.parentId === null) {
+          roots.push(buildNode(id));
+        }
+      }
+
+      return res.json({ tree: roots });
+
+    } catch (err) {
+      console.error("[COMMS_TREE] Erro:", err.message);
+      return res.status(500).json({ erro: "Falha ao montar árvore de controladoras" });
+    }
   });
 
   return router;
