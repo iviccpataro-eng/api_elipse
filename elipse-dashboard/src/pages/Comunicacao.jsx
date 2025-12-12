@@ -74,30 +74,19 @@ export default function Comunicacao() {
             <div className="max-w-7xl mx-auto">
 
                 {/* Topo */}
-                <div className="flex items-center justify-between mb-4">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600"
-                    >
-                        <ArrowLeft className="w-4 h-4" /> Voltar
-                    </button>
+                <div className="flex items-center justify-end mb-4">
 
-                    {/* Botão atualizar */}
                     <button
                         onClick={carregarDados}
-                        className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing
-                            ? "opacity-50 pointer-events-none"
-                            : ""
+                        className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing ? "opacity-50 pointer-events-none" : ""
                             }`}
                     >
                         <RefreshCcw
-                            className={`w-4 h-4 ${isRefreshing
-                                ? "animate-spin text-blue-500"
-                                : ""
-                                }`}
+                            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""}`}
                         />
                         Atualizar
                     </button>
+
                 </div>
 
                 {/* Cabeçalho */}
@@ -109,16 +98,11 @@ export default function Comunicacao() {
                     <p className="text-gray-500 mb-1">
                         Estrutura hierárquica de gateways, mestres e equipamentos escravos.
                     </p>
-
-                    <p className="text-sm text-gray-400">
-                        Atualização automática ativa a cada{" "}
-                        {Number(localStorage.getItem("refreshTime")) || 15000}ms.
-                    </p>
                 </div>
 
                 {/* Árvore */}
                 <div className="bg-white rounded-2xl shadow p-6">
-                    <CommTree />
+                    <CommTree data={dados} />
                 </div>
             </div>
         </div>
