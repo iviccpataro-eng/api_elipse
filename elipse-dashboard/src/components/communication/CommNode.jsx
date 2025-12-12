@@ -14,7 +14,7 @@ export default function CommNode({ node }) {
                         childrenCount={node.children.length}
                     />
 
-                    <div className="flex justify-center gap-8 mt-2">
+                    <div className="flex justify-center gap-8 mt-0">
                         {node.children.map((child) => (
                             <CommNode key={child.deviceId} node={child} />
                         ))}
