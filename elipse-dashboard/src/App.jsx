@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-import ToolsPage from "./ToolsPage";
 import Navbar from "./components/Navbar";
 import ArCondicionado from "./pages/ArCondicionado";
 import Iluminacao from "./pages/Iluminacao";
@@ -12,6 +11,8 @@ import Hidraulica from "./pages/Hidraulica";
 import Dashboard from "./pages/Dashboard";
 import Equipamento from "./pages/Equipamento";
 import RegisterPage from "./RegisterPage";
+import Comunicacao from "./pages/Comunicacao";
+import ToolsPage from "./ToolsPage";
 
 import useAlarms from "./hooks/useAlarms";
 import AlarmBanner from "./components/AlarmBanner";
@@ -195,7 +196,7 @@ export default function App() {
             <Route path="/eletrica" element={<Eletrica />} />
             <Route path="/hidraulica" element={<Hidraulica />} />
             <Route path="/incendio" element={<div className="p-6">Incêndio</div>} />
-            <Route path="/comunicacao" element={<div className="p-6">Comunicação</div>} />
+            <Route path="/comunicacao" element={<Comunicacao />} />
 
             {/* Equipamentos */}
             <Route path="/arcondicionado/equipamento/:tag" element={<Equipamento />} />
