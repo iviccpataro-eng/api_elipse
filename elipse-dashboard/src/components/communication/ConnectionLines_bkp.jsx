@@ -1,50 +1,35 @@
-export default function ConnectionLines({ childrenCount }) {
+export default function ConnectionLines({ childrenCount = 0 }) {
     if (childrenCount === 0) return null;
 
-    // Largura total da área onde ficam os filhos
-    const width = childrenCount * 160;
+    const multiple = childrenCount > 1;
 
     return (
-        <svg
-            width={width}
-            height="40"
-            className="absolute top-full left-1/2 -translate-x-1/2 z-0"
-        >
-            {/* Linha vertical do pai para o nível dos filhos */}
-            <line
-                x1={width / 2}
-                y1="0"
-                x2={width / 2}
-                y2="20"
-                stroke="#444"
-                strokeWidth="2"
-            />
+        <div className="flex flex-col items-center">
+            {/* Linha vertical descendo do pai */}
+            <svg width="2" height="24">
+                <line
+                    x1="1"
+                    y1="0"
+                    x2="1"
+                    y2="24"
+                    stroke="#555"
+                    strokeWidth="2"
+                />
+            </svg>
 
-            {/* Linha horizontal que conecta os filhos */}
-            <line
-                x1="20"
-                y1="20"
-                x2={width - 20}
-                y2="20"
-                stroke="#444"
-                strokeWidth="2"
-            />
-
-            {/* Linhas verticais para cada filho */}
-            {Array.from({ length: childrenCount }).map((_, index) => {
-                const x = 80 + index * 160; // cada child ocupa 160px
-                return (
+            {/* Linha horizontal se houver mais de 1 filho */}
+            {multiple && (
+                <svg width={childrenCount * 80} height="2" className="my-1">
                     <line
-                        key={index}
-                        x1={x}
-                        y1="20"
-                        x2={x}
-                        y2="40"
-                        stroke="#444"
+                        x1="0"
+                        y1="1"
+                        x2={childrenCount * 80}
+                        y2="1"
+                        stroke="#555"
                         strokeWidth="2"
                     />
-                );
-            })}
-        </svg>
+                </svg>
+            )}
+        </div>
     );
 }
