@@ -73,31 +73,33 @@ export default function Comunicacao() {
         <div className="min-h-screen bg-gray-50 pt-20 p-6">
             <div className="max-w-7xl mx-auto">
 
-                {/* Topo */}
-                <div className="flex items-center justify-end mb-4">
+                {/* Topo + Cabeçalho */}
+                <div className="bg-white rounded-2xl shadow p-6 mb-6 flex items-start justify-between">
 
+                    {/* Títulos */}
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                            Comunicação de Controladoras
+                        </h1>
+
+                        <p className="text-gray-500">
+                            Estrutura hierárquica de gateways, mestres e equipamentos escravos.
+                        </p>
+                    </div>
+
+                    {/* Botão Atualizar */}
                     <button
                         onClick={carregarDados}
                         className={`flex items-center gap-1 text-sm px-3 py-1 border rounded-md transition ${isRefreshing ? "opacity-50 pointer-events-none" : ""
                             }`}
                     >
                         <RefreshCcw
-                            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""}`}
+                            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""
+                                }`}
                         />
                         Atualizar
                     </button>
 
-                </div>
-
-                {/* Cabeçalho */}
-                <div className="bg-white rounded-2xl shadow p-6 mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-2">
-                        Comunicação de Controladoras
-                    </h1>
-
-                    <p className="text-gray-500 mb-1">
-                        Estrutura hierárquica de gateways, mestres e equipamentos escravos.
-                    </p>
                 </div>
 
                 {/* Árvore */}
